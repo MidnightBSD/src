@@ -2068,6 +2068,18 @@ pid_from_file(const char *path)
 }
 
 /*
+ * The daemon an rc-shim started: the process in the pidfile its rc.d script
+ * names, if it is there.  Returns -1 if there is none.
+ */
+pid_t
+supervisor_shim_pid(const job_t *job)
+{
+	if (job->type != JOB_TYPE_RCSHIM || job->shim_pidfile[0] == '\0')
+		return (-1);
+	return (pid_from_file(job->shim_pidfile));
+}
+
+/*
  * Find the oldest process called job->pid_name that was left to us: a child
  * of ours, or of init when we are not a reaper.  Returns -1 if there is
  * none.  Processes noted before the start (skip_pids) are leftovers, such as

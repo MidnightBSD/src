@@ -143,6 +143,65 @@ rcvar_scan(const char *p, bool *found, char *name, size_t namesz)
 }
 
 /*
+ * If the line is key="value" and out is still empty, copy the value: up to
+ * a quote, a blank or a semicolon.  A value that does not fit is not kept.
+ */
+static void
+assign_scan(const char *p, const char *key, char *out, size_t outsz)
+{
+	const char *q;
+	size_t n;
+
+	if (out[0] != '\0' || strncmp(p, key, strlen(key)) != 0 ||
+	    p[strlen(key)] != '=')
+		return;
+	p += strlen(key) + 1;
+	if (*p == '"' || *p == '\'')
+		p++;
+	for (q = p; *q != '\0' && *q != '"' && *q != '\'' && *q != '\n' &&
+	    *q != ' ' && *q != '\t' && *q != ';'; q++)
+		;
+	n = (size_t)(q - p);
+	if (n == 0 || n >= outsz)
+		return;
+	memcpy(out, p, n);
+	out[n] = '\0';
+}
+
+/*
+ * Turn the pidfile= value of an rc.d script into a path: $name and ${name}
+ * are replaced by the script's name variable.  An empty result means the
+ * pidfile is not a plain path.
+ */
+static void
+pidfile_path(const char *raw, const char *name, char *out, size_t outsz)
+{
+	const char *p;
+	size_t len = 0, nl = strlen(name);
+
+	out[0] = '\0';
+	if (raw[0] != '/')
+		return;
+	for (p = raw; *p != '\0'; ) {
+		if (strncmp(p, "${name}", 7) == 0 && len + nl < outsz) {
+			memcpy(out + len, name, nl);
+			len += nl;
+			p += 7;
+		} else if (strncmp(p, "$name", 5) == 0 && len + nl < outsz) {
+			memcpy(out + len, name, nl);
+			len += nl;
+			p += 5;
+		} else if (*p == '$' || len + 1 >= outsz) {
+			out[0] = '\0';
+			return;
+		} else {
+			out[len++] = *p++;
+		}
+	}
+	out[len] = '\0';
+}
+
+/*
  * Parse an rc.d script to extract its PROVIDE/REQUIRE/BEFORE/KEYWORD
  * headers and build a JOB_TYPE_RCSHIM job.
  *
@@ -170,6 +229,7 @@ rcshim_parse_script(const char *path, const char *scriptname)
 	bool done_headers = false;
 	bool has_rcvar = false;
 	char rcvar_name[PROWL_LABEL_MAX];
+	char name_var[PROWL_LABEL_MAX], pidfile_raw[PROWL_PATH_MAX];
 
 	{
 		int rfd = open(path, O_RDONLY | O_NOFOLLOW);
@@ -192,6 +252,8 @@ rcshim_parse_script(const char *path, const char *scriptname)
 	 * reading to find the rcvar= line that names the enable variable.
 	 */
 	rcvar_name[0] = '\0';
+	name_var[0] = '\0';
+	pidfile_raw[0] = '\0';
 	while (fgets(line, sizeof(line), fp) != NULL) {
 		const char *p = line;
 
@@ -204,6 +266,9 @@ rcshim_parse_script(const char *path, const char *scriptname)
 		if (done_headers) {
 			rcvar_scan(p, &has_rcvar, rcvar_name,
 			    sizeof(rcvar_name));
+			assign_scan(p, "name", name_var, sizeof(name_var));
+			assign_scan(p, "pidfile", pidfile_raw,
+			    sizeof(pidfile_raw));
 			continue;
 		}
 
@@ -211,6 +276,9 @@ rcshim_parse_script(const char *path, const char *scriptname)
 			done_headers = true;
 			rcvar_scan(p, &has_rcvar, rcvar_name,
 			    sizeof(rcvar_name));
+			assign_scan(p, "name", name_var, sizeof(name_var));
+			assign_scan(p, "pidfile", pidfile_raw,
+			    sizeof(pidfile_raw));
 			continue;
 		}
 
@@ -288,6 +356,10 @@ rcshim_parse_script(const char *path, const char *scriptname)
 	job = job_alloc();
 	if (job == NULL)
 		return (NULL);
+
+	/* The script's pidfile tells which process its daemon is */
+	pidfile_path(pidfile_raw, name_var[0] != '\0' ? name_var : scriptname,
+	    job->shim_pidfile, sizeof(job->shim_pidfile));
 
 	/* Label: org.midnightbsd.rc.<scriptname> */
 	snprintf(job->label, sizeof(job->label),

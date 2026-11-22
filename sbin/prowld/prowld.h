@@ -344,6 +344,7 @@ struct job {
 
 	/* rc-shim specific */
 	char		rcshim_path[PROWL_PATH_MAX];
+	char		shim_pidfile[PROWL_PATH_MAX]; /* of its daemon */
 
 	/* Runtime state */
 	job_state_t	state;
@@ -472,6 +473,7 @@ bool		 label_valid(const char *);
 int		 prowl_cmd_first(const prowl_cmd_t *);
 bool		 prowl_cond_holds(const char *, const char *);
 bool		 prowl_is_cond(const char *);
+pid_t		 supervisor_shim_pid(const job_t *);
 
 /* ---- unit.c ---- */
 int	unit_load_dir(const char *);

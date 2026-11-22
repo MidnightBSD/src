@@ -352,7 +352,7 @@ job_to_json(const job_t *job, char *buf, size_t bufsz)
 	    edesc,
 	    job_type_str(job->type),
 	    job_state_str(job->state),
-	    (int)job->pid,
+	    (int)(job->pid > 0 ? job->pid : supervisor_shim_pid(job)),
 	    ercname,
 	    job->enabled ? "true" : "false",
 	    job->restart_count,
