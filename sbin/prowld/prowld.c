@@ -1011,8 +1011,10 @@ void
 prowl_log(int priority, const char *fmt, ...)
 {
 	char msg[EARLY_LOG_LINE];
+	char line[1024];
 	va_list ap;
 	int saved_errno = errno;
+	int n;
 
 	if (!early_done)
 		early_log_flush();
@@ -1032,8 +1034,19 @@ prowl_log(int priority, const char *fmt, ...)
 		/* syslog may have changed errno; %m must see the caller's */
 		errno = saved_errno;
 		va_start(ap, fmt);
-		vfprintf(stderr, fmt, ap);
+		n = vsnprintf(line, sizeof(line) - 2, fmt, ap);
 		va_end(ap);
-		fputc('\n', stderr);
+		if (n < 0)
+			n = 0;
+		if ((size_t)n > sizeof(line) - 3)
+			n = (int)sizeof(line) - 3;
+		/*
+		 * One write per line, so output from other processes cannot
+		 * split it, and CR LF, so the lines do not stair-step when
+		 * something left the console without output processing.
+		 */
+		line[n++] = '\r';
+		line[n++] = '\n';
+		(void)write(STDERR_FILENO, line, (size_t)n);
 	}
 }
