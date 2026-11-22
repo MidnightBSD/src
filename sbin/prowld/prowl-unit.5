@@ -591,6 +591,9 @@ variables from
 .Xr dhclient 8 ,
 template, started by
 .Pa rc.d/dhclient
+and not restarted when it exits, because
+.Xr devd 8
+starts it again on the next link-up
 .It Pa dhcp6c.unit
 .Xr dhcp6c 8
 .It Pa ftpd.unit
