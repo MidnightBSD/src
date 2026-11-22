@@ -1,0 +1,100 @@
+.\" Copyright (c) 2026 Lucas Holt
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.Dd April 19, 2026
+.Dt PROWL-GENERATOR 8
+.Os
+.Sh NAME
+.Nm prowl-generator
+.Nd generate prowld unit files from rc.d scripts
+.Sh SYNOPSIS
+.Nm
+.Ar rc.d_script
+.Sh DESCRIPTION
+.Nm
+is a utility to help migrate legacy
+.Xr rc.d 8
+scripts to native
+.Xr prowld 8
+unit files.
+It parses the header comments of a provided script and emits a
+.Xr prowld 8
+compatible JSON/UCL configuration to standard output.
+.Pp
+The generator extracts the following information from the script:
+.Bl -bullet
+.It
+.Cm PROVIDE :
+Used to derive the unit's
+.Va rc_name
+and primary capability.
+.It
+.Cm REQUIRE :
+Mapped to
+.Va requires
+dependencies.
+.It
+.Cm BEFORE :
+Mapped to
+.Va before
+dependencies.
+.It
+.Cm KEYWORD :
+The
+.Dq shutdown
+keyword enables
+.Va shutdown_wait
+in the generated unit.
+.El
+.Pp
+The resulting unit file is set to
+.Va type :
+.Cm oneshot
+by default, as legacy scripts typically manage their own background processes.
+The
+.Va label
+is automatically prefixed with
+.Dq org.midnightbsd.rc.
+to maintain consistency with the
+.Xr prowld 8
+rc-shim.
+.Sh EXAMPLES
+Generate a unit file for the SSH daemon:
+.Bd -literal -offset indent
+prowl-generator /etc/rc.d/sshd > sshd.unit
+.Ed
+.Pp
+Review the output for a local service:
+.Bd -literal -offset indent
+prowl-generator /usr/local/etc/rc.d/nginx
+.Ed
+.Sh SEE ALSO
+.Xr rc.d 8 ,
+.Xr prowld 8 ,
+.Xr prowlctl 8
+.Sh HISTORY
+.Nm
+first appeared in MidnightBSD 4.1.
+.Sh AUTHORS
+.An Lucas Holt Aq Mt luke@MidnightBSD.org

@@ -1,0 +1,34 @@
+# nfsd.unit - native prowld(8) unit for nfsd(8)
+#
+# Replaces the rc.d/nfsd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with nfs_server_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/nfsd.
+#
+# nfsd always detaches from its parent and has no foreground mode.  The NFSv4,
+# privileged-port and max I/O settings of rc.d/nfsd are start_pre commands;
+# mountd, rpcbind (unless NFSv4 only) and nfsuserd (with nfs_server_managegids)
+# are started first if they are not running.  prowld finds the daemon by name
+# and stops it with SIGUSR1, as rc.d/nfsd does.  Its output is discarded.
+
+label = "org.midnightbsd.nfsd";
+description = "Remote NFS server";
+type = "daemon";
+rc_name = "nfs_server";
+run_at_load = true;
+keep_alive = true;
+provides = ["nfsd"];
+wants = ["mountcritremote", "hostname", "gssd", "nfsuserd"];
+activates = ["mountd", "!nfsv4_server_only rpcbind", "?nfs_server_managegids nfsuserd"];
+required_modules = ["nfsd"];
+pid_name = "nfsd";
+stop_signal = "USR1";
+stdout_path = "/dev/null";
+start_pre = [
+	["+nfs_server_maxio","-/sbin/sysctl","vfs.nfsd.srvmaxio=@nfs_server_maxio@"],
+	["?nfs_reserved_port_only","/sbin/sysctl","vfs.nfsd.nfs_privport=1"],
+	["!nfs_reserved_port_only","/sbin/sysctl","vfs.nfsd.nfs_privport=0"],
+	["?nfsv4_server_enable","/sbin/sysctl","vfs.nfsd.server_max_nfsvers=4"],
+	["!nfsv4_server_enable","!nfsv4_server_only","/sbin/sysctl","vfs.nfsd.server_max_nfsvers=3"]
+];
+program = "/usr/sbin/nfsd";
+arguments = ["@nfs_server_flags@","@nfs_server_vhost:+-V@","@nfs_server_vhost@"];

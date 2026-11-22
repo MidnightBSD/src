@@ -1,0 +1,16 @@
+# msgs.unit - native prowld(8) unit for msgs(8)
+#
+# Replaces the rc.d/msgs shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with msgs_enable in
+# rc.conf.
+
+
+label = "org.midnightbsd.msgs";
+description = "Make a bounds file for msgs(1)";
+type = "oneshot";
+rc_name = "msgs";
+run_at_load = true;
+provides = ["msgs"];
+wants = ["LOGIN"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config msgs\nif [ -d /var/msgs ] && [ ! -f /var/msgs/bounds ] && [ ! -L /var/msgs/bounds ]; then\n    echo 0 > /var/msgs/bounds\nfi", "msgs"];

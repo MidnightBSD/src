@@ -1,0 +1,22 @@
+# ipmon.unit - native prowld(8) unit for ipmon(8)
+#
+# Replaces the rc.d/ipmon shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with ipmon_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/ipmon.
+#
+# ipmon forks into the background (-D in ipmon_flags, as by default) and
+# prowld supervises the daemon it leaves.  It needs ipfilter or ipnat, which
+# are started first when they are enabled.
+
+label = "org.midnightbsd.ipmon";
+description = "Monitor for packets logged by IP Filter";
+type = "daemon";
+rc_name = "ipmon";
+run_at_load = true;
+keep_alive = true;
+provides = ["ipmon"];
+wants = ["FILESYSTEMS", "hostname", "sysctl", "?ipfilter_enable ipfilter", "?ipnat_enable ipnat"];
+before = ["SERVERS"];
+pid_name = "ipmon";
+program = "@ipmon_program@";
+arguments = ["@ipmon_flags@"];

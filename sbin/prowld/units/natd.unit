@@ -1,0 +1,20 @@
+# natd.unit - native prowld(8) unit for natd(8)
+#
+# Replaces the rc.d/natd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with natd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/natd.
+#
+# Like the rc.d script (KEYWORD: nostart) it is not started at boot; start it
+# with "prowlctl start natd".  natd stays in the foreground only in verbose
+# mode (-v), so its output is discarded.
+
+label = "org.midnightbsd.natd";
+description = "Network Address Translation daemon";
+type = "daemon";
+rc_name = "natd";
+run_at_load = false;
+keep_alive = true;
+provides = ["natd"];
+wants = [];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\n. /etc/network.subr\nload_rc_config natd\nkldstat -q -m ipdivert || kldload ipdivert || exit 1\nif [ -n \"$natd_interface\" ]; then\n    for ifn in $(list_net_interfaces dhcp); do\n        case \"$natd_interface\" in\n        $ifn)\n            natd_flags=\"$natd_flags -dynamic\"\n            ;;\n        esac\n    done\n    if echo \"$natd_interface\" | grep -q -E '^[0-9]+(\\.[0-9]+){0,3}$'; then\n        natd_flags=\"$natd_flags -a $natd_interface\"\n    else\n        natd_flags=\"$natd_flags -n $natd_interface\"\n    fi\nfi\n[ -n \"$natd_program\" ] || natd_program=/sbin/natd\nexec $natd_program -v $natd_flags > /dev/null 2>&1", "natd"];

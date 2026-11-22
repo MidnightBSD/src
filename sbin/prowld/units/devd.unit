@@ -1,0 +1,23 @@
+# devd.unit - native prowld(8) unit for devd(8)
+#
+# Replaces the rc.d/devd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with devd_enable in
+# rc.conf; devd_flags is honoured as in rc.d/devd.
+#
+# devd runs in the foreground (-d) so that prowld supervises it directly.  Its debug output is discarded.
+
+label = "org.midnightbsd.devd";
+description = "Device state change daemon";
+type = "daemon";
+rc_name = "devd";
+run_at_load = true;
+keep_alive = true;
+nojail = true;
+provides = ["devd"];
+wants = ["netif", "ldconfig"];
+before = ["NETWORKING", "mountcritremote"];
+required_files = ["/etc/devd.conf"];
+program = "/sbin/devd";
+arguments = ["-d","@devd_flags@"];
+standard_out_path = "/dev/null";
+standard_error_path = "/dev/null";

@@ -1,0 +1,758 @@
+.\" Copyright (c) 2026 Lucas Holt
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.Dd April 19, 2026
+.Dt PROWL-UNIT 5
+.Os
+.Sh NAME
+.Nm prowl-unit
+.Nd prowld job configuration format
+.Sh DESCRIPTION
+A unit file is a declarative configuration file that defines a job managed by
+.Xr prowld 8 .
+Jobs can be long-running daemons, oneshot tasks, schedule-driven timers,
+or on-demand services triggered by socket activity.
+.Pp
+Unit files are parsed by
+.Xr libucl 3
+and support UCL, JSON, and simplified YAML-like syntax.
+Files must have the
+.Pa .unit
+extension and be located in one of the search directories described in
+.Xr prowld 8 .
+.Sh SCHEMA
+The following fields are recognised at the top level of a unit file:
+.Ss Identity
+.Bl -tag -width "description"
+.It Va label
+.Pq required, string
+Unique reverse-DNS identifier for the job,
+e.g.,
+.Dq org.midnightbsd.sshd .
+Used for dependency resolution and management via
+.Xr prowlctl 8 .
+.It Va description
+.Pq string
+Human-readable description of the service.
+.It Va type
+.Pq string
+One of:
+.Bl -tag -width "oneshot" -compact
+.It Cm daemon
+A long-running process (default).
+.It Cm oneshot
+A task that runs once and is considered complete on successful exit.
+.It Cm timer
+A job activated by a schedule or interval.
+.It Cm socket
+A job activated by incoming socket connections.
+.El
+.It Va rc_name
+.Pq string
+The prefix used for the
+.Va _enable
+variable in
+.Pa /etc/rc.conf .
+Defaults to the last component of
+.Va label .
+.El
+.Ss Execution
+.Bl -tag -width "working_directory"
+.It Va program
+.Pq string
+Absolute path to the executable.
+Required unless
+.Va arguments[0]
+is an absolute path.
+.It Va arguments
+.Pq array of strings
+Argument vector passed to the process.
+The executable name is automatically prepended as
+.Vt argv[0] .
+.It Va stop_arguments
+.Pq array of strings
+Argument vector for a command that stops the job, run with the same
+.Va program ,
+user and environment.
+It is used when the job is stopped while it has no process of its own, as
+for a
+.Cm oneshot
+that has completed: the job is then
+.Em stopping
+until the command exits and
+.Em stopped
+afterwards, whatever its exit status.
+Without it, stopping a completed oneshot does nothing.
+.It Va reload_arguments , check_arguments , resync_arguments
+.Pq arrays of strings
+Argument vectors for the commands behind
+.Dq prowlctl reload ,
+.Dq prowlctl check
+and
+.Dq prowlctl resync .
+Each is run with the same
+.Va program ,
+user and environment as the job, and
+.Xr prowlctl 8
+prints what it writes to standard output and standard error and exits with
+its status.
+A command that runs longer than 30 seconds is killed, and the first 8192
+bytes of its output are kept.
+Without
+.Va reload_arguments
+a running job gets SIGHUP.
+.Ic reload
+and
+.Ic resync
+need a job that has been started; a
+.Ic check
+may run at any time.
+.It Va environment
+.Pq object
+Key/value pairs set in the child's environment.
+The process does not inherit the environment of
+.Xr prowld 8 .
+.It Va working_directory
+.Pq string
+Directory to
+.Xr chdir 2
+into before execution.
+.It Va root_directory
+.Pq string
+Directory to
+.Xr chroot 2
+into.
+Requires
+.Va user
+to be set for security.
+.It Va user , Va group
+.Pq string
+User and group names to drop privileges to.
+.It Va umask
+.Pq string
+Octal umask (e.g.,
+.Dq 0022 ) .
+.El
+.Ss Lifecycle
+.Bl -tag -width "throttle_interval"
+.It Va run_at_load
+.Pq boolean
+If true, start the job automatically when loaded.
+.It Va keep_alive
+.Pq boolean or object
+Restart policy.
+See
+.Xr prowld 8
+for detailed object keys:
+.Va always ,
+.Va crashed ,
+.Va successful_exit .
+.It Va throttle_interval
+.Pq integer
+Minimum seconds between restart attempts.
+Default: 10.
+.It Va exit_timeout
+.Pq integer
+Seconds to wait after
+.Dv SIGTERM
+before sending
+.Dv SIGKILL .
+Default: 20.
+.It Va shutdown_wait
+.Pq boolean
+Wait for clean exit during system shutdown.
+.It Va required_files
+.Pq array of strings
+Absolute paths of files that must exist and be readable for the job to
+start, such as its configuration file.
+If one is missing the job is not started: it enters the
+.Dq failed
+state, the reason is logged, and
+.Cm prowlctl start
+reports an error.
+Starting it again after creating the file works.
+At most 8 paths are allowed.
+A relative path, or too many, makes
+.Xr prowld 8
+refuse the unit rather than weaken the check.
+.It Va required_modules
+.Pq array of strings
+Kernel modules to load before the job starts, as
+.Va required_modules
+does in
+.Xr rc.subr 8 .
+An entry is the file to load, or
+.Dq file:module
+when the module has a different name.
+A module that is already loaded or built in is left alone; if one cannot be
+loaded the job does not run.
+At most 8 entries are allowed.
+.It Va pid_file
+.It Va pid_name
+.Pq string
+For a daemon that forks and lets its parent exit.
+The process
+.Xr prowld 8
+starts is then only a launcher: when it exits with status 0,
+.Xr prowld 8
+looks for the daemon and supervises that instead, so that stopping, reloading
+and restarting act on the daemon.
+.Va pid_file
+is the path of the file the daemon writes its process id to; it is removed
+before each start.
+.Va pid_name
+is the name of the process, for a daemon that writes no pidfile: the oldest
+process with that name that was left to
+.Xr prowld 8
+is taken.
+The daemon is looked for every 200 milliseconds for up to 10 seconds; if it
+does not appear the job is treated as having failed.
+Only one of the two may be given.
+.It Va start_pre
+.It Va start_post
+.It Va stop_pre
+.It Va stop_post
+.Pq array of arrays of strings
+Commands run around the job, at most 8 in each list.
+A command is an array of the program, an absolute path or an
+.Li @name@
+reference, followed by its arguments; both are expanded like
+.Va program .
+A
+.Dq -
+in front of the program means that a failure of the command is ignored.
+.Pp
+A command may begin with conditions on
+.Xr rc.conf 5
+variables, before the program:
+.Dq ?name
+runs it only if the variable is YES, TRUE, ON or 1,
+.Dq !name
+only if it is not, and
+.Dq +name
+only if it is not empty,
+.Dq ~name
+only if it is empty,
+.Dq <name
+only if its value is the name of a readable file, and
+.Dq !<name
+only if it is not.
+All the conditions must hold.
+An entry of
+.Va required_modules
+may also start with a condition and a space, as in
+.Dq "?dummynet_enable dummynet" .
+.Pp
+The
+.Va start_pre
+commands run one after the other in the process that is about to execute the
+job, as the job's user and with its environment and standard files.
+The first one that fails, unless it is marked with
+.Dq - ,
+ends that process and the job does not start.
+A daemon is not considered up while they run.
+.Pp
+.Va start_post
+and
+.Va stop_pre
+are for oneshot jobs.
+The
+.Va start_post
+commands run after the job's command has exited with status 0, one after the
+other like
+.Va stop_post ,
+and the job is not complete until they are done; a command that fails, unless
+it is marked with
+.Dq - ,
+makes the job fail.
+The
+.Va stop_pre
+commands run before the stop command, like
+.Va start_pre ,
+and one that fails keeps the stop command from running.
+.Pp
+The
+.Va stop_post
+commands run after the job's process has ended, however it ended, and in
+the same way.
+A failure is logged and the remaining commands still run.
+Each is stopped with
+.Dv SIGKILL
+after 30 seconds, and
+.Xr prowld 8
+does nothing else while they run.
+At shutdown
+.Xr prowld 8
+waits for the job to stop so that they run.
+.It Va activates
+.Pq array of strings
+Like
+.Va requires ,
+but a service that is disabled, or that is enabled but not started at boot,
+is started instead of being waited for in vain,
+as
+.Dq prowlctl start
+would start it.
+The job starts once those services are up, whether it is started at load or by
+hand.
+This replaces a start script that runs
+.Dq service foo onestart .
+A masked service, or one that only has an rc.d script, is not started.
+.It Va stop_signal
+.Pq string
+The signal that stops the job, by name with or without the
+.Dq SIG
+prefix, such as
+.Li USR1 .
+The default is
+.Dv SIGTERM .
+.Dv SIGKILL
+is still sent if the job has not ended after
+.Va exit_timeout .
+.It Va instances_var
+Makes the file a template; see
+.Sx TEMPLATES .
+The name of an
+.Xr rc.conf 5
+variable holding a space-separated list of instance names.
+.It Va default_instance
+For a template, the instance created when
+.Va instances_var
+is empty or unset.
+.It Va nojail
+.Pq boolean
+If true, the job is never started when
+.Xr prowld 8
+runs inside a jail.
+Use it for services that need the real hardware or kernel state,
+like
+.Xr devd 8 .
+.El
+.Ss Dependencies
+.Bl -tag -width "requires"
+.It Va requires
+.Pq array of strings
+Capability names that must be running for this job to start.
+.Pp
+Any entry of
+.Va requires ,
+.Va wants
+and
+.Va activates
+may begin with a condition and a space, such as
+.Dq ?nfs_server_managegids nfsuserd :
+the entry then counts only if the variable is YES
+.Pq Dq \&? ,
+is not YES
+.Pq Dq \&! ,
+or is not empty
+.Pq Dq + .
+.It Va wants
+.Pq array of strings
+Like
+.Va requires ,
+but a provider that is disabled, masked or failed does not hold the job
+back, and a capability that nothing provides is ignored.
+This matches the way
+.Xr rc 8
+treats REQUIRE, so units converted from rc.d scripts use it.
+.It Va provides
+.Pq array of strings
+Capabilities this job satisfies (e.g.,
+.Dq network ) .
+.It Va before , Va after
+.Pq array of strings
+Explicit ordering constraints against other job labels.
+.El
+.Ss Scheduling (Timers)
+The
+.Va schedule
+field is an object used by
+.Cm type :
+.Cm timer
+jobs:
+.Bl -tag -width "on_boot_delay"
+.It Va interval
+.Pq integer
+Recurring interval in seconds.
+.It Va on_boot_delay
+.Pq integer
+One-shot delay after the daemon starts.
+.It Va calendar
+.Pq object
+Cron-like triggers.
+Fields:
+.Va minute
+(0-59),
+.Va hour
+(0-23),
+.Va day
+(1-31),
+.Va month
+(1-12),
+.Va weekday
+(0-6, Sunday is 0).
+Fields support integers or the
+.Dq *
+wildcard.
+.El
+.Ss Socket Activation
+The
+.Va sockets
+field is an object mapping logical names to socket descriptions.
+Keys in each description:
+.Va type
+(stream, dgram, seqpacket),
+.Va family
+(inet, inet6, unix),
+.Va path
+(AF_UNIX only),
+.Va port
+(inet only),
+.Va host
+(bind address),
+.Va backlog .
+.Sh RC.CONF VARIABLES
+.Va program ,
+.Va arguments ,
+.Va stop_arguments ,
+.Va reload_arguments ,
+.Va check_arguments ,
+.Va resync_arguments
+and
+.Va required_files
+may refer to variables from
+.Xr rc.conf 5 ,
+so that a unit does not need a shell script to read them.
+The variables are those of the unit's
+.Va rc_name :
+.Pa /etc/defaults/rc.conf ,
+.Pa /etc/rc.conf ,
+.Pa /etc/rc.conf.local ,
+and
+.Pa /etc/rc.conf.d/ Ns Ar rc_name
+and
+.Pa /usr/local/etc/rc.conf.d/ Ns Ar rc_name ,
+with later files overriding earlier ones.
+They are read each time the job is started.
+.Bl -tag -width "@name?text@" -compact
+.It Li @name@
+The value, empty if the variable is not set.
+.It Li @name:-default@
+The value, or default if it is empty.
+.It Li @name:+text@
+text if the value is not empty, and nothing otherwise.
+.It Li @name?text@
+text if the value is
+.Dv YES ,
+.Dv TRUE ,
+.Dv ON
+or
+.Dv 1 ,
+and nothing otherwise.
+.It Li @@
+A literal
+.Ql @ .
+.El
+.Pp
+An argument that is only one reference becomes as many arguments as the
+value has words, none if it is empty, the way an unquoted
+.Ev $flags
+does in
+.Xr sh 1 .
+Anywhere else the value is put in place as one word.
+Arguments that contain a newline are shell scripts and are left alone.
+For example:
+.Bd -literal -offset indent
+program = "/usr/sbin/ntpd";
+arguments = ["-d", "@ntpd_flags@"];
+.Ed
+.Sh TEMPLATES
+A unit file whose name ends in
+.Pa @.unit
+is a template.
+It is not loaded as a job itself.
+Every
+.Dq %i
+in the file is replaced by an instance name and
+.Dq %%
+by a single
+.Dq % ,
+before the file is parsed, so the label, the program, the arguments and
+the other fields can all depend on the instance.
+A template's label must contain
+.Dq %i
+and the name of an instance may only use letters, digits and
+.Dq _ ,
+.Dq -
+and
+.Dq \&. .
+.Pp
+At start-up prowld creates one instance for each name in the
+.Xr rc.conf 5
+variable given by
+.Va instances_var ,
+or the
+.Va default_instance
+if that variable is empty.
+Any other instance is created when it is first named, as in
+.Dq prowlctl start pflog@pf3 .
+An instance can be addressed by its label, such as
+.Dq org.midnightbsd.pflog@pf1 ,
+or by the shorter
+.Dq pflog@pf1 .
+Drop-in files for a template are read from
+.Pa <name>@.d .
+.Sh EXAMPLES
+A simple periodic cleanup task:
+.Bd -literal -offset indent
+{
+  "label": "org.midnightbsd.cleanup",
+  "type": "timer",
+  "program": "/usr/libexec/mycleanup",
+  "schedule": {
+    "interval": 3600
+  }
+}
+.Ed
+.Pp
+A daemon with dependencies and socket activation:
+.Bd -literal -offset indent
+{
+  "label": "org.midnightbsd.myservice",
+  "description": "My Network Service",
+  "program": "/usr/local/bin/mysrv",
+  "requires": ["network"],
+  "sockets": {
+    "http": { "port": 80, "family": "inet" }
+  }
+}
+.Ed
+.Sh FILES
+Units for base system services are installed in
+.Pa /etc/prowld/units.d/ .
+Each replaces the matching
+.Pa /etc/rc.d
+script when
+.Xr prowld 8
+manages the system, and each honours the service's
+.Va _enable
+and
+.Va _flags
+variables from
+.Xr rc.conf 5 .
+.Bl -tag -width "local_unbound.unit" -compact
+.It Pa aged.unit
+.Xr aged 8
+.It Pa auditd.unit
+.Xr auditd 8
+.It Pa auditdistd.unit
+.Xr auditdistd 8
+.It Pa automountd.unit
+.Xr automountd 8
+.It Pa autounmountd.unit
+.Xr autounmountd 8
+.It Pa blocklistd.unit
+.Xr blocklistd 8
+.It Pa bootparamd.unit
+.Xr bootparamd 8
+.It Pa bsnmpd.unit
+.Xr bsnmpd 1
+.It Pa bthidd.unit
+.Xr bthidd 8
+.It Pa cron.unit
+.Xr cron 8
+.It Pa ctld.unit
+.Xr ctld 8
+.It Pa devd.unit
+.Xr devd 8
+.It Pa dhclient@.unit
+.Xr dhclient 8 ,
+template, started by
+.Pa rc.d/dhclient
+and not restarted when it exits, because
+.Xr devd 8
+starts it again on the next link-up
+.It Pa dhcp6c.unit
+.Xr dhcp6c 8
+.It Pa ftpd.unit
+.Xr ftpd 8
+.It Pa ftpproxy@.unit
+.Xr ftp-proxy 8 ,
+template
+.It Pa gssd.unit
+.Xr gssd 8
+.It Pa hastd.unit
+.Xr hastd 8
+.It Pa hcsecd.unit
+.Xr hcsecd 8
+.It Pa hostapd.unit
+.Xr hostapd 8
+.It Pa hostapd@.unit
+.Xr hostapd 8 ,
+template, started by
+.Pa rc.d/hostapd
+.It Pa inetd.unit
+.Xr inetd 8 ,
+watched through its pidfile
+.It Pa ipfilter.unit
+.Xr ipf 8 ,
+a oneshot with a stop command
+.It Pa ipfs.unit
+.Xr ipfs 8 ,
+a oneshot with a stop command
+.It Pa ipfw.unit
+.Xr ipfw 8 ,
+a oneshot with a stop command
+.It Pa ipfw_netflow.unit
+.Xr ng_netflow 4 ,
+a oneshot with a stop command
+.It Pa ipmon.unit
+.Xr ipmon 8
+.It Pa ipnat.unit
+.Xr ipnat 8 ,
+a oneshot with a stop command
+.It Pa ippool.unit
+.Xr ippool 8 ,
+a oneshot with a stop command
+.It Pa iscsictl.unit
+.Xr iscsictl 8 ,
+a oneshot
+.It Pa iscsid.unit
+.Xr iscsid 8
+.It Pa keyserv.unit
+.Xr keyserv 8
+.It Pa local_unbound.unit
+.Xr local-unbound 8
+.It Pa lockd.unit
+.Xr rpc.lockd 8
+.It Pa lpd.unit
+.Xr lpd 8
+.It Pa mdnsd.unit
+mdnsd
+.It Pa mdnsresponder.unit
+.Xr mDNSResponderPosix 8
+.It Pa mountd.unit
+.Xr mountd 8
+.It Pa msgs.unit
+.Xr msgs 1 ,
+a oneshot
+.It Pa natd.unit
+.Xr natd 8 ,
+started only on request
+.It Pa newsyslog.unit
+.Xr newsyslog 8 ,
+a oneshot
+.It Pa nfscbd.unit
+.Xr nfscbd 8
+.It Pa nfsd.unit
+.Xr nfsd 8
+.It Pa nfsuserd.unit
+.Xr nfsuserd 8
+.It Pa nscd.unit
+.Xr nscd 8
+.It Pa ntpd.unit
+.Xr ntpd 8
+.It Pa pf.unit
+.Xr pf 4 ,
+a oneshot with a stop command
+.It Pa pflog@.unit
+.Xr pflogd 8 ,
+template
+.It Pa pfsync.unit
+.Xr pfsync 4 ,
+a oneshot with a stop command
+.It Pa powerd.unit
+.Xr powerd 8
+.It Pa pppoed.unit
+.Xr pppoed 8
+.It Pa rarpd.unit
+.Xr rarpd 8
+.It Pa rdate.unit
+.Xr rdate 8 ,
+a oneshot
+.It Pa route6d.unit
+.Xr route6d 8
+.It Pa routed.unit
+.Xr routed 8
+.It Pa rpcbind.unit
+.Xr rpcbind 8
+.It Pa rtadvd.unit
+.Xr rtadvd 8
+.It Pa rtsold.unit
+.Xr rtsold 8
+.It Pa rwhod.unit
+.Xr rwhod 8
+.It Pa sdpd.unit
+.Xr sdpd 8
+.It Pa sppp.unit
+.Xr spppcontrol 8 ,
+a oneshot
+.It Pa sshd.unit
+.Xr sshd 8 ,
+after generating missing host keys and checking the configuration
+.It Pa statd.unit
+.Xr rpc.statd 8
+.It Pa syslogd.unit
+.Xr syslogd 8
+.It Pa tlsclntd.unit
+.Xr rpc.tlsclntd 8
+.It Pa tlsservd.unit
+.Xr rpc.tlsservd 8
+.It Pa ubthidhci.unit
+.Xr usbconfig 8 ,
+a oneshot
+.It Pa watchdogd.unit
+.Xr watchdogd 8
+.It Pa wpa_supplicant@.unit
+.Xr wpa_supplicant 8 ,
+template, started by
+.Pa rc.d/wpa_supplicant
+.It Pa ypbind.unit
+.Xr ypbind 8
+.It Pa ypserv.unit
+.Xr ypserv 8
+.It Pa ypxfrd.unit
+.Xr rpc.ypxfrd 8
+.It Pa zfsd.unit
+.Xr zfsd 8
+.El
+.Pp
+These daemons are supervised by
+.Xr prowld 8 :
+use
+.Xr prowlctl 8
+rather than
+.Xr service 8
+to restart them.
+.Sh SEE ALSO
+.Xr libucl 3 ,
+.Xr prowld 8 ,
+.Xr prowlctl 8 ,
+.Xr prowl-generator 8
+.Sh HISTORY
+.Nm
+first appeared in MidnightBSD 4.1.
+.Sh AUTHORS
+.An Lucas Holt Aq Mt luke@MidnightBSD.org

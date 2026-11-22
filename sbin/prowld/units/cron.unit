@@ -1,0 +1,19 @@
+# cron.unit - native prowld(8) unit for cron(8)
+#
+# Replaces the rc.d/cron shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with cron_enable in
+# rc.conf; cron_flags is honoured as in rc.d/cron.
+#
+# cron runs in the foreground (-n) so that prowld supervises it directly.
+
+label = "org.midnightbsd.cron";
+description = "Daemon to execute scheduled commands";
+type = "daemon";
+rc_name = "cron";
+run_at_load = true;
+keep_alive = true;
+provides = ["cron"];
+wants = ["LOGIN", "FILESYSTEMS"];
+before = ["securelevel"];
+program = "/usr/sbin/cron";
+arguments = ["-n","@cron_dst?-s@","@cron_flags@"];

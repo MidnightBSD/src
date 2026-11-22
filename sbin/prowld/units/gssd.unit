@@ -1,0 +1,22 @@
+# gssd.unit - native prowld(8) unit for gssd(8)
+#
+# Replaces the rc.d/gssd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with gssd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/gssd.
+#
+# gssd stays in the foreground only when given -d, which also makes it chatty,
+# so its output is discarded.
+
+label = "org.midnightbsd.gssd";
+description = "Generic Security Services Daemon";
+type = "daemon";
+rc_name = "gssd";
+run_at_load = true;
+keep_alive = true;
+provides = ["gssd"];
+wants = ["root", "mountcritlocal", "NETWORKING", "kdc"];
+before = ["mountcritremote"];
+program = "/usr/sbin/gssd";
+arguments = ["-d","@gssd_flags@"];
+standard_out_path = "/dev/null";
+standard_error_path = "/dev/null";

@@ -1,0 +1,22 @@
+# lockd.unit - native prowld(8) unit for rpc.lockd(8)
+#
+# Replaces the rc.d/lockd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with rpc_lockd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/lockd.
+#
+# rpc.lockd runs in the foreground (-F).  rpcbind and statd are started if
+# they are not running, as rc.d/lockd does.
+
+label = "org.midnightbsd.lockd";
+description = "NFS file locking daemon";
+type = "daemon";
+rc_name = "rpc_lockd";
+run_at_load = true;
+keep_alive = true;
+nojail = true;
+provides = ["lockd"];
+wants = ["nfsclient"];
+before = ["DAEMON"];
+activates = ["rpcbind", "statd"];
+program = "/usr/sbin/rpc.lockd";
+arguments = ["-F","@rpc_lockd_flags@"];

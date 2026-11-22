@@ -1,0 +1,36 @@
+# ipfilter.unit - native prowld(8) unit for ipfilter(8)
+#
+# Replaces the rc.d/ipfilter shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with ipfilter_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/ipfilter.
+#
+# A oneshot: it enables the filter, flushes it and loads the IPv4 and IPv6
+# rules that exist (the unit fails if neither file does).  "prowlctl stop
+# ipfilter" saves the state tables with ipfs and disables the filter.
+# "prowlctl reload ipfilter" loads the rules into the alternate set and swaps
+# it in, which takes a few steps and still uses a shell.
+
+label = "org.midnightbsd.ipfilter";
+description = "IP packet filter";
+type = "oneshot";
+rc_name = "ipfilter";
+run_at_load = true;
+provides = ["ipfilter"];
+wants = ["FILESYSTEMS"];
+before = ["ipmon", "ipnat", "netif", "netwait", "securelevel"];
+required_modules = ["ipl:ipfilter"];
+start_pre = [
+  ["!<ipfilter_rules", "!<ipv6_ipfilter_rules", "/usr/bin/false"],
+  ["-@ipfilter_program@", "-E"],
+  ["+ipfilter_optionlist", "@ipfilter_program@", "-T", "@ipfilter_optionlist@"]
+];
+program = "@ipfilter_program@";
+arguments = ["-Fa"];
+start_post = [
+  ["<ipfilter_rules", "@ipfilter_program@", "-f", "@ipfilter_rules@", "@ipfilter_flags@"],
+  ["<ipv6_ipfilter_rules", "@ipfilter_program@", "-6", "-f", "@ipv6_ipfilter_rules@", "@ipfilter_flags@"]
+];
+stop_pre = [["-@ipfs_program@", "-W", "@ipfs_flags@"]];
+stop_arguments = ["-D"];
+reload_arguments = ["-c", ". /etc/rc.subr\nload_rc_config ipfilter\n[ -n \"$ipfilter_program\" ] || ipfilter_program=/sbin/ipf\nif [ ! -f \"$ipfilter_rules\" ] && [ ! -f \"$ipv6_ipfilter_rules\" ]; then\n    echo \"ipfilter: no rules file ($ipfilter_rules)\" >&2\n    exit 1\nfi\necho \"Reloading ipfilter rules.\"\n$ipfilter_program -I -Fa\nif [ -r \"$ipfilter_rules\" ]; then\n    if ! $ipfilter_program -I -f \"$ipfilter_rules\" $ipfilter_flags; then\n        echo \"Load of rules into alternate set failed; aborting reload\" >&2\n        exit 1\n    fi\nfi\nif [ -r \"$ipv6_ipfilter_rules\" ]; then\n    if ! $ipfilter_program -I -6 -f \"$ipv6_ipfilter_rules\" $ipfilter_flags; then\n        echo \"Load of IPv6 rules into alternate set failed; aborting reload\" >&2\n        exit 1\n    fi\nfi\nexec $ipfilter_program -s", "ipfilter"];
+resync_arguments = ["-y", "@ipfilter_flags@"];

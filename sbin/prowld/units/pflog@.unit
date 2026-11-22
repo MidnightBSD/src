@@ -1,0 +1,23 @@
+# pflog@.unit - native prowld(8) template unit for pflog(8)
+#
+# Replaces the rc.d/pflog shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with pflog_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/pflog.
+#
+# One instance per name in pflog_instances, or a single "default" instance
+# with pflog_dev, pflog_logfile and pflog_flags.  Each instance has its own
+# pflog_<name>_dev, _logfile and _flags.  pflogd runs in the foreground (-D).
+# The interface is not taken down again when the instance stops.
+
+label = "org.midnightbsd.pflog@%i";
+description = "Packet filter logging daemon";
+type = "daemon";
+run_at_load = true;
+keep_alive = true;
+instances_var = "pflog_instances";
+default_instance = "default";
+rc_name = "pflog";
+provides = ["pflog"];
+wants = ["FILESYSTEMS", "netif"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config pflog\npget() { eval echo \\\"\\$pflog_$1\\\"; }\ninst=%i\nif [ \"$inst\" = default ]; then\n    dev=$pflog_dev\n    [ -n \"$dev\" ] || dev=pflog0\n    logfile=$pflog_logfile\n    flags=$pflog_flags\n    pidname=pflogd\nelse\n    dev=$(pget \"$inst\"_dev)\n    logfile=$(pget \"$inst\"_logfile)\n    flags=$(pget \"$inst\"_flags)\n    pidname=pflogd.$inst\nfi\nif [ -z \"$dev\" ] || [ -z \"$logfile\" ]; then\n    echo \"pflog instance $inst: pflog_dev or pflog_logfile is not set\" >&2\n    exit 1\nfi\nkldstat -q -m pflog || kldload pflog || exit 1\nifconfig $dev > /dev/null 2>&1 || ifconfig $dev create || exit 1\nifconfig $dev up || exit 1\nprog=$pflog_program\n[ -n \"$prog\" ] || prog=/sbin/pflogd\nexec $prog -D -p $pidname -f $logfile -i $dev $flags", "pflog"];

@@ -1,0 +1,21 @@
+# rarpd.unit - native prowld(8) unit for rarpd(8)
+#
+# Replaces the rc.d/rarpd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with rarpd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/rarpd.
+#
+# rarpd runs in the foreground (-f).
+
+label = "org.midnightbsd.rarpd";
+description = "Reverse ARP daemon";
+type = "daemon";
+rc_name = "rarpd";
+run_at_load = true;
+keep_alive = true;
+required_files = ["/etc/ethers"];
+nojail = true;
+provides = ["rarpd"];
+wants = ["DAEMON", "FILESYSTEMS"];
+before = ["LOGIN"];
+program = "/usr/sbin/rarpd";
+arguments = ["-f","@rarpd_flags@"];

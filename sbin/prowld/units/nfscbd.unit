@@ -1,0 +1,22 @@
+# nfscbd.unit - native prowld(8) unit for nfscbd(8)
+#
+# Replaces the rc.d/nfscbd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with nfscbd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/nfscbd.
+#
+# nfscbd always detaches from its parent and has no foreground mode.  prowld
+# finds it by name.  The daemon is stopped with SIGUSR1, as rc.d/nfscbd does.
+
+label = "org.midnightbsd.nfscbd";
+description = "NFSv4 client side callback daemon";
+type = "daemon";
+rc_name = "nfscbd";
+run_at_load = true;
+keep_alive = true;
+nojail = true;
+provides = ["nfscbd"];
+wants = ["NETWORKING", "nfsuserd"];
+pid_name = "nfscbd";
+stop_signal = "USR1";
+program = "/usr/sbin/nfscbd";
+arguments = ["@nfscbd_flags@"];

@@ -1,0 +1,24 @@
+# tlsservd.unit - native prowld(8) unit for tlsservd(8)
+#
+# Replaces the rc.d/tlsservd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with tlsservd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/tlsservd.
+#
+# tlsservd stays in the foreground only in debug mode (-d), so its output is
+# discarded.  A reload sends SIGHUP.
+
+label = "org.midnightbsd.tlsservd";
+description = "NFS over TLS server side daemon";
+type = "daemon";
+rc_name = "tlsservd";
+run_at_load = true;
+keep_alive = true;
+required_files = ["/etc/rpc.tlsservd/cert.pem", "/etc/rpc.tlsservd/certkey.pem"];
+nojail = true;
+provides = ["tlsservd"];
+wants = ["NETWORKING", "root", "mountcritlocal", "sysctl"];
+before = ["nfsd"];
+program = "/usr/sbin/rpc.tlsservd";
+arguments = ["-d","@tlsservd_flags@"];
+standard_out_path = "/dev/null";
+standard_error_path = "/dev/null";

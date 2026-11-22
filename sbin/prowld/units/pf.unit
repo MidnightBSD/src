@@ -1,0 +1,40 @@
+# pf.unit - native prowld(8) unit for pf(8)
+#
+# Replaces the rc.d/pf shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with pf_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/pf.
+#
+# A oneshot: it flushes pf, loads the rules and enables the filter.
+# "prowlctl stop pf" disables pf again; "prowlctl check|reload|resync pf"
+# run pfctl as the rc.d script does (pfctl loads a ruleset only when all of
+# it is valid, so reload needs no separate check first).
+#
+# With pf_fallback_rules_enable the fallback rules are loaded and pf is
+# enabled before the real rules are loaded, so that if the real rules cannot
+# be loaded the fallback stays in force.  Without it pf is enabled after the
+# rules are loaded.  The rules file pf_fallback_rules_file is used when it exists,
+# otherwise the rules in pf_fallback_rules, which needs a little shell to
+# feed pfctl its standard input.
+
+label = "org.midnightbsd.pf";
+description = "Packet filter";
+type = "oneshot";
+rc_name = "pf";
+run_at_load = true;
+provides = ["pf"];
+wants = ["FILESYSTEMS", "netif", "pflog", "pfsync", "routing"];
+required_modules = ["pf"];
+required_files = ["@pf_rules@"];
+start_pre = [
+  ["-@pf_program@", "-q", "-F", "all"],
+  ["?pf_fallback_rules_enable", "<pf_fallback_rules_file", "@pf_program@", "-f", "@pf_fallback_rules_file@", "@pf_flags@"],
+  ["?pf_fallback_rules_enable", "!<pf_fallback_rules_file", "+pf_fallback_rules", "/bin/sh", "-c", "r=${1#rules=}; p=$2; shift 2; echo \"$r\" | \"$p\" -f - \"$@\"", "pf", "rules=@pf_fallback_rules@", "@pf_program@", "@pf_flags@"],
+  ["?pf_fallback_rules_enable", "-@pf_program@", "-eq"]
+];
+program = "@pf_program@";
+arguments = ["-f", "@pf_rules@", "@pf_flags@"];
+start_post = [["!pf_fallback_rules_enable", "-@pf_program@", "-eq"]];
+stop_arguments = ["-dq"];
+check_arguments = ["-n", "-f", "@pf_rules@", "@pf_flags@"];
+reload_arguments = ["-f", "@pf_rules@", "@pf_flags@"];
+resync_arguments = ["-f", "@pf_rules@", "@pf_flags@"];

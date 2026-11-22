@@ -1,0 +1,37 @@
+# ipfw.unit - native prowld(8) unit for ipfw(8)
+#
+# Replaces the rc.d/ipfw shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with firewall_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/ipfw.
+#
+# A oneshot: it loads the modules, runs the firewall script and enables the
+# firewall.  "prowlctl stop ipfw" disables it and runs the coscripts' quietstop.
+# natd is started first, when natd_enable is set, by activating its unit.
+# A little shell is used only to run firewall_coscripts, when there are any.
+# Unlike rc.d/ipfw the unit does not warn about a kernel without firewall
+# rules, and it does not stop natd again when it stops.
+
+label = "org.midnightbsd.ipfw";
+description = "Firewall, traffic shaper, packet scheduler, in-kernel NAT";
+type = "oneshot";
+rc_name = "firewall";
+run_at_load = true;
+provides = ["ipfw"];
+wants = ["ppp", "netif"];
+activates = ["?natd_enable natd"];
+required_modules = ["ipfw", "?dummynet_enable dummynet", "?natd_enable ipdivert", "?firewall_nat_enable ipfw_nat", "?firewall_nat64_enable ipfw_nat64", "?firewall_nptv6_enable ipfw_nptv6", "?firewall_pmod_enable ipfw_pmod"];
+start_pre = [
+  ["-/etc/rc.d/sysctl", "reload"],
+  ["<firewall_script", "/bin/sh", "@firewall_script@", "@firewall_type@"],
+  ["?firewall_logging", "/sbin/sysctl", "-q", "net.inet.ip.fw.verbose=1"],
+  ["?firewall_logif", "-/sbin/ifconfig", "ipfw0", "create"],
+  ["+firewall_coscripts", "/bin/sh", "-c", "for c; do if [ -f \"$c\" ]; then \"$c\" quietstart; fi; done", "ipfw", "@firewall_coscripts@"],
+  ["-/sbin/sysctl", "-q", "net.inet6.ip6.fw.enable=1"]
+];
+program = "/sbin/sysctl";
+arguments = ["-q", "net.inet.ip.fw.enable=1"];
+stop_arguments = ["-q", "net.inet.ip.fw.enable=0"];
+stop_post = [
+  ["-/sbin/sysctl", "-q", "net.inet6.ip6.fw.enable=0"],
+  ["+firewall_coscripts", "/bin/sh", "-c", "r=; for c; do r=\"$c $r\"; done; for c in $r; do if [ -f \"$c\" ]; then \"$c\" quietstop; fi; done", "ipfw", "@firewall_coscripts@"]
+];

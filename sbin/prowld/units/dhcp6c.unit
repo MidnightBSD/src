@@ -1,0 +1,22 @@
+# dhcp6c.unit - native prowld(8) unit for dhcp6c(8)
+#
+# Replaces the rc.d/dhcp6c shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with dhcp6c_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/dhcp6c.
+#
+# dhcp6c runs in the foreground (-f).  The configuration file must exist;
+# dhcp6c reports a missing interface list itself.
+
+label = "org.midnightbsd.dhcp6c";
+description = "DHCPv6 client";
+type = "daemon";
+rc_name = "dhcp6c";
+run_at_load = true;
+keep_alive = true;
+required_files = ["@dhcp6c_config:-/etc/dhcp6c.conf@"];
+nojail = true;
+provides = ["dhcp6c"];
+wants = ["DAEMON"];
+before = ["firstboot"];
+program = "/sbin/dhcp6c";
+arguments = ["-f","-c","@dhcp6c_config:-/etc/dhcp6c.conf@","-p","/var/run/dhcp6c.pid","@dhcp6c_flags@","@dhcp6c_interfaces@"];

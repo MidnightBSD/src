@@ -1,0 +1,22 @@
+# nfsuserd.unit - native prowld(8) unit for nfsuserd(8)
+#
+# Replaces the rc.d/nfsuserd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with nfsuserd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/nfsuserd.
+#
+# nfsuserd always detaches from its parent and has no foreground mode.  prowld
+# finds it by name.  The master process is stopped with SIGUSR1, as
+# rc.d/nfsuserd does.
+
+label = "org.midnightbsd.nfsuserd";
+description = "NFSv4 user and group name mapping daemon";
+type = "daemon";
+rc_name = "nfsuserd";
+run_at_load = true;
+keep_alive = true;
+provides = ["nfsuserd"];
+wants = ["NETWORKING"];
+pid_name = "nfsuserd";
+stop_signal = "USR1";
+program = "/usr/sbin/nfsuserd";
+arguments = ["@nfs_server_managegids?-manage-gids@","@nfsuserd_flags@"];

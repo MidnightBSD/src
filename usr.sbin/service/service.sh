@@ -29,6 +29,14 @@
 . /etc/rc.subr
 load_rc_config 'XXX'
 
+PROWLCTL=/sbin/prowlctl
+PROWL_SOCK=/var/run/prowld/prowld.sock
+
+prowl_available () {
+	# prowld runs rc.shutdown without answering prowlctl
+	[ -z "${PROWLD_RUNDOWN}" ] && [ -z "${JAIL}" ] && [ -x "${PROWLCTL}" ] && [ -S "${PROWL_SOCK}" ]
+}
+
 usage () {
 	echo ''
 	echo 'Usage:'
@@ -86,19 +94,16 @@ if [ -n "$RESTART" ]; then
 	files=`rcorder ${skip} ${local_rc} 2>/dev/null`
 
 	for file in `reverse_list ${files}`; do
-		if grep -q ^rcvar $file; then
-			eval `grep ^name= $file`
-			eval `grep ^rcvar $file`
-			if [ -n "$rcvar" ]; then
-				load_rc_config_var ${name} ${rcvar}
-			fi
+		name=$(sed -n 's/^name=["'"'"']\{0,1\}\([A-Za-z_][A-Za-z0-9_]*\)["'"'"']\{0,1\}[[:space:]]*$/\1/p' "$file" | head -1)
+		rcvar=$(sed -n 's/^rcvar=["'"'"']\{0,1\}\([A-Za-z_][A-Za-z0-9_]*\)["'"'"']\{0,1\}[[:space:]]*$/\1/p' "$file" | head -1)
+		if [ -n "$rcvar" ]; then
+			load_rc_config_var ${name} ${rcvar}
 			checkyesno $rcvar 2>/dev/null && run_rc_script ${file} stop
 		fi
 	done
 	for file in $files; do
-		if grep -q ^rcvar $file; then
-			eval `grep ^name= $file`
-			eval `grep ^rcvar $file`
+		rcvar=$(sed -n 's/^rcvar=["'"'"']\{0,1\}\([A-Za-z_][A-Za-z0-9_]*\)["'"'"']\{0,1\}[[:space:]]*$/\1/p' "$file" | head -1)
+		if [ -n "$rcvar" ]; then
 			checkyesno $rcvar 2>/dev/null && run_rc_script ${file} start
 		fi
 	done
@@ -117,13 +122,15 @@ if [ -n "$ENABLED" -o -n "$RCORDER" ]; then
 fi
 
 if [ -n "$ENABLED" ]; then
+	if prowl_available; then
+		${PROWLCTL} list --enabled
+		exit 0
+	fi
 	for file in $files; do
-		if grep -q ^rcvar $file; then
-			eval `grep ^name= $file`
-			eval `grep ^rcvar $file`
-			if [ -n "$rcvar" ]; then
-				load_rc_config_var ${name} ${rcvar}
-			fi
+		name=$(sed -n 's/^name=["'"'"']\{0,1\}\([A-Za-z_][A-Za-z0-9_]*\)["'"'"']\{0,1\}[[:space:]]*$/\1/p' "$file" | head -1)
+		rcvar=$(sed -n 's/^rcvar=["'"'"']\{0,1\}\([A-Za-z_][A-Za-z0-9_]*\)["'"'"']\{0,1\}[[:space:]]*$/\1/p' "$file" | head -1)
+		if [ -n "$rcvar" ]; then
+			load_rc_config_var ${name} ${rcvar}
 			checkyesno $rcvar 2>/dev/null && echo $file
 		fi
 	done
@@ -131,6 +138,10 @@ if [ -n "$ENABLED" ]; then
 fi
 
 if [ -n "$LIST" ]; then
+	if prowl_available; then
+		${PROWLCTL} list
+		exit 0
+	fi
 	for dir in /etc/rc.d $local_startup; do
 		[ -n "$VERBOSE" ] && echo "From ${dir}:"
 		[ -d ${dir} ] && /bin/ls -1 ${dir}
@@ -157,6 +168,24 @@ if [ $# -gt 0 ]; then
 else
 	usage
 	exit 1
+fi
+
+# Hand the standard rc verbs to prowld.  Anything else (arguments that
+# devd passes to scripts such as power_profile, extra_commands, ...) is for
+# the rc.d script itself, which prowlctl does not know.  The same goes
+# for a verb that carries extra arguments (devd's "quietstart '?...'").
+if prowl_available && [ $# -eq 1 ]; then
+	case "$1" in
+	start|stop|restart|reload|status|\
+	faststart|faststop|fastrestart|fastreload|faststatus|\
+	quietstart|quietstop|quietrestart|quietreload|quietstatus|\
+	forcestart|forcestop|forcerestart|forcereload|forcestatus|\
+	onestart|onestop|onerestart|onereload|onestatus)
+		if ${PROWLCTL} status "${script}" > /dev/null 2>&1; then
+			exec ${PROWLCTL} "$@" "${script}"
+		fi
+		;;
+	esac
 fi
 
 cd /

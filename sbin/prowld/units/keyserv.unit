@@ -1,0 +1,23 @@
+# keyserv.unit - native prowld(8) unit for keyserv(8)
+#
+# Replaces the rc.d/keyserv shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with keyserv_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/keyserv.
+#
+# keyserv stays in the foreground only in debug mode (-D), so its output is
+# discarded.
+
+label = "org.midnightbsd.keyserv";
+description = "Server for storing private encryption keys";
+type = "daemon";
+rc_name = "keyserv";
+run_at_load = true;
+keep_alive = true;
+provides = ["keyserv"];
+wants = ["ypset"];
+before = ["DAEMON"];
+activates = ["rpcbind"];
+stdout_path = "/dev/null";
+stderr_path = "/dev/null";
+program = "/usr/sbin/keyserv";
+arguments = ["-D","@keyserv_flags@"];

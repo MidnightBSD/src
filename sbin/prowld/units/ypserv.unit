@@ -1,0 +1,20 @@
+# ypserv.unit - native prowld(8) unit for ypserv(8)
+#
+# Replaces the rc.d/ypserv shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with ypserv_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/ypserv.
+#
+# ypserv stays in the foreground only in debug mode (-d), so its output is
+# discarded.  It is enabled by nis_server_enable.
+
+label = "org.midnightbsd.ypserv";
+description = "NIS database server";
+type = "daemon";
+run_at_load = true;
+keep_alive = true;
+rc_name = "nis_server";
+provides = ["ypserv"];
+wants = ["nisdomain"];
+activates = ["rpcbind"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config ypserv\n[ -n \"$(domainname)\" ] || { echo \"NIS domainname(1) is not set.\" >&2; exit 1; }\n[ -d /var/yp/$(domainname)/. ] || { echo \"/var/yp/$(domainname) is not a directory.\" >&2; exit 1; }\nexec /usr/sbin/ypserv -d $nis_server_flags > /dev/null 2>&1", "ypserv"];

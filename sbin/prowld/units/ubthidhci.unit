@@ -1,0 +1,20 @@
+# ubthidhci.unit - native prowld(8) unit for ubthidhci(8)
+#
+# Replaces the rc.d/ubthidhci shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with ubthidhci_enable in
+# rc.conf.
+
+
+label = "org.midnightbsd.ubthidhci";
+description = "Switch a Bluetooth HID proxy dongle to HCI mode";
+type = "oneshot";
+rc_name = "ubthidhci";
+run_at_load = true;
+nojail = true;
+provides = ["ubthidhci"];
+wants = ["DAEMON"];
+before = ["bluetooth"];
+program = "/usr/sbin/usbconfig";
+arguments = ["-u","@ubthidhci_busnum@","-a","@ubthidhci_addr@","do_request","0x40","0","0","0","0"];
+standard_out_path = "/dev/null";
+standard_error_path = "/dev/null";

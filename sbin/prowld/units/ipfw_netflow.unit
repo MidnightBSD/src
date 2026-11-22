@@ -1,0 +1,19 @@
+# ipfw_netflow.unit - native prowld(8) unit for ipfw(8) netflow export
+#
+# Replaces the rc.d/ipfw_netflow shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with ipfw_netflow_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/ipfw_netflow.
+#
+# A oneshot: it loads the rules and exits.  "prowlctl stop ipfw_netflow" runs the
+# stop command (stop_arguments), which undoes what the start did.
+
+label = "org.midnightbsd.ipfw_netflow";
+description = "Netflow export of ipfw traffic";
+type = "oneshot";
+rc_name = "ipfw_netflow";
+run_at_load = true;
+provides = ["ipfw_netflow"];
+wants = ["ipfw"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config ipfw_netflow\n[ -n \"$ipfw_netflow_hook\" ] || ipfw_netflow_hook=9995\n[ -n \"$ipfw_netflow_rule\" ] || ipfw_netflow_rule=01000\n[ -n \"$ipfw_netflow_ip\" ] || ipfw_netflow_ip=127.0.0.1\n[ -n \"$ipfw_netflow_port\" ] || ipfw_netflow_port=9995\nif [ -n \"$ipfw_netflow_version\" ] && [ \"$ipfw_netflow_version\" != 9 ]; then\n    echo \"Unknown netflow version '$ipfw_netflow_version'\" >&2\n    exit 1\nfi\ncase \"$ipfw_netflow_hook\" in\n[!0-9]*) echo \"Bad value \\\"$ipfw_netflow_hook\\\": hook must be numerical\" >&2; exit 1 ;;\nesac\ncase \"$ipfw_netflow_rule\" in\n[!0-9]*) echo \"Bad value \\\"$ipfw_netflow_rule\\\": rule number must be numerical\" >&2; exit 1 ;;\nesac\nfor m in ipfw ng_netflow ng_ipfw; do\n    load_kld $m || exit 1\ndone\nif ngctl show netflow: > /dev/null 2>&1; then\n    echo \"ipfw_netflow is already active\" >&2\n    exit 1\nfi\nfib=\nif [ -n \"$ipfw_netflow_fib\" ]; then\n    fib=\"fib $ipfw_netflow_fib\"\nfi\nv=$ipfw_netflow_version\nipfw add $ipfw_netflow_rule ngtee $ipfw_netflow_hook ip from any to any $fib || exit 1\nexec ngctl -f - <<EOF\nmkpeer ipfw: netflow $ipfw_netflow_hook iface0\nname ipfw:$ipfw_netflow_hook netflow\nmkpeer netflow: ksocket export$v inet/dgram/udp\nmsg netflow: setdlt {iface=0 dlt=12}\nname netflow:export$v netflow_export\nmsg netflow:export$v connect inet/$ipfw_netflow_ip:$ipfw_netflow_port\nEOF", "ipfw_netflow"];
+stop_arguments = ["-c", ". /etc/rc.subr\nload_rc_config ipfw_netflow\n[ -n \"$ipfw_netflow_rule\" ] || ipfw_netflow_rule=01000\nngctl shutdown netflow:\nexec ipfw delete $ipfw_netflow_rule", "ipfw_netflow"];

@@ -1,0 +1,20 @@
+# ftpd.unit - native prowld(8) unit for ftpd(8)
+#
+# Replaces the rc.d/ftpd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with ftpd_enable in
+# rc.conf; ftpd_flags is honoured as in rc.d/ftpd.
+#
+# Stand-alone ftpd always detaches from its parent (-D) and has no foreground
+# mode.  prowld watches the daemon through its pidfile.
+
+label = "org.midnightbsd.ftpd";
+description = "Internet File Transfer Protocol daemon";
+type = "daemon";
+rc_name = "ftpd";
+run_at_load = true;
+keep_alive = true;
+provides = ["ftpd"];
+wants = ["LOGIN", "FILESYSTEMS"];
+pid_file = "/var/run/ftpd.pid";
+program = "@ftpd_program:-/usr/libexec/ftpd@";
+arguments = ["-D","@ftpd_flags@"];

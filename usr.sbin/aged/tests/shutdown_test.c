@@ -9,7 +9,7 @@
 #include <atf-c.h>
 #include <unistd.h>
 
-static int aged_main(void) __unused;
+static int aged_main(int, char **) __unused;
 static int logging_probe_daemon(int, int);
 
 /* Exercise the real cleanup and signal handler without starting a daemon. */
@@ -223,7 +223,7 @@ ATF_TC_BODY(syslog_before_sandbox, tc)
 		closelog();
 		if (chroot(".") == -1 || chdir("/") == -1)
 			_exit(2);
-		aged_main();
+		aged_main(1, (char *[]){ __DECONST(char *, "aged"), NULL });
 		_exit(3);
 	}
 	ATF_REQUIRE_EQ(waitpid(child, &status, 0), child);

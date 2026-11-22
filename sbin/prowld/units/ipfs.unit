@@ -1,0 +1,22 @@
+# ipfs.unit - native prowld(8) unit for ipfs(8)
+#
+# Replaces the rc.d/ipfs shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with ipfs_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/ipfs.
+#
+# A oneshot: it loads the rules and exits.  "prowlctl stop ipfs" runs the
+# stop command (stop_arguments), which undoes what the start did.
+# Starting restores the tables saved by the last stop.  rc.shutdown still runs
+# "rc.d/ipfs stop" at shutdown because the script has the shutdown keyword.
+
+label = "org.midnightbsd.ipfs";
+description = "Save and restore the NAT and state tables";
+type = "oneshot";
+rc_name = "ipfs";
+run_at_load = true;
+provides = ["ipfs"];
+wants = ["ipnat"];
+before = ["netif"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config ipfs\n[ -n \"$ipfilter_program\" ] || ipfilter_program=/sbin/ipf\n[ -n \"$ipfs_program\" ] || ipfs_program=/sbin/ipfs\nif ! checkyesno ipfilter_enable || ! checkyesno ipnat_enable; then\n    echo \"ipfs requires ipfilter and ipnat to be enabled\" >&2\n    exit 1\nfi\nif ! $ipfilter_program -V | grep -q 'Running: yes'; then\n    echo \"ipfilter module is not loaded\" >&2\n    exit 1\nfi\nif [ -r /var/db/ipf/ipstate.ipf ] && [ -r /var/db/ipf/ipnat.ipf ]; then\n    $ipfs_program -R $ipfs_flags\n    rm -f /var/db/ipf/ipstate.ipf /var/db/ipf/ipnat.ipf\nfi", "ipfs"];
+stop_arguments = ["-c", ". /etc/rc.subr\nload_rc_config ipfs\n[ -n \"$ipfs_program\" ] || ipfs_program=/sbin/ipfs\nif [ ! -d /var/db/ipf ]; then\n    mkdir /var/db/ipf\n    chmod 700 /var/db/ipf\n    chown root:wheel /var/db/ipf\nfi\nexec $ipfs_program -W $ipfs_flags", "ipfs"];

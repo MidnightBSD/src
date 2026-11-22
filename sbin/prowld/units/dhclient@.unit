@@ -1,0 +1,19 @@
+# dhclient@.unit - native prowld(8) template unit for dhclient(8)
+#
+# One instance per interface.  rc.d/dhclient, which network.subr and devd(8)
+# call, starts and stops an instance with prowlctl(8) when prowld is
+# running.  There is no instance at boot and no dhclient_enable: whether an
+# interface uses DHCP is decided by dhcpif() as in rc.d/dhclient, and an
+# interface that does not exits successfully.  dhclient stays in the
+# foreground (-d), so background_dhclient does not apply.  It is not
+# restarted when it exits: dhclient leaves when its interface goes down or
+# is gone, and devd(8) starts it again on the next link-up, as under rc.
+
+label = "org.midnightbsd.dhclient@%i";
+description = "DHCP client";
+type = "daemon";
+rc_name = "dhclient";
+run_at_load = false;
+keep_alive = false;
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\n. /etc/network.subr\nload_rc_config dhclient\nload_rc_config network\nifn=%i\nif ! ifconfig $ifn > /dev/null 2>&1; then\n    echo \"$ifn does not exist\" >&2\n    exit 0\nfi\nif ! dhcpif $ifn; then\n    echo \"'$ifn' is not a DHCP-enabled interface\" >&2\n    exit 0\nfi\nflags=$(get_if_var $ifn dhclient_flags_IF)\n[ -n \"$flags\" ] || flags=$dhclient_flags\ndhclient_arpwait=$(get_if_var $ifn dhclient_arpwait_IF $dhclient_arpwait)\ncheckyesno dhclient_arpwait || flags=\"$flags -n\"\ninstall -d -o root -g wheel -m 755 /var/run/dhclient\nexec /sbin/dhclient -d $flags $ifn", "dhclient"];

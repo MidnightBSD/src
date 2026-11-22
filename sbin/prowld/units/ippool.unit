@@ -1,0 +1,22 @@
+# ippool.unit - native prowld(8) unit for ippool(8)
+#
+# Replaces the rc.d/ippool shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with ippool_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/ippool.
+#
+# A oneshot: it loads the rules and exits.  "prowlctl stop ippool" runs the
+# stop command (stop_arguments), which undoes what the start did.
+
+label = "org.midnightbsd.ippool";
+description = "User interface to the IPFilter pools";
+type = "oneshot";
+rc_name = "ippool";
+run_at_load = true;
+provides = ["ippool"];
+wants = ["FILESYSTEMS"];
+before = ["ipfilter"];
+required_files = ["@ippool_rules@"];
+required_modules = ["ipl:ipfilter"];
+program = "@ippool_program:-/sbin/ippool@";
+arguments = ["-f","@ippool_rules@","@ippool_flags@"];
+stop_arguments = ["-F"];

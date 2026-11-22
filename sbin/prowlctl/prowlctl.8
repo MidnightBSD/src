@@ -1,0 +1,406 @@
+.\" Copyright (c) 2026 Lucas Holt
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.Dd April 18, 2026
+.Dt PROWLCTL 8
+.Os
+.Sh NAME
+.Nm prowlctl
+.Nd control utility for prowld(8)
+.Sh SYNOPSIS
+.Nm
+.Op Fl s Ar rundir
+.Op Fl \-json
+.Ar command
+.Op Ar args ...
+.Sh DESCRIPTION
+.Nm
+is the command-line interface for
+.Xr prowld 8 .
+It connects to the
+.Xr prowld 8
+control socket at
+.Pa /var/run/prowld/prowld.sock
+and sends commands over the JSON IPC protocol.
+Most commands require appropriate privilege;
+operations that modify service state or system configuration
+must be run as root.
+.Pp
+The following global options are available:
+.Bl -tag -width "--json"
+.It Fl s Ar rundir
+Connect to the
+.Xr prowld 8
+that was started with
+.Fl s Ar rundir ,
+that is to
+.Pa rundir/prowld.sock ,
+instead of the system one.
+It must come first, before any other option or the command.
+.It Fl \-json
+Print raw JSON responses instead of human-readable output.
+Useful for scripts and monitoring tools.
+.El
+.Sh COMMANDS
+Where a command takes a
+.Ar label ,
+an instance of a template unit may be given as a second word instead of after an
+.Dq @ :
+.Dq "prowlctl start dhclient wlan0"
+is
+.Dq "prowlctl start dhclient@wlan0" .
+.Bl -tag -width "reload-config"
+.It Cm list Op Fl \-enabled | Fl \-failed | Fl \-type Ns = Ns Ar type
+List known jobs.
+With no filter options all loaded jobs are shown regardless of state.
+The filters are applied by
+.Xr prowld 8
+and can be combined; a job is shown only if it passes all of them.
+.Fl \-enabled
+shows only jobs that are enabled: not disabled in
+.Xr rc.conf 5
+and not masked.
+.Fl \-failed
+shows only jobs currently in the
+.Dv failed
+state.
+.Fl \-type Ns = Ns Ar type
+shows only jobs of that type; valid values are
+.Cm daemon ,
+.Cm oneshot ,
+.Cm timer ,
+.Cm socket
+and
+.Cm rcshim .
+Any other value is an error.
+.It Cm status Ar label
+Show detailed status for a single job, including its state, PID,
+restart count, last exit code, and any status message reported via
+sd_notify
+.Pq Dv STATUS=... .
+.Ar label
+may be either the full unit label
+.Pq e.g., Dq org.midnightbsd.sshd
+or the short rc_name
+.Pq e.g., Dq sshd .
+.It Cm start Ar label
+Start the named job.
+The job must be loaded and not currently running.
+If the job has unsatisfied hard dependencies the command will fail.
+.It Cm stop Ar label
+Stop the named job.
+.Xr prowld 8
+sends
+.Dv SIGTERM
+and waits up to
+.Va exit_timeout
+seconds for the process to exit before sending
+.Dv SIGKILL .
+.Pp
+A legacy
+.Xr rc.d 8
+script
+.Pq an rcshim job
+whose start has finished has no process of its own, because the script
+started a daemon and exited.
+For such a job
+.Xr prowld 8
+runs the script's
+.Cm stop
+instead, with the same time limit.
+.It Cm restart Ar label
+Stop then start the named job again, once it has stopped.
+This also starts a job that is stopped, completed or failed.
+.It Cm reload Ar label
+Make the named job re-read its configuration.
+If the unit defines
+.Va reload_arguments
+that command is run and its output is printed, and
+.Nm
+exits with its exit status.
+Otherwise
+.Dv SIGHUP
+is sent to the job, which by convention causes a daemon to re-read its
+configuration without dropping connections.
+The job must be in the
+.Dv running
+or
+.Dv completed
+state.
+.It Cm check Ar label
+Run the unit's
+.Va check_arguments
+command, which tests the configuration without applying it, and print its
+output.
+.Nm
+exits with the command's exit status.
+The job does not have to be running.
+.It Cm resync Ar label
+Run the unit's
+.Va resync_arguments
+command, which brings the running service back in line with its
+configuration, for example by reloading firewall rules.
+The job must be running or completed.
+.It Cm enable Ar label
+Mark a job to start at boot by setting
+.Va \*(Lt rc_name \*(Gt _enable=YES
+in
+.Pa /etc/rc.conf
+via
+.Xr sysrc 8 .
+For unit jobs that do not have an rc_name the job's label is used.
+.It Cm disable Ar label
+Mark a job to not start at boot by setting
+.Va \*(Lt rc_name \*(Gt _enable=NO
+in
+.Pa /etc/rc.conf .
+Does not stop a currently running instance.
+.It Cm mask Ar label
+Unconditionally prevent a job from starting even as a dependency.
+Creates a placeholder file in
+.Pa /var/db/prowld/masked.d/ .
+A masked job cannot be started with
+.Cm start
+until it is unmasked.
+.It Cm unmask Ar label
+Remove a mask created by
+.Cm mask .
+The job must then be explicitly enabled or started if desired.
+.It Cm show Ar label
+Dump the effective configuration of a job as a JSON object.
+The output reflects all parsed unit-file fields and runtime defaults.
+Useful for verifying that a unit file was parsed correctly.
+.It Cm reload-config
+Rescan all unit directories and
+.Xr rc.d 8
+script directories for new or changed files,
+then rebuild the dependency graph.
+Running jobs are not stopped or restarted.
+Equivalent to sending
+.Dv SIGHUP
+to
+.Xr prowld 8
+directly.
+.It Cm shutdown
+Ask
+.Xr prowld 8
+to shut down, and wait until it has exited.
+It stops the jobs, and when
+.Xr prowld 8
+is the service manager of a jail it first runs
+.Pa /etc/rc.shutdown .
+Intended as the
+.Va exec.stop
+command of a jail whose
+.Va exec.start
+is
+.Pa /sbin/prowld ;
+see
+.Xr prowld 8 .
+It is refused when
+.Xr prowld 8
+is
+.Xr init 8 ,
+which must be stopped with
+.Xr shutdown 8
+or
+.Xr reboot 8 .
+.It Cm daemon-reexec
+Re-execute
+.Xr prowld 8
+in place without disturbing running services.
+Intended for upgrading the daemon binary while the system is live.
+The new process inherits all open file descriptors and job state.
+.It Cm dependencies Ar label
+Show the dependency list for a job.
+Each entry names the dependency and whether it is a hard
+.Pq Cm requires
+or soft
+.Pq Cm wants
+dependency.
+.It Cm graph Op Fl \-format Ns = Ns Ar fmt
+Emit the full service dependency graph.
+Without options, output is a human-readable edge table showing
+each job and its direct dependencies.
+With
+.Fl \-format Ns = Ns Ar dot ,
+output is Graphviz DOT format suitable for rendering with
+.Xr dot 1 .
+.It Cm logs Ar label Op Fl \-follow Op Fl \-lines Ns = Ns Ar N
+Display the captured log output for a job.
+Only available for jobs that write stdout or stderr to
+.Pa /var/log/prowld/jobs/ Ns Ar label Ns Pa .log .
+.Pp
+.Fl \-follow
+tails the file continuously, similar to
+.Xr tail 1
+.Fl f .
+Use
+.Ic ^C
+to stop following.
+.Fl \-lines Ns = Ns Ar N
+limits initial output to the last
+.Ar N
+lines; the default is 50.
+.El
+.Sh EXIT STATUS
+.Ex -std
+.Pp
+Additional exit codes:
+.Bl -tag -width "3" -compact
+.It 1
+Job not found or invalid label.
+.It 2
+Job is in a failed state and the operation could not be performed.
+.It 3
+Operation not permitted (insufficient privilege).
+.It 4
+.Xr prowld 8
+is not running or not responding on the control socket.
+.Nm
+gives up when
+.Xr prowld 8
+has not answered for 30 seconds.
+The operation may still be carried out.
+.El
+.Sh EXAMPLES
+List all loaded services:
+.Bd -literal -offset indent
+prowlctl list
+.Ed
+.Pp
+Show only failed services:
+.Bd -literal -offset indent
+prowlctl list --failed
+.Ed
+.Pp
+Start the SSH daemon:
+.Bd -literal -offset indent
+prowlctl start org.midnightbsd.sshd
+.Ed
+.Pp
+Enable a service at boot:
+.Bd -literal -offset indent
+prowlctl enable sshd
+.Ed
+.Pp
+Check detailed status, using short rc name:
+.Bd -literal -offset indent
+prowlctl status sshd
+.Ed
+.Pp
+Follow a service's log output:
+.Bd -literal -offset indent
+prowlctl logs org.midnightbsd.nginx --follow
+.Ed
+.Pp
+Render the dependency graph as a PDF:
+.Bd -literal -offset indent
+prowlctl graph --format=dot | dot -Tpdf -o deps.pdf
+.Ed
+.Pp
+Get machine-readable status for scripting:
+.Bd -literal -offset indent
+prowlctl --json status org.midnightbsd.sshd | jq .state
+.Ed
+.Pp
+Mask a unit to prevent it from ever starting:
+.Bd -literal -offset indent
+prowlctl mask org.midnightbsd.bluetooth
+.Ed
+.Sh DIAGNOSTICS
+.Bl -diag
+.It "prowld not running or socket unavailable"
+.Xr prowld 8
+is not started, or the control socket at
+.Pa /var/run/prowld/prowld.sock
+does not exist.
+Start prowld or check
+.Pa /var/log/prowld/prowld.log
+for startup errors.
+If prowld was started with a custom run directory via
+.Fl s ,
+the socket will be under that directory instead.
+.It "operation not permitted"
+The command requires root privilege.
+Re-run with
+.Xr su 1 ,
+.Xr doas 1 ,
+or
+.Xr sudo 8
+if installed.
+.It "job not found: \*(Ltlabel\*(Gt"
+No loaded job matches the given label or rc_name.
+Run
+.Cm prowlctl list
+to see all known jobs and confirm the spelling.
+If the unit file was recently added, run
+.Cm prowlctl reload-config
+first.
+.It "job is masked"
+The job has been masked with
+.Cm prowlctl mask
+and cannot be started.
+Use
+.Cm prowlctl unmask Ar label
+to remove the mask.
+.El
+.Sh FILES
+.Bl -tag -width "/var/log/prowld/jobs/<label>.log" -compact
+.It Pa /var/run/prowld/prowld.sock
+.Xr prowld 8
+control socket.
+If prowld was started with
+.Fl s Ar rundir ,
+the socket is at
+.Pa Ar rundir Ns /prowld.sock
+instead.
+.It Pa /var/db/prowld/masked.d/
+Directory of mask files created by
+.Cm prowlctl mask .
+.It Pa /var/log/prowld/jobs/ Ns Ar label Ns Pa .log
+Per-job log file, read by
+.Cm prowlctl logs .
+.It Pa /etc/rc.conf
+Modified by
+.Cm enable
+and
+.Cm disable
+via
+.Xr sysrc 8 .
+.El
+.Sh SEE ALSO
+.Xr doas 1 ,
+.Xr su 1 ,
+.Xr tail 1 ,
+.Xr dot 1 ,
+.Xr rc 8 ,
+.Xr service 8 ,
+.Xr sysrc 8 ,
+.Xr prowld 8
+.Sh HISTORY
+.Nm
+first appeared in MidnightBSD 4.1.
+.Sh AUTHORS
+.An Lucas Holt Aq Mt luke@MidnightBSD.org

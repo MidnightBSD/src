@@ -1,0 +1,21 @@
+# ipnat.unit - native prowld(8) unit for ipnat(8)
+#
+# Replaces the rc.d/ipnat shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with ipnat_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/ipnat.
+#
+# A oneshot: it loads the rules and exits.  "prowlctl stop ipnat" runs the
+# stop command (stop_arguments), which undoes what the start did.
+
+label = "org.midnightbsd.ipnat";
+description = "User interface to the NAT subsystem";
+type = "oneshot";
+rc_name = "ipnat";
+run_at_load = true;
+provides = ["ipnat"];
+required_files = ["@ipnat_rules@"];
+required_modules = ["ipl:ipfilter"];
+program = "@ipnat_program:-/sbin/ipnat@";
+arguments = ["-CF","-f","@ipnat_rules@","@ipnat_flags@"];
+stop_arguments = ["-F","-C"];
+reload_arguments = ["-CF","-f","@ipnat_rules@","@ipnat_flags@"];

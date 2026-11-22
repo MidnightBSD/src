@@ -1,0 +1,21 @@
+# syslogd.unit - native prowld(8) unit for syslogd(8)
+#
+# Replaces the rc.d/syslogd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with syslogd_enable in
+# rc.conf; syslogd_flags and altlog_proglist are honoured as in rc.d/syslogd.
+#
+# syslogd runs in the foreground (-F) so that prowld supervises it directly.
+# UCL has no multi-line array element, hence the escaped script below.
+
+label = "org.midnightbsd.syslogd";
+description = "System log daemon";
+type = "daemon";
+rc_name = "syslogd";
+run_at_load = true;
+keep_alive = true;
+provides = ["syslogd"];
+wants = ["mountcritremote", "FILESYSTEMS", "newsyslog", "netif"];
+required_files = ["/etc/syslog.conf"];
+before = ["SERVERS"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config syslogd\n\n# Transitional symlink for old binaries.\nif [ ! -L /dev/log ] && ! check_jail jailed; then\n    ln -sf /var/run/log /dev/log\nfi\nrm -f /var/run/log\n\n# Extra sockets for chrooted daemons that log via their own /var/run/log.\nsockfile=/var/run/syslogd.sockets\n( umask 022 ; : > $sockfile )\nfor _l in $altlog_proglist; do\n    eval _ldir=\\$\"$_l\"_chrootdir\n    if checkyesno \"$_l\"_enable && [ -n \"$_ldir\" ]; then\n        echo \"$_ldir/var/run/log\" >> $sockfile\n    fi\ndone\n_sockets=\nif [ -s $sockfile ]; then\n    echo /var/run/log >> $sockfile\n    for _s in $(cat $sockfile); do\n        _sockets=\"-l $_s $_sockets\"\n    done\nfi\n\nexec /usr/sbin/syslogd -F $_sockets $syslogd_flags", "syslogd"];

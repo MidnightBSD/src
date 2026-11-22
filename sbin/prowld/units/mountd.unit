@@ -1,0 +1,35 @@
+# mountd.unit - native prowld(8) unit for mountd(8)
+#
+# Replaces the rc.d/mountd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with mountd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/mountd.
+#
+# mountd always detaches from its parent and has no foreground mode.  The NFSv4
+# settings of rc.d/mountd are start_pre commands, and weak_mountd_authentication
+# and zfs_enable add their flags.  prowld finds the daemon through its pidfile,
+# and "prowlctl reload" sends it SIGHUP, which makes it reread /etc/exports.
+# Unlike rc.d/mountd it does not drop -n when nfsv4_server_only is also set.
+
+label = "org.midnightbsd.mountd";
+description = "Service remote NFS mount requests";
+type = "daemon";
+rc_name = "mountd";
+run_at_load = true;
+keep_alive = true;
+provides = ["mountd"];
+wants = ["NETWORKING", "rpcbind", "quota", "mountlate"];
+required_files = ["/etc/exports"];
+activates = ["!nfsv4_server_only rpcbind"];
+required_modules = ["nfsd"];
+pid_file = "/var/run/mountd.pid";
+stdout_path = "/dev/null";
+start_pre = [
+	["?nfsv4_server_only","/sbin/sysctl","vfs.nfsd.server_min_nfsvers=4"],
+	["?nfsv4_server_only","/sbin/sysctl","vfs.nfsd.server_max_nfsvers=4"],
+	["!nfsv4_server_only","?nfsv4_server_enable","/sbin/sysctl","vfs.nfsd.server_max_nfsvers=4"],
+	["!nfsv4_server_only","!nfsv4_server_enable","/sbin/sysctl","vfs.nfsd.server_max_nfsvers=3"],
+	["/bin/rm","-f","/var/db/mountdtab"],
+	["/usr/bin/touch","/var/db/mountdtab"]
+];
+program = "/usr/sbin/mountd";
+arguments = ["@mountd_flags@","@nfsv4_server_only?-R@","@weak_mountd_authentication?-n@","@zfs_enable?/etc/exports /etc/zfs/exports@"];

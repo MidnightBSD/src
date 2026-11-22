@@ -1,0 +1,564 @@
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
+ * Copyright (c) 2026 The MidnightBSD Project
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ */
+
+#ifndef PROWLD_H
+#define PROWLD_H
+
+#include <sys/types.h>
+#include <sys/queue.h>
+#include <sys/resource.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <time.h>
+
+/*
+ * Forward typedefs so prowl_socket_t can reference job_t and vice versa.
+ * The full struct bodies appear later in this file.
+ */
+typedef struct job job_t;
+typedef struct prowl_socket prowl_socket_t;
+
+/* A command of start_pre, start_post, stop_pre or stop_post: the program, then its arguments */
+#define PROWL_COND_LEN		48	/* "?name" before a dependency */
+#define PROWL_CMDS_MAX		8	/* commands in one list */
+#define PROWL_CMD_ARGS		16	/* words in one command */
+#define PROWL_CMD_PRE		0
+#define PROWL_CMD_POST		1
+#define PROWL_CMD_START_POST	2
+#define PROWL_CMD_STOP_PRE	3
+#define PROWL_CMD_LISTS		4
+typedef struct prowl_cmd {
+	char	       *argv[PROWL_CMD_ARGS];
+	int		argc;
+} prowl_cmd_t;
+
+/*
+ * Timer ident encoding (low 3 bits of job pointer).
+ * Assumes job_t pointers are at least 8-byte aligned.
+ */
+#define TIMER_MASK	7UL
+#define TIMER_THROTTLE	0UL
+#define TIMER_STOP	1UL
+#define TIMER_WATCHDOG	2UL
+#define NOTIFY_TMO	3UL
+#define TIMER_PERIODIC	4UL
+#define TIMER_BOOT_DELAY 5UL
+#define TIMER_CALENDAR_TICK 6UL
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#include <assert.h>
+/* Ensure the tagging trick is safe for this architecture */
+static_assert((__alignof__(struct job) & TIMER_MASK) == 0,
+    "struct job alignment insufficient for timer tagging");
+#endif
+
+/* String size limits */
+#define PROWL_LABEL_MAX		256
+#define PROWL_PATH_MAX		1024
+#define PROWL_DESC_MAX		512
+#define PROWL_PROVIDES_MAX	16
+#define PROWL_DEPS_MAX		32
+#define PROWL_REQFILES_MAX	8
+#define PROWL_ARGS_MAX		64
+
+#define PROWL_MODULES_MAX	8
+#define PROWL_MODULE_LEN	96
+
+/* Commands a unit can define besides start and stop. */
+#define PROWL_ACTION_NONE	0
+#define PROWL_ACTION_RELOAD	1
+#define PROWL_ACTION_CHECK	2
+#define PROWL_ACTION_RESYNC	3
+#define PROWL_ACTION_MAX	4
+#define PROWL_ACTION_OUT_MAX	8192	/* output kept from a command */
+#define PROWL_ACTION_TIMEOUT	30	/* seconds a command may run */
+#define PROWL_ENV_MAX		64
+#define PROWL_GROUPS_MAX	32
+
+/* Runtime paths */
+#define PROWLD_SOCK_PATH	"/var/run/prowld/prowld.sock"
+#define PROWLD_PID_PATH		"/var/run/prowld/prowld.pid"
+#define PROWLD_RUN_DIR		"/var/run/prowld"
+#define PROWLD_NOTIFY_DIR	"/var/run/prowld/notify"
+#define PROWLD_CONF_PATH	"/etc/prowld/prowld.conf"
+#define PROWLD_MASK_DIR		"/var/db/prowld/masked.d"
+#define PROWLD_DB_DIR		"/var/db/prowld"
+#define PROWLD_TIMER_STATE_PATH	"/var/db/prowld/timers.state"
+#define PROWLD_LOG_DIR		"/var/log/prowld"
+#define PROWLD_JOB_LOG_DIR	"/var/log/prowld/jobs"
+
+/* Unit file directories (searched in order; later overrides earlier) */
+#define PROWL_INSTANCE_MAX	64	/* longest template instance name */
+#define UNIT_FILE_MAX		(256 * 1024)	/* largest template file */
+#define UNIT_DIR_BASE		"/etc/prowld/units.d"
+#define UNIT_DIR_LOCAL		"/usr/local/etc/prowld/units.d"
+#define UNIT_DIR_OVERRIDE	"/etc/prowld/overrides.d"
+#define UNIT_DIR_GENERATED	"/var/run/prowld/generated.d"
+
+/*
+ * Any persistent state files (e.g., timer state) MUST be written atomically:
+ *   write to <path>.tmp -> fsync -> rename(<path>.tmp, <path>)
+ */
+
+/* rc.d script directories */
+#define RCD_DIR_BASE		"/etc/rc.d"
+#define RCD_DIR_LOCAL		"/usr/local/etc/rc.d"
+
+/* rc.conf paths */
+#define RCCONF_PATH		"/etc/rc.conf"
+#define RCCONF_LOCAL_PATH	"/etc/rc.conf.local"
+
+/* Default concurrency: overridden by prowld.conf */
+#define DEFAULT_MAX_STARTS	0	/* 0 = auto (ncpu*2) */
+#define DEFAULT_SHUTDOWN_TMO	300	/* seconds */
+#define DEFAULT_THROTTLE_INT	10	/* seconds */
+#define PROWL_READY_DELAY	1	/* seconds until a daemon is "up" */
+#define PROWL_ADOPT_TRIES	50	/* looks for a forked daemon */
+#define PROWL_ADOPT_MS		200	/* between those looks */
+#define PROWL_PIDNAME_LEN	32	/* process name of a forked daemon */
+#define PROWL_SKIP_MAX		16	/* same-named processes ignored */
+#define DEFAULT_EXIT_TIMEOUT	20	/* seconds */
+
+/* IPC */
+#define IPC_MAX_CLIENTS		32
+#define IPC_MSG_MAX		65536	/* max JSON request size */
+#define IPC_REPLY_MAX		(4 * 1024 * 1024) /* max JSON reply size */
+
+/* Job types */
+typedef enum {
+	JOB_TYPE_DAEMON  = 0,
+	JOB_TYPE_ONESHOT = 1,
+	JOB_TYPE_TIMER   = 2,
+	JOB_TYPE_SOCKET  = 3,
+	JOB_TYPE_RCSHIM  = 4,
+} job_type_t;
+
+/* Job states */
+typedef enum {
+	JOB_STATE_UNKNOWN   = 0,
+	JOB_STATE_LOADED    = 1,
+	JOB_STATE_DISABLED  = 2,
+	JOB_STATE_MASKED    = 3,
+	JOB_STATE_STARTING  = 4,
+	JOB_STATE_RUNNING   = 5,
+	JOB_STATE_STOPPING  = 6,
+	JOB_STATE_STOPPED   = 7,
+	JOB_STATE_FAILED    = 8,
+	JOB_STATE_COMPLETED = 9,	/* oneshots only */
+} job_state_t;
+
+/* Notify types */
+typedef enum {
+	NOTIFY_NONE   = 0,
+	NOTIFY_NOTIFY = 1,
+} notify_type_t;
+
+/* Socket activation */
+#define PROWL_SOCK_NAME_MAX	64
+#define PROWL_SOCKETS_MAX	8
+
+struct prowl_socket {
+	char	name[PROWL_SOCK_NAME_MAX]; /* key from unit file sockets block */
+	char	path[PROWL_PATH_MAX];      /* AF_UNIX socket path */
+	char	host[256];                 /* bind host for inet sockets */
+	int	port;                      /* TCP/UDP port; 0 = AF_UNIX */
+	int	socktype;                  /* SOCK_STREAM or SOCK_DGRAM */
+	int	family;                    /* AF_UNIX, AF_INET, AF_INET6 */
+	int	backlog;                   /* listen backlog (0 = SOMAXCONN) */
+	int	fd;                        /* bound fd; -1 = not yet bound */
+	job_t  *job;                       /* owning job (back-pointer) */
+};
+
+/* Calendar schedule (cron-like) */
+typedef struct calendar_schedule {
+	int	minute;		/* 0-59, or -1 for any */
+	int	hour;		/* 0-23, or -1 for any */
+	int	day;		/* 1-31, or -1 for any */
+	int	month;		/* 1-12, or -1 for any */
+	int	weekday;	/* 0-6 (Sun-Sat), or -1 for any */
+} calendar_schedule_t;
+
+/* Job schedule configuration */
+typedef struct schedule {
+	int			interval;	/* periodic interval in seconds */
+	int			on_boot_delay;	/* delay after boot in seconds */
+	bool			persistent;	/* catch up if missed */
+	calendar_schedule_t	calendar;
+	bool			has_calendar;
+} schedule_t;
+
+/* Keep-alive policy */
+typedef struct keep_alive {
+	bool	always;			/* always restart */
+	bool	crashed;		/* restart on non-zero exit */
+	bool	successful_exit;	/* restart even on clean exit */
+} keep_alive_t;
+
+/* Resource limits */
+typedef struct rlimits {
+	bool		set_nofile;
+	rlim_t		nofile;
+	bool		set_nproc;
+	rlim_t		nproc;
+} rlimits_t;
+
+/* mDNS discovery configuration */
+typedef struct mdns_config {
+	bool	register_service;
+	char	name[PROWL_LABEL_MAX];
+	char	type[64];
+	int	port;
+	char	domain[64];
+	char   *txt_record[PROWL_ENV_MAX]; /* Reuse PROWL_ENV_MAX for simple KV list */
+	int	txt_count;
+} mdns_config_t;
+
+/* Dependency entry */
+typedef struct dep_entry {
+	char	name[PROWL_LABEL_MAX];
+	bool	hard;		/* true = requires, false = wants */
+	bool	activate;	/* start the provider if it is disabled */
+	bool	derived;	/* added for another job's "before" */
+	char	cond[PROWL_COND_LEN];	/* only when this holds, or "" */
+} dep_entry_t;
+
+/* Job structure (forward-declared as job_t above) */
+struct job {
+	/* Identity */
+	char		label[PROWL_LABEL_MAX];
+	char		description[PROWL_DESC_MAX];
+	job_type_t	type;
+	char		rc_name[PROWL_LABEL_MAX];
+
+	/* Execution */
+	char		program[PROWL_PATH_MAX];
+	char	       *arguments[PROWL_ARGS_MAX];
+	int		argc;
+	char	       *stop_arguments[PROWL_ARGS_MAX];
+	int		stop_argc;
+	/* reload, check and resync commands, indexed by PROWL_ACTION_* */
+	char	       *action_args[PROWL_ACTION_MAX][PROWL_ARGS_MAX];
+	int		action_argc[PROWL_ACTION_MAX];
+	int		action;		/* command being run in the child */
+	/* start_pre and stop_post, indexed by PROWL_CMD_* */
+	prowl_cmd_t	cmds[PROWL_CMD_LISTS][PROWL_CMDS_MAX];
+	int		cmd_count[PROWL_CMD_LISTS];
+	const prowl_cmd_t *run_cmd;	/* stop_post command in the child */
+	char	       *envp[PROWL_ENV_MAX];
+	int		envc;
+	char		working_directory[PROWL_PATH_MAX];
+	char		root_directory[PROWL_PATH_MAX];
+
+	/* Privilege */
+	char		user[64];
+	char		group[64];
+	mode_t		umask_val;
+	bool		umask_set;
+
+	/* Pre-resolved privilege info (set in parent before fork) */
+	uid_t		run_uid;
+	gid_t		run_gid;
+	gid_t		run_groups[PROWL_GROUPS_MAX];
+	int		run_ngroups;
+	bool		run_priv_set;
+
+	/* Lifecycle */
+	bool		run_at_load;
+	keep_alive_t	keep_alive;
+	int		throttle_interval;
+	int		exit_timeout;
+
+	/* Dependencies */
+	dep_entry_t	deps[PROWL_DEPS_MAX];	/* requires + wants merged */
+	int		deps_count;
+	char		before[PROWL_DEPS_MAX][PROWL_LABEL_MAX];
+	int		before_count;
+	char		after[PROWL_DEPS_MAX][PROWL_LABEL_MAX];
+	int		after_count;
+	char		conflicts[PROWL_DEPS_MAX][PROWL_LABEL_MAX];
+	int		conflicts_count;
+	char		provides[PROWL_PROVIDES_MAX][PROWL_LABEL_MAX];
+	int		provides_count;
+
+	/*
+	 * A daemon that forks and lets its parent exit: where to find the
+	 * process that stays, and the signal that stops it (0 = SIGTERM).
+	 */
+	char		pid_file[PROWL_PATH_MAX];
+	char		pid_name[PROWL_PIDNAME_LEN];
+	int		stop_signal;
+	pid_t		skip_pids[PROWL_SKIP_MAX];	/* there before start */
+	int		skip_count;
+
+	/* Files that must be readable before the job is started */
+	char		required_files[PROWL_REQFILES_MAX][PROWL_PATH_MAX];
+	int		required_files_count;
+	char		required_modules[PROWL_MODULES_MAX][PROWL_MODULE_LEN];
+	int		required_modules_count;
+
+	/* I/O */
+	char		stdin_path[PROWL_PATH_MAX];
+	char		stdout_path[PROWL_PATH_MAX];
+	char		stderr_path[PROWL_PATH_MAX];
+
+	/* Resources */
+	int		nice_val;
+	rlimits_t	rlimits;
+
+	/* Notification */
+	notify_type_t	notify_type;
+	int		watchdog_sec;
+	int		notify_fd;
+
+	/* mDNS Discovery */
+	mdns_config_t	mdns;
+	pid_t		mdns_pid;
+	time_t		mdns_last_register;
+
+	/* Shutdown */
+	bool		shutdown_wait;
+
+	/* rc-shim specific */
+	char		rcshim_path[PROWL_PATH_MAX];
+	char		shim_pidfile[PROWL_PATH_MAX]; /* of its daemon */
+
+	/* Runtime state */
+	job_state_t	state;
+	pid_t		pid;
+	int		last_exit_status;
+	int		restart_count;
+	time_t		started_at;
+	time_t		exited_at;
+	char		status_msg[256];
+
+	/* Enable state (from rc.conf) */
+	bool		enabled;
+
+	/* DAG bookkeeping */
+	int		dag_indegree;
+	bool		dag_visited;
+	bool		dag_in_stack;
+	char		dag_ignored[8][PROWL_LABEL_MAX]; /* waits dropped */
+	int		dag_ignored_count;
+	job_t		*dag_parent;	/* job that led the search here */
+	int		dag_parent_idx;	/* its deps[] entry for this job */
+
+	/* Timer tracking */
+	bool		throttle_timer_active;
+	bool		restart_hold;	/* waiting out a restart back-off */
+	bool		launcher;	/* pid forks the daemon */
+	bool		adopting;	/* looking for the forked daemon */
+	int		adopt_tries;
+	bool		rc_stopping;	/* rc-shim running its "stop" */
+	bool		restart_after_stop;	/* restart: start once stopped */
+	int		quick_fails;	/* consecutive short runs */
+	bool		stop_timer_active;
+	bool		watchdog_timer_active;
+	time_t		watchdog_last_ping;
+
+	/* Socket activation */
+	prowl_socket_t	sockets[PROWL_SOCKETS_MAX];
+	int		sockets_count;
+	bool		socket_activated;	/* daemon has been fork+exec'd */
+
+	/* Activation triggers */
+	schedule_t	schedule;
+	time_t		last_run;
+
+	TAILQ_ENTRY(job) entries;
+};
+
+TAILQ_HEAD(job_list, job);
+
+/* IPC client state */
+typedef struct ipc_client {
+	int		fd;
+	char		buf[IPC_MSG_MAX];
+	size_t		buf_used;
+	bool		active;
+	uid_t		peer_uid;	/* from getpeereid(2) at accept time */
+	gid_t		peer_gid;
+	
+	/* Subscriptions */
+	bool		is_subscriber;
+	char		event_filter[PROWL_LABEL_MAX];
+
+	/*
+	 * Pending output.  Whole frames (4-byte length + JSON) are appended
+	 * to out and drained from out_off; EVFILT_WRITE is armed only while
+	 * data is left over because the socket buffer was full.
+	 */
+	char		*out;
+	size_t		out_len;	/* bytes queued in out */
+	size_t		out_off;	/* bytes of out already sent */
+	bool		want_write;	/* EVFILT_WRITE registered */
+} ipc_client_t;
+
+/* Prowld daemon configuration */
+typedef struct prowld_config {
+	int	max_concurrent_starts;
+	int	shutdown_timeout;
+	bool	debug;
+} prowld_config_t;
+
+/* ---- Global state (defined in prowld.c) ---- */
+extern struct job_list	 g_jobs;
+extern prowld_config_t	 g_config;
+extern int		 g_kqueue_fd;
+extern volatile bool	 g_shutdown;
+extern volatile bool	 g_reload;
+extern int		 g_current_starts;
+extern bool		 g_is_init;		/* running as PID 1 */
+extern bool		 g_jailed;		/* running inside a jail */
+extern bool		 g_reaper;		/* orphaned descendants are ours */
+extern bool		 g_rundown;		/* rc.shutdown is running */
+extern bool		 g_fastboot;		/* no "autoboot": skip fsck */
+extern bool		 g_boot_mode;		/* we run rc.d */
+
+/*
+ * Runtime path globals.  Defaults match the compile-time macros but may be
+ * overridden by the -s flag or auto-detected fallback on read-only media.
+ * All code must use these globals rather than the macro constants directly.
+ */
+extern char		 g_run_dir[PROWL_PATH_MAX];
+extern char		 g_notify_dir[PROWL_PATH_MAX];
+extern char		 g_sock_path[PROWL_PATH_MAX];
+extern char		 g_pid_path[PROWL_PATH_MAX];
+extern char		 g_db_dir[PROWL_PATH_MAX];
+extern char		 g_mask_dir[PROWL_PATH_MAX];
+extern char		 g_log_dir[PROWL_PATH_MAX];
+extern char		 g_job_log_dir[PROWL_PATH_MAX];
+extern char		 g_generated_dir[PROWL_PATH_MAX];
+extern char		 g_unit_override[PROWL_PATH_MAX];
+
+/* ---- IPC state (defined in ipc.c) ---- */
+extern int		 ipc_listen_fd;
+
+/* ---- job.c ---- */
+job_t		*job_alloc(void);
+void		 job_free(job_t *);
+job_t		*job_find_by_label(const char *);
+job_t		*job_find_by_rcname(const char *);
+job_t		*job_find_instance(const char *);
+job_t		*job_find_by_provides(const char *);
+bool		 job_provides(const job_t *, const char *);
+void		 job_set_state(job_t *, job_state_t);
+const char	*job_state_str(job_state_t);
+const char	*job_type_str(job_type_t);
+bool		 job_is_masked(const job_t *);
+bool		 job_dep_satisfied(const job_t *, const dep_entry_t *);
+bool		 job_all_deps_satisfied(const job_t *);
+bool		 job_activations_pending(const job_t *);
+bool		 label_valid(const char *);
+int		 prowl_cmd_first(const prowl_cmd_t *);
+bool		 prowl_cond_holds(const char *, const char *);
+bool		 prowl_is_cond(const char *);
+pid_t		 supervisor_shim_pid(const job_t *);
+
+/* ---- unit.c ---- */
+int	unit_load_dir(const char *);
+int	unit_load_file(const char *);
+job_t	*unit_instantiate(const char *);
+
+/* ---- rcshim.c ---- */
+int	rcshim_scan_dir(const char *);
+bool	rcconf_is_enabled(const char *, bool);
+bool	rcconf_var_is_enabled(const char *, bool);
+bool	rcconf_var_get(const char *, char *, size_t);
+bool	rcconf_job_var(const char *, const char *, char *, size_t);
+bool	rcconf_value_yes(const char *);
+int	rcconf_expand(const char *, const char *, char *, size_t);
+int	rcconf_expand_args(const char *, char *const *, int, char **, int);
+
+/* ---- pid1.c ---- */
+void	pid1_mount_devfs(bool);
+void	pid1_open_console(void);
+void	pid1_shutdown(int) __dead2;
+void	pid1_single_user(void) __dead2;
+int	pid1_load_ttys(void);
+int	boot_run_rundown(const char *);
+void	pid1_init_exec(void);
+int	pid1_init_script(void);
+void	pid1_init_chroot(void);
+void	pid1_rescan_ttys(void);
+void	pid1_reroot(void) __dead2;
+void	pid1_reroot_phase_two(void) __dead2;
+void	pid1_reroot_cleanup(void);
+
+/* ---- dag.c ---- */
+int	dag_build(void);
+void	dag_schedule_ready(void);
+bool	dag_activate(job_t *);
+
+/* ---- supervisor.c ---- */
+void	supervisor_init(void);
+void	prowl_reset_signals(void);
+void	timer_state_load(void);
+void	timer_state_save(void);
+int	supervisor_start(job_t *);
+int	supervisor_stop(job_t *, bool);
+int	supervisor_signal(job_t *, int);
+int	supervisor_run_action(job_t *, int, char *, size_t, int *);
+void	supervisor_reap(pid_t, int);
+void	supervisor_handle_throttle(job_t *);
+void	supervisor_handle_stop_timeout(job_t *);
+void	supervisor_handle_watchdog(job_t *);
+void	supervisor_handle_notify(job_t *);
+void	supervisor_handle_notify_timeout(job_t *);
+void	supervisor_handle_periodic(job_t *);
+void	supervisor_handle_boot_delay(job_t *);
+void	supervisor_handle_calendar_tick(void);
+
+/* ---- timer arming ---- */
+void	arm_periodic_timer(job_t *);
+void	arm_boot_delay_timer(job_t *);
+
+void	supervisor_handle_notify_timeout(job_t *);
+void	supervisor_socket_activate(job_t *);
+void	supervisor_shutdown_all(void);
+
+/* ---- socket_activation.c ---- */
+int	socket_bind_all(job_t *);
+void	socket_handle_activation(prowl_socket_t *);
+void	socket_rearm(job_t *);
+void	socket_close_all(job_t *);
+
+/* ---- ipc.c ---- */
+int	ipc_init(void);
+void	ipc_shutdown(void);
+void	ipc_accept(void);
+void	ipc_read_client(int);
+void	ipc_write_ready(int);
+void	ipc_close_client(int);
+void	ipc_broadcast_event(const char *, const char *, const char *);
+
+/* ---- logger ---- */
+void	prowl_log(int, const char *, ...)
+    __attribute__((format(printf, 2, 3)));
+
+#endif /* PROWLD_H */

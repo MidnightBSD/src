@@ -1,0 +1,24 @@
+# iscsid.unit - native prowld(8) unit for iscsid(8)
+#
+# Replaces the rc.d/iscsid shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with iscsid_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/iscsid.
+#
+# iscsid stays in the foreground only in debug mode (-d), so its log output,
+# which goes to stderr, is discarded and it logs nothing.
+
+label = "org.midnightbsd.iscsid";
+description = "iSCSI initiator daemon";
+type = "daemon";
+rc_name = "iscsid";
+run_at_load = true;
+keep_alive = true;
+nojail = true;
+provides = ["iscsid"];
+wants = ["NETWORK"];
+before = ["DAEMON"];
+required_modules = ["iscsi"];
+program = "/usr/sbin/iscsid";
+arguments = ["-d","-P","/var/run/iscsid.pid","@iscsid_flags@"];
+standard_out_path = "/dev/null";
+standard_error_path = "/dev/null";
