@@ -465,6 +465,7 @@ bool		 job_dep_satisfied(const job_t *, const dep_entry_t *);
 bool		 job_all_deps_satisfied(const job_t *);
 bool		 job_activations_pending(const job_t *);
 bool		 label_valid(const char *);
+int		 prowl_cmd_first(const prowl_cmd_t *);
 
 /* ---- unit.c ---- */
 int	unit_load_dir(const char *);
@@ -477,6 +478,7 @@ bool	rcconf_is_enabled(const char *, bool);
 bool	rcconf_var_is_enabled(const char *, bool);
 bool	rcconf_var_get(const char *, char *, size_t);
 bool	rcconf_job_var(const char *, const char *, char *, size_t);
+bool	rcconf_value_yes(const char *);
 int	rcconf_expand(const char *, const char *, char *, size_t);
 int	rcconf_expand_args(const char *, char *const *, int, char **, int);
 

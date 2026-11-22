@@ -660,7 +660,8 @@ static int
 cmd_build(const job_t *job, const prowl_cmd_t *c, char *program, size_t psz,
     char **argv, bool *ignore)
 {
-	const char *p = c->argv[0];
+	int first = prowl_cmd_first(c);
+	const char *p = c->argv[first];
 	int n;
 
 	*ignore = false;
@@ -670,13 +671,44 @@ cmd_build(const job_t *job, const prowl_cmd_t *c, char *program, size_t psz,
 	}
 	if (rcconf_expand(job->rc_name, p, program, psz) == -1)
 		return (-1);
-	n = rcconf_expand_args(job->rc_name, c->argv + 1, c->argc - 1,
-	    &argv[1], PROWL_ARGS_MAX);
+	n = rcconf_expand_args(job->rc_name, c->argv + first + 1,
+	    c->argc - first - 1, &argv[1], PROWL_ARGS_MAX);
 	if (n == -1)
 		return (-1);
 	argv[0] = program;
 	argv[1 + n] = NULL;
 	return (0);
+}
+
+/*
+ * Do the conditions in front of a command hold?  See prowl_cmd_first().
+ */
+static bool
+cmd_enabled(const job_t *job, const prowl_cmd_t *c)
+{
+	char val[256];
+	int i, first = prowl_cmd_first(c);
+
+	for (i = 0; i < first; i++) {
+		val[0] = '\0';
+		(void)rcconf_job_var(job->rc_name, c->argv[i] + 1, val,
+		    sizeof(val));
+		switch (c->argv[i][0]) {
+		case '?':
+			if (!rcconf_value_yes(val))
+				return (false);
+			break;
+		case '!':
+			if (rcconf_value_yes(val))
+				return (false);
+			break;
+		case '+':
+			if (val[0] == '\0')
+				return (false);
+			break;
+		}
+	}
+	return (true);
 }
 
 /*
@@ -694,6 +726,8 @@ run_start_pre(const job_t *job, char *const *envp)
 	int i, st;
 
 	for (i = 0; i < job->cmd_count[PROWL_CMD_PRE]; i++) {
+		if (!cmd_enabled(job, &job->cmds[PROWL_CMD_PRE][i]))
+			continue;
 		if (cmd_build(job, &job->cmds[PROWL_CMD_PRE][i], program,
 		    sizeof(program), argv, &ignore) == -1) {
 			syslog(LOG_ERR, "prowld: %s: cannot expand start_pre",
@@ -1285,6 +1319,8 @@ supervisor_stop_post(job_t *job)
 	resolve_job_privileges(job);
 	for (i = 0; i < job->cmd_count[PROWL_CMD_POST]; i++) {
 		c = &job->cmds[PROWL_CMD_POST][i];
+		if (!cmd_enabled(job, c))
+			continue;
 		pid = fork();
 		if (pid == -1) {
 			prowl_log(LOG_ERR, "fork %s: %m", job->label);
@@ -1310,7 +1346,8 @@ supervisor_stop_post(job_t *job)
 				break;
 			if (time(NULL) >= deadline) {
 				prowl_log(LOG_WARNING, "job %s: stop_post %s "
-				    "timed out", job->label, c->argv[0]);
+				    "timed out", job->label,
+				    c->argv[prowl_cmd_first(c)]);
 				kill(pid, SIGKILL);
 				while (waitpid(pid, &st, 0) == -1 &&
 				    errno == EINTR)
@@ -1320,10 +1357,10 @@ supervisor_stop_post(job_t *job)
 			}
 			nanosleep(&ts, NULL);
 		}
-		if (c->argv[0][0] != '-' &&
+		if (c->argv[prowl_cmd_first(c)][0] != '-' &&
 		    !(WIFEXITED(st) && WEXITSTATUS(st) == 0))
 			prowl_log(LOG_WARNING, "job %s: stop_post %s failed",
-			    job->label, c->argv[0]);
+			    job->label, c->argv[prowl_cmd_first(c)]);
 	}
 }
 

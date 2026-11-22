@@ -309,6 +309,24 @@ job_all_deps_satisfied(const job_t *job)
 }
 
 /*
+ * A start_pre or stop_post command may begin with conditions: "?name" (the
+ * rc.conf variable is YES), "!name" (it is not) or "+name" (it is not empty).
+ * Returns the index of the program, after the conditions.
+ */
+int
+prowl_cmd_first(const prowl_cmd_t *c)
+{
+	int i;
+
+	for (i = 0; i < c->argc; i++) {
+		if (c->argv[i][0] != '?' && c->argv[i][0] != '!' &&
+		    c->argv[i][0] != '+')
+			break;
+	}
+	return (i);
+}
+
+/*
  * Validate a job label or rc_name against the allowed character set:
  * alphanumerics, dots, hyphens, underscores; no path separators, NUL
  * bytes, leading dots, or ".." components.

@@ -661,6 +661,63 @@ activates_cleanup()
 	pkill -KILL -f "sleep 300" 2>/dev/null || true
 }
 
+atf_test_case conditions cleanup
+conditions_head()
+{
+	atf_set descr "conditions in front of a start_pre or stop_post command"
+	atf_set require.user root
+}
+conditions_body()
+{
+	dir="$(pwd)"
+	mkdir -p units /etc/rc.conf.d
+	cat >/etc/rc.conf.d/prowlctl_test_cond <<EOF
+cond_yes="YES"
+cond_no="NO"
+cond_val="x"
+EOF
+	cat >units/cd.unit <<EOF
+{"label": "org.test.cd", "rc_name": "prowlctl_test_cond",
+ "type": "daemon", "program": "/bin/sleep", "arguments": ["300"],
+ "start_pre": [
+   ["?cond_yes", "/bin/sh", "-c", "echo a >> ${dir}/log"],
+   ["?cond_no", "/bin/sh", "-c", "echo b >> ${dir}/log"],
+   ["!cond_no", "/bin/sh", "-c", "echo c >> ${dir}/log"],
+   ["!cond_yes", "/bin/sh", "-c", "echo d >> ${dir}/log"],
+   ["+cond_val", "?cond_yes", "!nosuch_cd", "/bin/sh", "-c", "echo e >> ${dir}/log"],
+   ["+nosuch_cd", "/bin/sh", "-c", "echo f >> ${dir}/log"]],
+ "stop_post": [
+   ["?cond_no", "/bin/sh", "-c", "echo g >> ${dir}/log"],
+   ["!cond_no", "/bin/sh", "-c", "echo h >> ${dir}/log"]],
+ "run_at_load": true}
+EOF
+	cat >units/ce.unit <<EOF
+{"label": "org.test.ce", "rc_name": "prowlctl_test_cond",
+ "type": "daemon", "program": "/bin/sleep", "arguments": ["300"],
+ "start_pre": [["?", "/bin/true"]], "run_at_load": true}
+EOF
+	cat >units/cf.unit <<EOF
+{"label": "org.test.cf", "rc_name": "prowlctl_test_cond",
+ "type": "daemon", "program": "/bin/sleep", "arguments": ["300"],
+ "start_pre": [["?cond_yes"]], "run_at_load": true}
+EOF
+	start_prowld
+	wait_state org.test.cd running
+	atf_check -o inline:"a\nc\ne\n" cat log
+	atf_check -o ignore ${CTL} stop org.test.cd
+	wait_state org.test.cd stopped
+	atf_check -o inline:"a\nc\ne\nh\n" cat log
+	# An empty condition, or a command that is only conditions, is refused.
+	atf_check -s not-exit:0 -e ignore -o ignore ${CTL} status org.test.ce
+	atf_check -s not-exit:0 -e ignore -o ignore ${CTL} status org.test.cf
+}
+conditions_cleanup()
+{
+	stop_prowld
+	rm -f /etc/rc.conf.d/prowlctl_test_cond
+	pkill -KILL -f "sleep 300" 2>/dev/null || true
+}
+
 atf_test_case templates cleanup
 templates_head()
 {
@@ -702,6 +759,7 @@ templates_cleanup()
 
 atf_init_test_cases()
 {
+	atf_add_test_case conditions
 	atf_add_test_case activates
 	atf_add_test_case pre_post
 	atf_add_test_case forking

@@ -517,6 +517,14 @@ rcconf_var_get(const char *varname, char *buf, size_t sz)
 	return (rcconf_scan(files, varname, buf, sz));
 }
 
+/* True for the values rc.subr's checkyesno takes as yes */
+bool
+rcconf_value_yes(const char *val)
+{
+	return (strcasecmp(val, "yes") == 0 || strcasecmp(val, "true") == 0 ||
+	    strcasecmp(val, "on") == 0 || strcmp(val, "1") == 0);
+}
+
 /*
  * As rcconf_var_get(), but also read the per-service files that
  * load_rc_config() reads: rc.conf.d/<rc_name> under /etc and
@@ -620,10 +628,7 @@ rcconf_expand(const char *rc_name, const char *in, char *out, size_t outsz)
 			    (size_t)(end - (sep + 2))))
 				return (-1);
 		} else if (sep[0] == '?') {
-			if ((strcasecmp(val, "yes") == 0 ||
-			    strcasecmp(val, "true") == 0 ||
-			    strcasecmp(val, "on") == 0 ||
-			    strcmp(val, "1") == 0) &&
+			if (rcconf_value_yes(val) &&
 			    !append_str(out, outsz, &len, sep + 1,
 			    (size_t)(end - (sep + 1))))
 				return (-1);

@@ -241,6 +241,17 @@ A
 .Dq -
 in front of the program means that a failure of the command is ignored.
 .Pp
+A command may begin with conditions on
+.Xr rc.conf 5
+variables, before the program:
+.Dq ?name
+runs it only if the variable is YES, TRUE, ON or 1,
+.Dq !name
+only if it is not, and
+.Dq +name
+only if it is not empty.
+All the conditions must hold.
+.Pp
 The
 .Va start_pre
 commands run one after the other in the process that is about to execute the

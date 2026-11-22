@@ -478,6 +478,7 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 		const ucl_object_t *cmdobj, *word;
 		ucl_object_iter_t wit;
 		size_t k;
+		int d;
 
 		for (k = 0; k < sizeof(lists) / sizeof(lists[0]); k++) {
 			int l = lists[k].list;
@@ -518,7 +519,19 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 					c->argc++;
 				}
 				job->cmd_count[l]++;
-				p = c->argc > 0 ? c->argv[0] : "";
+				for (d = 0; d < prowl_cmd_first(c); d++) {
+					if (c->argv[d][1] == '\0')
+						break;
+				}
+				if (d < prowl_cmd_first(c)) {
+					prowl_log(LOG_ERR, "%s: empty "
+					    "condition in %s", job->label,
+					    lists[k].key);
+					job_free(job);
+					return (NULL);
+				}
+				d = prowl_cmd_first(c);
+				p = d < c->argc ? c->argv[d] : "";
 				if (*p == '-')
 					p++;
 				if (*p != '/' && *p != '@') {
