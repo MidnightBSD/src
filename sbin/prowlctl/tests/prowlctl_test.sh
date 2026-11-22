@@ -643,7 +643,22 @@ EOF
  "type": "daemon", "program": "/bin/sleep", "arguments": ["300"],
  "activates": ["act_nosuch"], "run_at_load": true}
 EOF
+	# Enabled in rc.conf but not started at boot: it is started too.
+	mkdir -p /etc/rc.conf.d
+	echo 'prowlctl_test_b3_enable="YES"' >/etc/rc.conf.d/prowlctl_test_b3
+	cat >units/b3.unit <<EOF
+{"label": "org.test.b3", "rc_name": "prowlctl_test_b3",
+ "type": "daemon", "program": "/bin/sleep", "arguments": ["300"],
+ "provides": ["act_b3"], "run_at_load": false}
+EOF
+	cat >units/u4.unit <<EOF
+{"label": "org.test.u4", "rc_name": "prowlctl_test_u4",
+ "type": "daemon", "program": "/bin/sleep", "arguments": ["300"],
+ "activates": ["act_b3"], "run_at_load": true}
+EOF
 	start_prowld
+	wait_state org.test.b3 running
+	wait_state org.test.u4 running
 	# At boot: the disabled service is started, then the one that needs it.
 	wait_state org.test.b1 running
 	wait_state org.test.u1 running
@@ -657,6 +672,7 @@ EOF
 }
 activates_cleanup()
 {
+	rm -f /etc/rc.conf.d/prowlctl_test_b3
 	stop_prowld
 	pkill -KILL -f "sleep 300" 2>/dev/null || true
 }

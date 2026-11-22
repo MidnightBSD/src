@@ -227,14 +227,23 @@ dag_activate(job_t *job)
 		p = job_find_by_provides(job->deps[i].name);
 		if (p == NULL)
 			p = job_find_by_label(job->deps[i].name);
-		if (p == NULL || p == job || p->type == JOB_TYPE_RCSHIM ||
-		    p->state != JOB_STATE_DISABLED)
+		if (p == NULL || p == job || p->type == JOB_TYPE_RCSHIM)
 			continue;
+		/*
+		 * A provider that is disabled is enabled; one that is enabled
+		 * but not started at boot (run_at_load is false) is started.
+		 */
+		if (p->state == JOB_STATE_DISABLED) {
+			p->enabled = true;
+			p->run_at_load = true;
+			job_set_state(p, JOB_STATE_LOADED);
+		} else if (p->state == JOB_STATE_LOADED && !p->run_at_load) {
+			p->run_at_load = true;
+		} else {
+			continue;
+		}
 		prowl_log(LOG_NOTICE, "%s activates %s", job->label,
 		    p->label);
-		p->enabled = true;
-		p->run_at_load = true;
-		job_set_state(p, JOB_STATE_LOADED);
 		any = true;
 	}
 	return (any);

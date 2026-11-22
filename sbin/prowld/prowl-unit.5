@@ -309,7 +309,8 @@ waits for the job to stop so that they run.
 .Pq array of strings
 Like
 .Va requires ,
-but a service that is disabled is started instead of being waited for in vain,
+but a service that is disabled, or that is enabled but not started at boot,
+is started instead of being waited for in vain,
 as
 .Dq prowlctl start
 would start it.
