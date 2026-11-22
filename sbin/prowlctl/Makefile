@@ -2,6 +2,8 @@
 # MidnightBSD prowlctl(8) - Service Management Control Utility
 #
 
+.include <src.opts.mk>
+
 PACKAGE=	prowld
 PROG=		prowlctl
 SRCS=		prowlctl.c
