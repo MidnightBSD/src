@@ -34,6 +34,7 @@
  */
 
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/un.h>
 
@@ -58,6 +59,7 @@
 #define REQ_MAX			1024
 
 /* Exit codes per spec §13.3 */
+#define PROWLD_TIMEOUT		30	/* seconds without an answer */
 #define EXIT_OK			0
 #define EXIT_NOT_FOUND		1
 #define EXIT_FAILED		2
@@ -126,6 +128,7 @@ static int
 connect_daemon(void)
 {
 	struct sockaddr_un sun;
+	struct timeval tv = { PROWLD_TIMEOUT, 0 };
 	int fd;
 
 	fd = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -135,6 +138,16 @@ connect_daemon(void)
 	memset(&sun, 0, sizeof(sun));
 	sun.sun_family = AF_UNIX;
 	strlcpy(sun.sun_path, g_sock_path, sizeof(sun.sun_path));
+
+	/*
+	 * Do not wait for ever on a prowld that does not answer, for example
+	 * one that is busy running rc.shutdown.
+	 */
+	if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) == -1 ||
+	    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) == -1) {
+		close(fd);
+		return (-1);
+	}
 
 	if (connect(fd, (struct sockaddr *)&sun, sizeof(sun)) == -1) {
 		close(fd);
@@ -198,8 +211,12 @@ recv_response(int fd)
 
 	/* Read 4-byte length header */
 	n = recv(fd, &nlen, 4, MSG_WAITALL);
-	if (n != 4)
+	if (n != 4) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK)
+			warnx("no answer from prowld after %d seconds",
+			    PROWLD_TIMEOUT);
 		return (NULL);
+	}
 
 	msglen = ntohl(nlen);
 	if (msglen == 0 || msglen > MSG_MAX)
@@ -212,6 +229,10 @@ recv_response(int fd)
 	while (got < msglen) {
 		n = recv(fd, buf + got, msglen - got, 0);
 		if (n <= 0) {
+			if (n == -1 && (errno == EAGAIN ||
+			    errno == EWOULDBLOCK))
+				warnx("no answer from prowld after %d seconds",
+				    PROWLD_TIMEOUT);
 			free(buf);
 			return (NULL);
 		}

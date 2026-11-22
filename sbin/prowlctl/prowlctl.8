@@ -278,6 +278,11 @@ Operation not permitted (insufficient privilege).
 .It 4
 .Xr prowld 8
 is not running or not responding on the control socket.
+.Nm
+gives up when
+.Xr prowld 8
+has not answered for 30 seconds.
+The operation may still be carried out.
 .El
 .Sh EXAMPLES
 List all loaded services:
