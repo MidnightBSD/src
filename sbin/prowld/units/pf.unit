@@ -4,11 +4,17 @@
 # a native unit is skipped.  Enable and disable it with pf_enable in
 # rc.conf; the other rc.conf variables are honoured as in rc.d/pf.
 #
-# A oneshot: it loads the rules and exits.  "prowlctl stop pf" runs the
-# stop command (stop_arguments), which undoes what the start did.
-# The rules are loaded with pfctl and the filter enabled.  Stopping the unit
-# disables pf again.  "prowlctl check|reload|resync pf" run pfctl as the rc.d
-# script does.
+# A oneshot: it flushes pf, loads the rules and enables the filter.
+# "prowlctl stop pf" disables pf again; "prowlctl check|reload|resync pf"
+# run pfctl as the rc.d script does (pfctl loads a ruleset only when all of
+# it is valid, so reload needs no separate check first).
+#
+# With pf_fallback_rules_enable the fallback rules are loaded and pf is
+# enabled before the real rules are loaded, so that if the real rules cannot
+# be loaded the fallback stays in force.  Without it pf is enabled after the
+# rules are loaded.  The rules file pf_fallback_rules_file is used when it exists,
+# otherwise the rules in pf_fallback_rules, which needs a little shell to
+# feed pfctl its standard input.
 
 label = "org.midnightbsd.pf";
 description = "Packet filter";
@@ -17,9 +23,18 @@ rc_name = "pf";
 run_at_load = true;
 provides = ["pf"];
 wants = ["FILESYSTEMS", "netif", "pflog", "pfsync", "routing"];
-program = "/bin/sh";
-arguments = ["-c", ". /etc/rc.subr\nload_rc_config pf\n[ -n \"$pf_program\" ] || pf_program=/sbin/pfctl\nload_kld pf || exit 1\nif [ ! -r \"$pf_rules\" ]; then\n    echo \"pf: $pf_rules: no such file\" >&2\n    exit 1\nfi\n$pf_program -F all > /dev/null 2>&1\nif ! $pf_program -f \"$pf_rules\" $pf_flags; then\n    echo \"pf: unable to load $pf_rules\" >&2\n    if checkyesno pf_fallback_rules_enable; then\n        if [ -f \"$pf_fallback_rules_file\" ]; then\n            echo \"pf: loading fallback rules file $pf_fallback_rules_file\" >&2\n            $pf_program -f \"$pf_fallback_rules_file\" $pf_flags\n        else\n            echo \"pf: loading fallback rules\" >&2\n            echo \"$pf_fallback_rules\" | $pf_program -f - $pf_flags\n        fi\n    fi\nfi\nif ! $pf_program -s info | grep -q Enabled; then\n    $pf_program -eq\nfi", "pf"];
-stop_arguments = ["-c", ". /etc/rc.subr\nload_rc_config pf\n[ -n \"$pf_program\" ] || pf_program=/sbin/pfctl\nif $pf_program -s info 2> /dev/null | grep -q Enabled; then\n    exec $pf_program -dq\nfi", "pf"];
-check_arguments = ["-c", ". /etc/rc.subr\nload_rc_config pf\n[ -n \"$pf_program\" ] || pf_program=/sbin/pfctl\necho \"Checking pf rules.\"\nexec $pf_program -n -f \"$pf_rules\" $pf_flags", "pf"];
-reload_arguments = ["-c", ". /etc/rc.subr\nload_rc_config pf\n[ -n \"$pf_program\" ] || pf_program=/sbin/pfctl\n$pf_program -n -f \"$pf_rules\" $pf_flags || exit 1\necho \"Reloading pf rules.\"\nexec $pf_program -f \"$pf_rules\" $pf_flags", "pf"];
-resync_arguments = ["-c", ". /etc/rc.subr\nload_rc_config pf\n[ -n \"$pf_program\" ] || pf_program=/sbin/pfctl\n$pf_program -n -f \"$pf_rules\" $pf_flags || exit 1\nexec $pf_program -f \"$pf_rules\" $pf_flags", "pf"];
+required_modules = ["pf"];
+required_files = ["@pf_rules@"];
+start_pre = [
+  ["-@pf_program@", "-q", "-F", "all"],
+  ["?pf_fallback_rules_enable", "<pf_fallback_rules_file", "@pf_program@", "-f", "@pf_fallback_rules_file@", "@pf_flags@"],
+  ["?pf_fallback_rules_enable", "!<pf_fallback_rules_file", "+pf_fallback_rules", "/bin/sh", "-c", "r=${1#rules=}; p=$2; shift 2; echo \"$r\" | \"$p\" -f - \"$@\"", "pf", "rules=@pf_fallback_rules@", "@pf_program@", "@pf_flags@"],
+  ["?pf_fallback_rules_enable", "-@pf_program@", "-eq"]
+];
+program = "@pf_program@";
+arguments = ["-f", "@pf_rules@", "@pf_flags@"];
+start_post = [["!pf_fallback_rules_enable", "-@pf_program@", "-eq"]];
+stop_arguments = ["-dq"];
+check_arguments = ["-n", "-f", "@pf_rules@", "@pf_flags@"];
+reload_arguments = ["-f", "@pf_rules@", "@pf_flags@"];
+resync_arguments = ["-f", "@pf_rules@", "@pf_flags@"];

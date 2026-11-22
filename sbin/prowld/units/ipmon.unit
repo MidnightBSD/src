@@ -4,8 +4,9 @@
 # a native unit is skipped.  Enable and disable it with ipmon_enable in
 # rc.conf; the other rc.conf variables are honoured as in rc.d/ipmon.
 #
-# ipmon runs in the foreground; the -D (daemonize) option in ipmon_flags is
-# removed.  Like rc.d/ipmon it needs ipfilter or ipnat enabled and loaded.
+# ipmon forks into the background (-D in ipmon_flags, as by default) and
+# prowld supervises the daemon it leaves.  It needs ipfilter or ipnat, which
+# are started first when they are enabled.
 
 label = "org.midnightbsd.ipmon";
 description = "Monitor for packets logged by IP Filter";
@@ -14,7 +15,8 @@ rc_name = "ipmon";
 run_at_load = true;
 keep_alive = true;
 provides = ["ipmon"];
-wants = ["FILESYSTEMS", "hostname", "sysctl"];
+wants = ["FILESYSTEMS", "hostname", "sysctl", "?ipfilter_enable ipfilter", "?ipnat_enable ipnat"];
 before = ["SERVERS"];
-program = "/bin/sh";
-arguments = ["-c", ". /etc/rc.subr\nload_rc_config ipmon\nif ! checkyesno ipfilter_enable && ! checkyesno ipnat_enable; then\n    echo \"ipmon requires either ipfilter or ipnat enabled\" >&2\n    exit 1\nfi\nprog=$ipfilter_program\n[ -n \"$prog\" ] || prog=/sbin/ipf\nif ! $prog -V | grep -q 'Running: yes'; then\n    echo \"ipfilter module is not loaded\" >&2\n    exit 1\nfi\nflags=$(echo \"$ipmon_flags\" | sed -E -e 's/(^| )-([A-Za-z]*)D([A-Za-z]*)/\\1-\\2\\3/g' -e 's/(^| )-( |$)/\\1/g')\nexec /sbin/ipmon $flags", "ipmon"];
+pid_name = "ipmon";
+program = "@ipmon_program@";
+arguments = ["@ipmon_flags@"];

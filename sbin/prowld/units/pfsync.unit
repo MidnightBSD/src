@@ -4,8 +4,10 @@
 # a native unit is skipped.  Enable and disable it with pfsync_enable in
 # rc.conf; the other rc.conf variables are honoured as in rc.d/pfsync.
 #
-# A oneshot: it loads the rules and exits.  "prowlctl stop pfsync" runs the
-# stop command (stop_arguments), which undoes what the start did.
+# A oneshot: it configures pfsync0 and exits.  "prowlctl stop pfsync" takes
+# the interface down again.  pfsync_syncdev must be set; the unit fails
+# without it (the first start_pre command is false(1), run only when
+# pfsync_syncdev is empty).
 
 label = "org.midnightbsd.pfsync";
 description = "Packet filter state table synchronisation interface";
@@ -14,6 +16,8 @@ rc_name = "pfsync";
 run_at_load = true;
 provides = ["pfsync"];
 wants = ["FILESYSTEMS", "netif"];
-program = "/bin/sh";
-arguments = ["-c", ". /etc/rc.subr\nload_rc_config pfsync\nif [ -z \"$pfsync_syncdev\" ]; then\n    echo \"pfsync_syncdev is not set\" >&2\n    exit 1\nfi\nload_kld pf || exit 1\nload_kld pfsync || exit 1\nsyncpeer=\nif [ -n \"$pfsync_syncpeer\" ]; then\n    syncpeer=\"syncpeer $pfsync_syncpeer\"\nfi\nexec ifconfig pfsync0 $syncpeer syncdev $pfsync_syncdev $pfsync_ifconfig up", "pfsync"];
-stop_arguments = ["-c", "exec ifconfig pfsync0 -syncdev -syncpeer down", "pfsync"];
+required_modules = ["pf", "pfsync"];
+start_pre = [["~pfsync_syncdev", "/usr/bin/false"]];
+program = "/sbin/ifconfig";
+arguments = ["pfsync0", "@pfsync_syncpeer:+syncpeer@", "@pfsync_syncpeer@", "syncdev", "@pfsync_syncdev@", "@pfsync_ifconfig@", "up"];
+stop_arguments = ["pfsync0", "-syncdev", "-syncpeer", "down"];

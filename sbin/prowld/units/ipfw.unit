@@ -4,11 +4,12 @@
 # a native unit is skipped.  Enable and disable it with firewall_enable in
 # rc.conf; the other rc.conf variables are honoured as in rc.d/ipfw.
 #
-# A oneshot: it loads the rules and exits.  "prowlctl stop ipfw" runs the
-# stop command (stop_arguments), which undoes what the start did.
-# Enabled by firewall_enable, as rc.d/ipfw.  Stopping the unit disables the
-# firewall and stops the coscripts again.  natd is started and stopped through
-# its rc.d script as before.
+# A oneshot: it loads the modules, runs the firewall script and enables the
+# firewall.  "prowlctl stop ipfw" disables it and runs the coscripts' quietstop.
+# natd is started first, when natd_enable is set, by activating its unit.
+# A little shell is used only to run firewall_coscripts, when there are any.
+# Unlike rc.d/ipfw the unit does not warn about a kernel without firewall
+# rules, and it does not stop natd again when it stops.
 
 label = "org.midnightbsd.ipfw";
 description = "Firewall, traffic shaper, packet scheduler, in-kernel NAT";
@@ -17,6 +18,20 @@ rc_name = "firewall";
 run_at_load = true;
 provides = ["ipfw"];
 wants = ["ppp", "netif"];
-program = "/bin/sh";
-arguments = ["-c", ". /etc/rc.subr\n. /etc/network.subr\nload_rc_config ipfw\nmods=ipfw\ncheckyesno dummynet_enable && mods=\"$mods dummynet\"\ncheckyesno natd_enable && mods=\"$mods ipdivert\"\ncheckyesno firewall_nat_enable && mods=\"$mods ipfw_nat\"\ncheckyesno firewall_nat64_enable && mods=\"$mods ipfw_nat64\"\ncheckyesno firewall_nptv6_enable && mods=\"$mods ipfw_nptv6\"\ncheckyesno firewall_pmod_enable && mods=\"$mods ipfw_pmod\"\nfor m in $mods; do\n    load_kld $m || exit 1\ndone\n/etc/rc.d/sysctl reload\n[ -n \"$firewall_script\" ] || firewall_script=/etc/rc.firewall\nif [ -r \"$firewall_script\" ]; then\n    /bin/sh \"$firewall_script\" \"$firewall_type\"\n    echo 'Firewall rules loaded.'\nelif [ \"$(ipfw list 65535)\" = \"65535 deny ip from any to any\" ]; then\n    echo 'Warning: kernel has firewall functionality, but firewall rules are not enabled.'\n    echo '           All ip services are disabled.'\nfi\nif checkyesno firewall_logging; then\n    echo 'Firewall logging enabled.'\n    sysctl net.inet.ip.fw.verbose=1 > /dev/null\nfi\nif checkyesno firewall_logif; then\n    if ! ifconfig ipfw0 > /dev/null 2>&1; then\n        ifconfig ipfw0 create\n        echo 'Firewall logging pseudo-interface (ipfw0) created.'\n    else\n        echo 'Firewall logging pseudo-interface (ipfw0) already created.'\n    fi\nfi\nfor c in /etc/rc.d/natd $firewall_coscripts; do\n    if [ -f \"$c\" ]; then\n        $c quietstart\n    fi\ndone\nif ! sysctl net.inet.ip.fw.enable=1 > /dev/null 2>&1; then\n    warn \"failed to enable IPv4 firewall\"\nfi\nif afexists inet6; then\n    if ! sysctl net.inet6.ip6.fw.enable=1 > /dev/null 2>&1; then\n        warn \"failed to enable IPv6 firewall\"\n    fi\nfi", "ipfw"];
-stop_arguments = ["-c", ". /etc/rc.subr\n. /etc/network.subr\nload_rc_config ipfw\nsysctl net.inet.ip.fw.enable=0 > /dev/null\nif afexists inet6; then\n    sysctl net.inet6.ip6.fw.enable=0 > /dev/null\nfi\nfor c in $(reverse_list /etc/rc.d/natd $firewall_coscripts); do\n    if [ -f \"$c\" ]; then\n        $c quietstop\n    fi\ndone\nexit 0", "ipfw"];
+activates = ["?natd_enable natd"];
+required_modules = ["ipfw", "?dummynet_enable dummynet", "?natd_enable ipdivert", "?firewall_nat_enable ipfw_nat", "?firewall_nat64_enable ipfw_nat64", "?firewall_nptv6_enable ipfw_nptv6", "?firewall_pmod_enable ipfw_pmod"];
+start_pre = [
+  ["-/etc/rc.d/sysctl", "reload"],
+  ["<firewall_script", "/bin/sh", "@firewall_script@", "@firewall_type@"],
+  ["?firewall_logging", "/sbin/sysctl", "-q", "net.inet.ip.fw.verbose=1"],
+  ["?firewall_logif", "-/sbin/ifconfig", "ipfw0", "create"],
+  ["+firewall_coscripts", "/bin/sh", "-c", "for c; do if [ -f \"$c\" ]; then \"$c\" quietstart; fi; done", "ipfw", "@firewall_coscripts@"],
+  ["-/sbin/sysctl", "-q", "net.inet6.ip6.fw.enable=1"]
+];
+program = "/sbin/sysctl";
+arguments = ["-q", "net.inet.ip.fw.enable=1"];
+stop_arguments = ["-q", "net.inet.ip.fw.enable=0"];
+stop_post = [
+  ["-/sbin/sysctl", "-q", "net.inet6.ip6.fw.enable=0"],
+  ["+firewall_coscripts", "/bin/sh", "-c", "r=; for c; do r=\"$c $r\"; done; for c in $r; do if [ -f \"$c\" ]; then \"$c\" quietstop; fi; done", "ipfw", "@firewall_coscripts@"]
+];
