@@ -44,6 +44,7 @@ typedef struct job job_t;
 typedef struct prowl_socket prowl_socket_t;
 
 /* A command of start_pre or stop_post: the program, then its arguments */
+#define PROWL_COND_LEN		48	/* "?name" before a dependency */
 #define PROWL_CMDS_MAX		8	/* commands in one list */
 #define PROWL_CMD_ARGS		16	/* words in one command */
 #define PROWL_CMD_PRE		0
@@ -240,6 +241,7 @@ typedef struct dep_entry {
 	char	name[PROWL_LABEL_MAX];
 	bool	hard;		/* true = requires, false = wants */
 	bool	activate;	/* start the provider if it is disabled */
+	char	cond[PROWL_COND_LEN];	/* only when this holds, or "" */
 } dep_entry_t;
 
 /* Job structure (forward-declared as job_t above) */
@@ -466,6 +468,7 @@ bool		 job_all_deps_satisfied(const job_t *);
 bool		 job_activations_pending(const job_t *);
 bool		 label_valid(const char *);
 int		 prowl_cmd_first(const prowl_cmd_t *);
+bool		 prowl_cond_holds(const char *, const char *);
 
 /* ---- unit.c ---- */
 int	unit_load_dir(const char *);

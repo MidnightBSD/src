@@ -701,7 +701,33 @@ EOF
  "type": "daemon", "program": "/bin/sleep", "arguments": ["300"],
  "start_pre": [["?cond_yes"]], "run_at_load": true}
 EOF
+	cat >units/cp.unit <<EOF
+{"label": "org.test.cp", "rc_name": "prowlctl_test_cond",
+ "type": "oneshot", "program": "/bin/sh",
+ "arguments": ["-c", "echo \"\$@\" > ${dir}/out", "sh",
+   "@cond_val:+-V@", "@cond_val@", "@nosuch_cp:+-W@", "@nosuch_cp@"],
+ "run_at_load": true}
+EOF
+	for n in b1 b2; do
+		cat >units/c${n}.unit <<EOF
+{"label": "org.test.c${n}", "rc_name": "prowlctl_test_c${n}",
+ "type": "daemon", "program": "/bin/sleep", "arguments": ["300"],
+ "provides": ["cond_${n}"], "run_at_load": false}
+EOF
+	done
+	cat >units/cu.unit <<EOF
+{"label": "org.test.cu", "rc_name": "prowlctl_test_cond",
+ "type": "daemon", "program": "/bin/sleep", "arguments": ["300"],
+ "activates": ["?cond_no cond_b1", "?cond_yes cond_b2"],
+ "requires": ["!cond_yes cond_nosuch"], "run_at_load": true}
+EOF
 	start_prowld
+	wait_state org.test.cp completed
+	atf_check -o inline:"-V x\n" cat out
+	# Only the activation whose condition holds starts its service.
+	wait_state org.test.cu running
+	wait_state org.test.cb2 running
+	atf_check -o match:'State: disabled' ${CTL} status org.test.cb1
 	wait_state org.test.cd running
 	atf_check -o inline:"a\nc\ne\n" cat log
 	atf_check -o ignore ${CTL} stop org.test.cd

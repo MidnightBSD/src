@@ -245,6 +245,10 @@ job_dep_satisfied(const job_t *job, const dep_entry_t *dep)
 {
 	job_t *provider;
 
+	/* "?name service": nothing to wait for unless the variable holds */
+	if (dep->cond[0] != '\0' && !prowl_cond_holds(job->rc_name, dep->cond))
+		return (true);
+
 	provider = job_find_by_provides(dep->name);
 	if (provider == NULL) {
 		/*
@@ -304,6 +308,29 @@ job_all_deps_satisfied(const job_t *job)
 	for (i = 0; i < job->deps_count; i++) {
 		if (!job_dep_satisfied(job, &job->deps[i]))
 			return (false);
+	}
+	return (true);
+}
+
+/*
+ * Does the condition hold?  "?name": the rc.conf variable is YES, TRUE, ON or
+ * 1; "!name": it is not; "+name": it is not empty.  rc_name selects the
+ * rc.conf.d file read after rc.conf.
+ */
+bool
+prowl_cond_holds(const char *rc_name, const char *cond)
+{
+	char val[256];
+
+	val[0] = '\0';
+	(void)rcconf_job_var(rc_name, cond + 1, val, sizeof(val));
+	switch (cond[0]) {
+	case '?':
+		return (rcconf_value_yes(val));
+	case '!':
+		return (!rcconf_value_yes(val));
+	case '+':
+		return (val[0] != '\0');
 	}
 	return (true);
 }

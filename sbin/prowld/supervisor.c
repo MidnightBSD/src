@@ -686,27 +686,11 @@ cmd_build(const job_t *job, const prowl_cmd_t *c, char *program, size_t psz,
 static bool
 cmd_enabled(const job_t *job, const prowl_cmd_t *c)
 {
-	char val[256];
 	int i, first = prowl_cmd_first(c);
 
 	for (i = 0; i < first; i++) {
-		val[0] = '\0';
-		(void)rcconf_job_var(job->rc_name, c->argv[i] + 1, val,
-		    sizeof(val));
-		switch (c->argv[i][0]) {
-		case '?':
-			if (!rcconf_value_yes(val))
-				return (false);
-			break;
-		case '!':
-			if (rcconf_value_yes(val))
-				return (false);
-			break;
-		case '+':
-			if (val[0] == '\0')
-				return (false);
-			break;
-		}
+		if (!prowl_cond_holds(job->rc_name, c->argv[i]))
+			return (false);
 	}
 	return (true);
 }

@@ -221,6 +221,9 @@ dag_activate(job_t *job)
 	for (i = 0; i < job->deps_count; i++) {
 		if (!job->deps[i].activate)
 			continue;
+		if (job->deps[i].cond[0] != '\0' &&
+		    !prowl_cond_holds(job->rc_name, job->deps[i].cond))
+			continue;
 		p = job_find_by_provides(job->deps[i].name);
 		if (p == NULL)
 			p = job_find_by_label(job->deps[i].name);

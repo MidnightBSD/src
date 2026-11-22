@@ -175,6 +175,8 @@ parse_deps(const ucl_object_t *arr, job_t *job, bool hard)
 {
 	const ucl_object_t *item;
 	ucl_object_iter_t it = NULL;
+	dep_entry_t *dep;
+	const char *s, *sp;
 
 	if (arr == NULL || ucl_object_type(arr) != UCL_ARRAY)
 		return;
@@ -184,9 +186,23 @@ parse_deps(const ucl_object_t *arr, job_t *job, bool hard)
 			break;
 		if (ucl_object_type(item) != UCL_STRING)
 			continue;
-		strlcpy(job->deps[job->deps_count].name,
-		    ucl_object_tostring(item), PROWL_LABEL_MAX);
-		job->deps[job->deps_count].hard = hard;
+		s = ucl_object_tostring(item);
+		dep = &job->deps[job->deps_count];
+		dep->cond[0] = '\0';
+		dep->activate = false;
+		/* "?name service": only when the rc.conf variable holds */
+		if ((*s == '?' || *s == '!' || *s == '+') &&
+		    (sp = strchr(s, ' ')) != NULL) {
+			size_t cl = (size_t)(sp - s);
+
+			if (cl < 2 || cl >= PROWL_COND_LEN)
+				continue;
+			memcpy(dep->cond, s, cl);
+			dep->cond[cl] = '\0';
+			s = sp + strspn(sp, " ");
+		}
+		strlcpy(dep->name, s, PROWL_LABEL_MAX);
+		dep->hard = hard;
 		job->deps_count++;
 	}
 }

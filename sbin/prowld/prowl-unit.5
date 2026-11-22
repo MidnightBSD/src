@@ -322,6 +322,20 @@ like
 .It Va requires
 .Pq array of strings
 Capability names that must be running for this job to start.
+.Pp
+Any entry of
+.Va requires ,
+.Va wants
+and
+.Va activates
+may begin with a condition and a space, such as
+.Dq ?nfs_server_managegids nfsuserd :
+the entry then counts only if the variable is YES
+.Pq Dq \&? ,
+is not YES
+.Pq Dq \&! ,
+or is not empty
+.Pq Dq + .
 .It Va wants
 .Pq array of strings
 Like
@@ -415,6 +429,8 @@ They are read each time the job is started.
 The value, empty if the variable is not set.
 .It Li @name:-default@
 The value, or default if it is empty.
+.It Li @name:+text@
+text if the value is not empty, and nothing otherwise.
 .It Li @name?text@
 text if the value is
 .Dv YES ,

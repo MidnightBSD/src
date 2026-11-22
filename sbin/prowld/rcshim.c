@@ -627,6 +627,10 @@ rcconf_expand(const char *rc_name, const char *in, char *out, size_t outsz)
 			} else if (!append_str(out, outsz, &len, sep + 2,
 			    (size_t)(end - (sep + 2))))
 				return (-1);
+		} else if (sep[0] == ':' && sep[1] == '+') {
+			if (val[0] != '\0' && !append_str(out, outsz, &len,
+			    sep + 2, (size_t)(end - (sep + 2))))
+				return (-1);
 		} else if (sep[0] == '?') {
 			if (rcconf_value_yes(val) &&
 			    !append_str(out, outsz, &len, sep + 1,
