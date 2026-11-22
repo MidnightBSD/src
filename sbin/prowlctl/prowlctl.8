@@ -63,6 +63,13 @@ Print raw JSON responses instead of human-readable output.
 Useful for scripts and monitoring tools.
 .El
 .Sh COMMANDS
+Where a command takes a
+.Ar label ,
+an instance of a template unit may be given as a second word instead of after an
+.Dq @ :
+.Dq "prowlctl start dhclient wlan0"
+is
+.Dq "prowlctl start dhclient@wlan0" .
 .Bl -tag -width "reload-config"
 .It Cm list Op Fl \-enabled | Fl \-failed | Fl \-type Ns = Ns Ar type
 List known jobs.

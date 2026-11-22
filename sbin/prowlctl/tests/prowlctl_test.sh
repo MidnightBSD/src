@@ -789,6 +789,12 @@ EOF
 	atf_check -o ignore ${CTL} stop tmpl@two
 	wait_state org.test.tmpl@two stopped
 
+	# "start tmpl two" means "start tmpl@two".
+	atf_check -o ignore ${CTL} start tmpl two
+	wait_state org.test.tmpl@two running
+	atf_check -o ignore ${CTL} stop tmpl two
+	wait_state org.test.tmpl@two stopped
+
 	# Bad instance names and unknown templates are refused.
 	atf_check -s not-exit:0 -e ignore -o ignore ${CTL} start tmpl@bad/x
 	atf_check -s not-exit:0 -e ignore -o ignore ${CTL} start tmpl@..x

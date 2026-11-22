@@ -1222,6 +1222,27 @@ main(int argc, char *argv[])
 	argc--;
 	argv++;
 
+	/*
+	 * "prowlctl start dhclient wlan0" is "prowlctl start dhclient@wlan0",
+	 * as "service dhclient start wlan0" is for the rc.d scripts that take
+	 * an interface.
+	 */
+	if (argc >= 2 && argv[1][0] != '-' && strchr(argv[0], '@') == NULL &&
+	    (strcmp(cmd, "status") == 0 || strcmp(cmd, "start") == 0 ||
+	    strcmp(cmd, "stop") == 0 || strcmp(cmd, "restart") == 0 ||
+	    strcmp(cmd, "reload") == 0 || strcmp(cmd, "check") == 0 ||
+	    strcmp(cmd, "resync") == 0 || strcmp(cmd, "enable") == 0 ||
+	    strcmp(cmd, "disable") == 0 || strcmp(cmd, "show") == 0)) {
+		static char joined[256];
+
+		if (snprintf(joined, sizeof(joined), "%s@%s", argv[0],
+		    argv[1]) >= (int)sizeof(joined))
+			errx(1, "label too long");
+		argv[1] = joined;
+		argc--;
+		argv++;
+	}
+
 	g_sock = connect_daemon();
 	if (g_sock == -1) {
 		if (errno == ENOENT || errno == ECONNREFUSED)
