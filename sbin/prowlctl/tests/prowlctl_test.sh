@@ -612,6 +612,55 @@ pre_post_cleanup()
 	pkill -KILL -f "sleep 300" 2>/dev/null || true
 }
 
+atf_test_case activates cleanup
+activates_head()
+{
+	atf_set descr "activates starts a disabled service first"
+	atf_set require.user root
+}
+activates_body()
+{
+	mkdir -p units
+	for n in b1 b2; do
+		cat >units/${n}.unit <<EOF
+{"label": "org.test.${n}", "rc_name": "prowlctl_test_${n}",
+ "type": "daemon", "program": "/bin/sleep", "arguments": ["300"],
+ "provides": ["act_${n}"], "run_at_load": false}
+EOF
+	done
+	cat >units/u1.unit <<EOF
+{"label": "org.test.u1", "rc_name": "prowlctl_test_u1",
+ "type": "daemon", "program": "/bin/sleep", "arguments": ["300"],
+ "activates": ["act_b1"], "run_at_load": true}
+EOF
+	cat >units/u2.unit <<EOF
+{"label": "org.test.u2", "rc_name": "prowlctl_test_u2",
+ "type": "daemon", "program": "/bin/sleep", "arguments": ["300"],
+ "activates": ["act_b2"], "run_at_load": false}
+EOF
+	cat >units/u3.unit <<EOF
+{"label": "org.test.u3", "rc_name": "prowlctl_test_u3",
+ "type": "daemon", "program": "/bin/sleep", "arguments": ["300"],
+ "activates": ["act_nosuch"], "run_at_load": true}
+EOF
+	start_prowld
+	# At boot: the disabled service is started, then the one that needs it.
+	wait_state org.test.b1 running
+	wait_state org.test.u1 running
+	# By hand: "start" brings up the activated service too.
+	atf_check -o match:'State: (disabled|loaded)' ${CTL} status org.test.b2
+	atf_check -o ignore ${CTL} start org.test.u2
+	wait_state org.test.b2 running
+	wait_state org.test.u2 running
+	# Nothing provides it: the job waits.
+	atf_check -o match:'State: loaded' ${CTL} status org.test.u3
+}
+activates_cleanup()
+{
+	stop_prowld
+	pkill -KILL -f "sleep 300" 2>/dev/null || true
+}
+
 atf_test_case templates cleanup
 templates_head()
 {
@@ -653,6 +702,7 @@ templates_cleanup()
 
 atf_init_test_cases()
 {
+	atf_add_test_case activates
 	atf_add_test_case pre_post
 	atf_add_test_case forking
 	atf_add_test_case expansion

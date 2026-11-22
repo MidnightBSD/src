@@ -239,6 +239,7 @@ typedef struct mdns_config {
 typedef struct dep_entry {
 	char	name[PROWL_LABEL_MAX];
 	bool	hard;		/* true = requires, false = wants */
+	bool	activate;	/* start the provider if it is disabled */
 } dep_entry_t;
 
 /* Job structure (forward-declared as job_t above) */
@@ -462,6 +463,7 @@ const char	*job_type_str(job_type_t);
 bool		 job_is_masked(const job_t *);
 bool		 job_dep_satisfied(const job_t *, const dep_entry_t *);
 bool		 job_all_deps_satisfied(const job_t *);
+bool		 job_activations_pending(const job_t *);
 bool		 label_valid(const char *);
 
 /* ---- unit.c ---- */
@@ -496,6 +498,7 @@ void	pid1_reroot_cleanup(void);
 /* ---- dag.c ---- */
 int	dag_build(void);
 void	dag_schedule_ready(void);
+bool	dag_activate(job_t *);
 
 /* ---- supervisor.c ---- */
 void	supervisor_init(void);

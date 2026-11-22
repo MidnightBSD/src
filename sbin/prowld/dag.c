@@ -207,6 +207,37 @@ max_concurrent(void)
 }
 
 /*
+ * Start the disabled services that job activates, the way "prowlctl start"
+ * would.  Returns true if any was started.  A service that is masked, or an
+ * rc-shim, is left alone.
+ */
+bool
+dag_activate(job_t *job)
+{
+	job_t *p;
+	bool any = false;
+	int i;
+
+	for (i = 0; i < job->deps_count; i++) {
+		if (!job->deps[i].activate)
+			continue;
+		p = job_find_by_provides(job->deps[i].name);
+		if (p == NULL)
+			p = job_find_by_label(job->deps[i].name);
+		if (p == NULL || p == job || p->type == JOB_TYPE_RCSHIM ||
+		    p->state != JOB_STATE_DISABLED)
+			continue;
+		prowl_log(LOG_NOTICE, "%s activates %s", job->label,
+		    p->label);
+		p->enabled = true;
+		p->run_at_load = true;
+		job_set_state(p, JOB_STATE_LOADED);
+		any = true;
+	}
+	return (any);
+}
+
+/*
  * Scan the job list and start any job that:
  *  - is in LOADED state
  *  - has run_at_load set
@@ -220,6 +251,7 @@ dag_schedule_ready(void)
 {
 	job_t *job;
 	int limit = max_concurrent();
+	bool rerun = false;
 
 	/* Nothing new starts while the system is going down. */
 	if (g_shutdown || g_rundown)
@@ -238,6 +270,9 @@ dag_schedule_ready(void)
 		/* Waiting out a restart back-off */
 		if (job->restart_hold)
 			continue;
+
+		if (dag_activate(job))
+			rerun = true;
 
 		if (!job_all_deps_satisfied(job))
 			continue;
@@ -274,4 +309,8 @@ dag_schedule_ready(void)
 				g_current_starts++;
 		}
 	}
+
+	/* A service that was activated may be startable now */
+	if (rerun)
+		dag_schedule_ready();
 }

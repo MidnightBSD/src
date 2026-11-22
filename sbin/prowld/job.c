@@ -266,13 +266,30 @@ job_dep_satisfied(const job_t *job, const dep_entry_t *dep)
 	 * same goes for a native unit's "wants".  A native unit's "requires"
 	 * keeps the strict rule.
 	 */
-	if ((job->type == JOB_TYPE_RCSHIM || !dep->hard) &&
+	if ((job->type == JOB_TYPE_RCSHIM || !dep->hard ||
+	    (dep->activate && provider->type == JOB_TYPE_RCSHIM)) &&
 	    (provider->state == JOB_STATE_DISABLED ||
 	    provider->state == JOB_STATE_MASKED ||
 	    provider->state == JOB_STATE_FAILED ||
 	    provider->restart_hold))
 		return (true);
 
+	return (false);
+}
+
+/*
+ * Return true when a service this job activates is not up yet.
+ */
+bool
+job_activations_pending(const job_t *job)
+{
+	int i;
+
+	for (i = 0; i < job->deps_count; i++) {
+		if (job->deps[i].activate &&
+		    !job_dep_satisfied(job, &job->deps[i]))
+			return (true);
+	}
 	return (false);
 }
 

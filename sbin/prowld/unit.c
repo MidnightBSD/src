@@ -685,6 +685,15 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 	/* requires (hard deps) */
 	parse_deps(ucl_object_lookup(root, "requires"), job, true);
 
+	/* activates: a hard dep that is started if it is disabled */
+	{
+		int first = job->deps_count, d;
+
+		parse_deps(ucl_object_lookup(root, "activates"), job, true);
+		for (d = first; d < job->deps_count; d++)
+			job->deps[d].activate = true;
+	}
+
 	/* wants (soft deps) */
 	parse_deps(ucl_object_lookup(root, "wants"), job, false);
 

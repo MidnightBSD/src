@@ -263,6 +263,19 @@ does nothing else while they run.
 At shutdown
 .Xr prowld 8
 waits for the job to stop so that they run.
+.It Va activates
+.Pq array of strings
+Like
+.Va requires ,
+but a service that is disabled is started instead of being waited for in vain,
+as
+.Dq prowlctl start
+would start it.
+The job starts once those services are up, whether it is started at load or by
+hand.
+This replaces a start script that runs
+.Dq service foo onestart .
+A masked service, or one that only has an rc.d script, is not started.
 .It Va stop_signal
 .Pq string
 The signal that stops the job, by name with or without the

@@ -619,6 +619,12 @@ cmd_start(int fd, const char *id, const ucl_object_t *req)
 	job->run_at_load = true;
 	job->enabled = true;
 	if (job->state != JOB_STATE_RUNNING &&
+	    job->state != JOB_STATE_STARTING &&
+	    (dag_activate(job) || job_activations_pending(job))) {
+		/* Wait for the services it activates: the scheduler starts it */
+		job_set_state(job, JOB_STATE_LOADED);
+		dag_schedule_ready();
+	} else if (job->state != JOB_STATE_RUNNING &&
 	    job->state != JOB_STATE_STARTING) {
 		job_set_state(job, JOB_STATE_LOADED);
 		if (supervisor_start(job) == 0)
