@@ -37,8 +37,10 @@
 #include <sys/event.h>
 #include <sys/procctl.h>
 #include <sys/reboot.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <sys/un.h>
 #include <sys/wait.h>
 
 #include <err.h>
@@ -960,6 +962,9 @@ early_log_add(int priority, const char *msg)
 	size_t n;
 	int len;
 
+	/* Debug output is for the console; it would only crowd the rest out */
+	if (priority == LOG_DEBUG)
+		return;
 	if (localtime_r(&now, &tm) == NULL)
 		return;
 	len = snprintf(line, sizeof(line), "%d %02d:%02d:%02d] %s",
@@ -979,14 +984,41 @@ early_log_add(int priority, const char *msg)
 	early_log[early_len++] = '\n';
 }
 
+/*
+ * Is syslogd listening?  /var/run may outlive a boot, so a socket file
+ * left by the last one does not count: connect to it.
+ */
+static bool
+syslog_ready(void)
+{
+	static const int types[2] = { SOCK_DGRAM, SOCK_STREAM };
+	struct sockaddr_un sun;
+	int fd, i;
+	bool ok = false;
+
+	memset(&sun, 0, sizeof(sun));
+	sun.sun_family = AF_UNIX;
+	strlcpy(sun.sun_path, "/var/run/log", sizeof(sun.sun_path));
+	for (i = 0; i < 2 && !ok; i++) {
+		fd = socket(AF_UNIX, types[i], 0);
+		if (fd == -1)
+			continue;
+		ok = connect(fd, (struct sockaddr *)&sun, sizeof(sun)) == 0;
+		close(fd);
+	}
+	return (ok);
+}
+
 /* Send the saved messages to syslogd, if it is there now */
 static void
 early_log_flush(void)
 {
+	struct timespec pause = { 0, 5000000L };
 	char *line, *next, *end;
 	long pri;
+	int sent = 0;
 
-	if (access("/var/run/log", F_OK) == -1)
+	if (!syslog_ready())
 		return;
 	early_done = true;
 	for (line = early_log; line < early_log + early_len; line = next) {
@@ -999,6 +1031,12 @@ early_log_flush(void)
 		if (end == line || *end != ' ' || pri < 0 || pri > LOG_DEBUG)
 			continue;
 		syslog((int)pri, "[early boot %s", end + 1);
+		/*
+		 * syslogd's socket holds a few dozen messages; give it time
+		 * to read them or the rest are lost.
+		 */
+		if (++sent % 16 == 0)
+			(void)nanosleep(&pause, NULL);
 	}
 	if (early_dropped > 0)
 		syslog(LOG_WARNING, "%d early boot messages were dropped",
