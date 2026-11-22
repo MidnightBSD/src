@@ -39,6 +39,10 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
+# 20261122: prowld: moused.unit and blacklistd.unit removed
+OLD_FILES+=etc/prowld/units.d/blacklistd.unit
+OLD_FILES+=etc/prowld/units.d/moused.unit
+
 # 20261121: NDIS compatibility support removed
 OLD_FILES+=usr/sbin/ndis_events
 OLD_FILES+=usr/sbin/ndiscvt
