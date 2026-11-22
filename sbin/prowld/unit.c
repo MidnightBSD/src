@@ -385,8 +385,12 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 	if (obj != NULL && ucl_object_type(obj) == UCL_STRING)
 		strlcpy(job->rc_name, ucl_object_tostring(obj),
 		    sizeof(job->rc_name));
-	else
+	else {
+		if (obj != NULL)
+			prowl_log(LOG_WARNING, "%s: rc_name is not a single "
+			    "string (set twice?), ignoring it", job->label);
 		derive_rc_name(job->label, job->rc_name, sizeof(job->rc_name));
+	}
 
 	/* program */
 	obj = ucl_object_lookup(root, "program");
