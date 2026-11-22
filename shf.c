@@ -2,7 +2,7 @@
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2011,
- *		 2012, 2013, 2015, 2016, 2017, 2018
+ *		 2012, 2013, 2015, 2016, 2017, 2018, 2019
  *	mirabilos <m@mirbsd.org>
  * Copyright (c) 2015
  *	Daniel Richard G. <skunk@iSKUNK.ORG>
@@ -27,7 +27,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/shf.c,v 1.97 2018/01/14 01:28:16 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/shf.c,v 1.102 2020/06/22 17:11:03 tg Exp $");
 
 /* flags to shf_emptybuf() */
 #define EB_READSW	0x01	/* about to switch to reading */
@@ -523,7 +523,8 @@ shf_getse(char *buf, ssize_t bsize, struct shf *shf)
 		buf += ncopy;
 		bsize -= ncopy;
 #ifdef MKSH_WITH_TEXTMODE
-		if (end && buf > orig_buf + 1 && buf[-2] == '\r') {
+		if (buf > orig_buf + 1 && ord(buf[-2]) == ORD('\r') &&
+		    ord(buf[-1]) == ORD('\n')) {
 			buf--;
 			bsize++;
 			buf[-1] = '\n';
@@ -531,9 +532,9 @@ shf_getse(char *buf, ssize_t bsize, struct shf *shf)
 #endif
 	} while (!end && bsize);
 #ifdef MKSH_WITH_TEXTMODE
-	if (!bsize && buf[-1] == '\r') {
+	if (!bsize && ord(buf[-1]) == ORD('\r')) {
 		int c = shf_getc(shf);
-		if (c == '\n')
+		if (ord(c) == ORD('\n'))
 			buf[-1] = '\n';
 		else if (c != -1)
 			shf_ungetc(c, shf);
@@ -665,7 +666,7 @@ shf_write(const char *buf, ssize_t nbytes, struct shf *shf)
 	if (nbytes < 0)
 		internal_errorf(Tf_szs, Tshf_write, nbytes, Tbytes);
 
-	/* Don't buffer if buffer is empty and we're writting a large amount. */
+	/* don't buffer if buffer is empty and we're writing a large amount */
 	if ((ncopy = shf->wnleft) &&
 	    (shf->wp != shf->buf || nbytes < shf->wnleft)) {
 		if (ncopy > nbytes)
@@ -781,7 +782,7 @@ shf_smprintf(const char *fmt, ...)
 #define FL_ZERO		0x040	/* '0' seen */
 #define FL_DOT		0x080	/* '.' seen */
 #define FL_UPPER	0x100	/* format character was uppercase */
-#define FL_NUMBER	0x200	/* a number was formated %[douxefg] */
+#define FL_NUMBER	0x200	/* a number was formatted %[douxefg] */
 #define FL_SIZET	0x400	/* 'z' seen */
 #define FM_SIZES	0x430	/* h/l/z mask */
 
@@ -1073,7 +1074,7 @@ shf_vfprintf(struct shf *shf, const char *fmt, va_list args)
 	return (shf_error(shf) ? -1 : nwritten);
 }
 
-#if defined(MKSH_SMALL) && !defined(MKSH_SMALL_BUT_FAST)
+#ifdef MKSH_SHF_NO_INLINE
 int
 shf_getc(struct shf *shf)
 {
@@ -1304,7 +1305,7 @@ ebcdic_init(void)
 		 * and the C1 control characters other than NEL are
 		 * hopeless, but we map EBCDIC NEL to ASCII LF so we
 		 * cannot even use C1 NEL.
-		 * If ever we map to Unicode, bump the table width to
+		 * If ever we map to UCS, bump the table width to
 		 * an unsigned int, and or the raw unconverted EBCDIC
 		 * values with 0x01000000 instead.
 		 */

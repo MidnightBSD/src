@@ -23,7 +23,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/lex.c,v 1.247 2018/01/14 01:44:01 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/lex.c,v 1.251 2020/03/10 23:48:40 tg Exp $");
 
 /*
  * states while lexing word
@@ -77,11 +77,16 @@ typedef struct lex_state {
 	short nparen;
 	/* type of this state */
 	uint8_t type;
+	/* extra flags */
+	uint8_t ls_flags;
 } Lex_state;
 #define ls_base		u.base
 #define ls_start	u.start
 #define ls_bool		u.abool
 #define ls_adelim	u.adelim
+
+/* ls_flags */
+#define LS_HEREDOC	BIT(0)
 
 typedef struct {
 	Lex_state *base;
@@ -147,9 +152,11 @@ getsc_r(int c)
 #define STATE_BSIZE	8
 
 #define PUSH_STATE(s)	do {					\
+	uint8_t state_flags = statep->ls_flags;			\
 	if (++statep == state_info.end)				\
 		statep = push_state_i(&state_info, statep);	\
 	state = statep->type = (s);				\
+	statep->ls_flags = state_flags;				\
 } while (/* CONSTCOND */ 0)
 
 #define POP_STATE()	do {					\
@@ -242,6 +249,7 @@ yylex(int cf)
 
 	/* Initial state: one of SWORD SLETPAREN SHEREDELIM SBASE */
 	statep->type = state;
+	statep->ls_flags = (cf & HEREDOC) ? LS_HEREDOC : 0;
 
 	/* collect non-special or quoted characters to form word */
 	while (!((c = getsc()) == 0 ||
@@ -319,7 +327,7 @@ yylex(int cf)
 				break;
 			case ORD('\''):
  open_ssquote_unless_heredoc:
-				if ((cf & HEREDOC))
+				if ((statep->ls_flags & LS_HEREDOC))
 					goto store_char;
 				*wp++ = OQUOTE;
 				ignore_backslash_newline++;
@@ -357,7 +365,7 @@ yylex(int cf)
 				c = getsc();
 				switch (c) {
 				case ORD('"'):
-					if ((cf & HEREDOC))
+					if ((statep->ls_flags & LS_HEREDOC))
 						goto heredocquote;
 					/* FALLTHROUGH */
 				case ORD('\\'):
@@ -388,6 +396,8 @@ yylex(int cf)
 					if ((unsigned int)c == ORD('(' /*)*/)) {
 						*wp++ = EXPRSUB;
 						PUSH_SRETRACE(SASPAREN);
+						/* unneeded? */
+						/*statep->ls_flags &= ~LS_HEREDOC;*/
 						statep->nparen = 2;
 						*retrace_info->xp++ = '(';
 					} else {
@@ -434,13 +444,14 @@ yylex(int cf)
 							*wp++ = ADELIM;
 							*wp++ = ':';
 							PUSH_STATE(SBRACE);
+							/* perhaps unneeded? */
+							statep->ls_flags &= ~LS_HEREDOC;
 							PUSH_STATE(SADELIM);
 							statep->ls_adelim.delimiter = ':';
 							statep->ls_adelim.num = 1;
 							statep->nparen = 0;
 							break;
-						} else if (ctype(c, C_DIGIT | C_DOLAR | C_SPC) ||
-						    /*XXX what else? */
+						} else if (ctype(c, C_ALNUX | C_DOLAR | C_SPC) ||
 						    c == '(' /*)*/) {
 							/* substring subst. */
 							if (c != ' ') {
@@ -449,6 +460,8 @@ yylex(int cf)
 							}
 							ungetsc(c);
 							PUSH_STATE(SBRACE);
+							/* perhaps unneeded? */
+							statep->ls_flags &= ~LS_HEREDOC;
 							PUSH_STATE(SADELIM);
 							statep->ls_adelim.delimiter = ':';
 							statep->ls_adelim.num = 2;
@@ -466,6 +479,8 @@ yylex(int cf)
 						} else
 							ungetsc(c);
 						PUSH_STATE(SBRACE);
+						/* perhaps unneeded? */
+						statep->ls_flags &= ~LS_HEREDOC;
 						PUSH_STATE(SADELIM);
 						statep->ls_adelim.delimiter = '/';
 						statep->ls_adelim.num = 1;
@@ -489,6 +504,8 @@ yylex(int cf)
 							PUSH_STATE(STBRACEBOURNE);
 						else
 							PUSH_STATE(STBRACEKORN);
+						/* single-quotes-in-heredoc-trim */
+						statep->ls_flags &= ~LS_HEREDOC;
 					} else {
 						ungetsc(c);
 						if (state == SDQUOTE ||
@@ -496,6 +513,8 @@ yylex(int cf)
 							PUSH_STATE(SQBRACE);
 						else
 							PUSH_STATE(SBRACE);
+						/* here no LS_HEREDOC removal */
+						/* single-quotes-in-heredoc-braces */
 					}
 				} else if (ctype(c, C_ALPHX)) {
 					*wp++ = OSUBST;
@@ -601,7 +620,8 @@ yylex(int cf)
 		case SSQUOTE:
 			if ((unsigned int)c == ORD('\'')) {
 				POP_STATE();
-				if ((cf & HEREDOC) || state == SQBRACE)
+				if ((statep->ls_flags & LS_HEREDOC) ||
+				    state == SQBRACE)
 					goto store_char;
 				*wp++ = CQUOTE;
 				ignore_backslash_newline--;
@@ -1155,7 +1175,7 @@ readhere(struct ioword *iop)
 			/* Newline terminates here document marker */
 			goto heredoc_found_terminator;
 		}
-	} else if (c == *eofp++)
+	} else if ((unsigned int)c == ord(*eofp++))
 		/* store; then read and compare next character */
 		goto heredoc_store_and_loop;
 	/* nope, mismatch; read until end of line */
@@ -1338,7 +1358,7 @@ getsc_line(Source *s)
 {
 	char *xp = Xstring(s->xs, xp), *cp;
 	bool interactive = Flag(FTALKING) && s->type == SSTDIN;
-	bool have_tty = tobool(interactive && (s->flags & SF_TTY));
+	bool have_tty = interactive && (s->flags & SF_TTY) && tty_hasstate;
 
 	/* Done here to ensure nothing odd happens when a timeout occurs */
 	XcheckN(s->xs, xp, LINE);

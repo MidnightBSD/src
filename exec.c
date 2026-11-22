@@ -2,7 +2,8 @@
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
- *		 2011, 2012, 2013, 2014, 2015, 2016, 2017
+ *		 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018,
+ *		 2019, 2020
  *	mirabilos <m@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -23,7 +24,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/exec.c,v 1.201 2017/10/11 21:09:24 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/exec.c,v 1.224 2020/08/27 19:52:43 tg Exp $");
 
 #ifndef MKSH_DEFAULT_EXECSHELL
 #define MKSH_DEFAULT_EXECSHELL	MKSH_UNIXROOT "/bin/sh"
@@ -107,8 +108,8 @@ execute(struct op * volatile t,
 
 			if ((rv = herein(t->ioact[0], &cp) /*? 1 : 0*/))
 				cp = NULL;
-			dp = shf_smprintf(Tf_ss, evalstr(t->vars[0],
-			    DOASNTILDE | DOSCALAR), rv ? null : cp);
+			strdup2x(dp, evalstr(t->vars[0], DOASNTILDE | DOSCALAR),
+			    rv ? null : cp);
 			typeset(dp, Flag(FEXPORT) ? EXPORT : 0, 0, 0, 0);
 			/* free the expanded value */
 			afree(cp, APERM);
@@ -126,7 +127,7 @@ execute(struct op * volatile t,
 			timex_hook(t, &up);
 		ap = (const char **)up;
 		if (ap[0])
-			tp = findcom(ap[0], FC_BI|FC_FUNC);
+			tp = findcom(ap[0], FC_BI | FC_FUNC);
 	}
 	flags &= ~XTIME;
 
@@ -429,6 +430,12 @@ execute(struct op * volatile t,
 		up = makenv();
 		restoresigs();
 		cleanup_proc_env();
+		/* I/O redirection cleanup to be done in child process */
+		if (!Flag(FPOSIX) && !Flag(FSH) && t->left->ioact != NULL)
+			for (iowp = t->left->ioact; *iowp != NULL; iowp++)
+				if ((*iowp)->ioflag & IODUPSELF)
+					fcntl((*iowp)->unit, F_SETFD, 0);
+		/* try to execute */
 		{
 			union mksh_ccphack cargs;
 
@@ -439,7 +446,7 @@ execute(struct op * volatile t,
 		if (rv == ENOEXEC)
 			scriptexec(t, (const char **)up);
 		else
-			errorf(Tf_sD_s, t->str, cstrerror(rv));
+			errorfx(126, Tf_sD_s, t->str, cstrerror(rv));
 	}
  Break:
 	exstat = rv & 0xFF;
@@ -457,14 +464,9 @@ execute(struct op * volatile t,
 		unwind(LEXIT);
 	if (rv != 0 && !(flags & XERROK) &&
 	    (xerrok == NULL || !*xerrok)) {
-		if (Flag(FERREXIT) & 0x80) {
-			/* inside eval */
-			Flag(FERREXIT) = 0;
-		} else {
-			trapsig(ksh_SIGERR);
-			if (Flag(FERREXIT))
-				unwind(LERROR);
-		}
+		trapsig(ksh_SIGERR);
+		if (Flag(FERREXIT))
+			unwind(LERREXT);
 	}
 	return (rv);
 }
@@ -485,7 +487,7 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 	static struct op texec;
 	int type_flags;
 	bool resetspec;
-	int fcflags = FC_BI|FC_FUNC|FC_PATH;
+	int fcflags = FC_BI | FC_FUNC | FC_PATH;
 	struct block *l_expand, *l_assign;
 	int optc;
 	const char *exec_argv0 = NULL;
@@ -522,7 +524,7 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 	resetspec = false;
 	while (tp && tp->type == CSHELL) {
 		/* undo effects of command */
-		fcflags = FC_BI|FC_FUNC|FC_PATH;
+		fcflags = FC_BI | FC_FUNC | FC_PATH;
 		if (tp->val.f == c_builtin) {
 			if ((cp = *++ap) == NULL ||
 			    (!strcmp(cp, "--") && (cp = *++ap) == NULL)) {
@@ -571,7 +573,7 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 				/* command -vV or something */
 				break;
 			/* don't look for functions */
-			fcflags = FC_BI|FC_PATH;
+			fcflags = FC_BI | FC_PATH;
 			if (saw_p) {
 				if (Flag(FRESTRICTED)) {
 					warningf(true, Tf_sD_s,
@@ -601,8 +603,8 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 			    (tp->flag & LOWER_BI)) {
 				struct tbl *ext_cmd;
 
-				ext_cmd = findcom(tp->name, FC_PATH | FC_FUNC);
-				if (ext_cmd && (ext_cmd->type != CTALIAS ||
+				ext_cmd = findcom(tp->name, FC_FUNC | FC_PATH);
+				if (ext_cmd && (ext_cmd->type == CFUNC ||
 				    (ext_cmd->flag & ISSET)))
 					tp = ext_cmd;
 			}
@@ -612,7 +614,7 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 			break;
 		} else
 			break;
-		tp = findcom(ap[0], fcflags & (FC_BI|FC_FUNC));
+		tp = findcom(ap[0], fcflags & (FC_BI | FC_FUNC));
 	}
 	if (t->u.evalflags & DOTCOMEXEC)
 		flags |= XEXEC;
@@ -622,12 +624,8 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 	else {
 		/* create new variable/function block */
 		newblock();
-		/* ksh functions don't keep assignments, POSIX functions do. */
-		if (!resetspec && tp && tp->type == CFUNC &&
-		    !(tp->flag & FKSH))
-			type_flags = EXPORT;
-		else
-			type_flags = LOCAL|LOCAL_COPY|EXPORT;
+		/* all functions keep assignments */
+		type_flags = LOCAL | LOCAL_COPY | EXPORT;
 	}
 	l_assign = e->loc;
 	if (exec_clrenv)
@@ -687,11 +685,9 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 	/* shell built-in */
 	case CSHELL:
  do_call_builtin:
+		if (l_expand != l_assign)
+			l_assign->flags |= (tp->flag & NEXTLOC_BI);
 		rv = call_builtin(tp, (const char **)ap, null, resetspec);
-		if (resetspec && tp->val.f == c_shift) {
-			l_expand->argc = l_assign->argc;
-			l_expand->argv = l_assign->argv;
-		}
 		break;
 
 	/* function call */
@@ -797,6 +793,7 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 		switch (i) {
 		case LRETURN:
 		case LERROR:
+		case LERREXT:
 			rv = exstat & 0xFF;
 			break;
 		case LINTR:
@@ -820,7 +817,8 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
 		if (!(tp->flag&ISSET)) {
 			if (tp->u2.errnov == ENOENT) {
 				rv = 127;
-				warningf(true, Tf_sD_s, cp, Tnot_found);
+				warningf(true, Tf_sD_s_s, cp,
+				    "inaccessible or", Tnot_found);
 			} else {
 				rv = 126;
 				warningf(true, Tf_sD_sD_s, cp, "can't execute",
@@ -862,7 +860,7 @@ comexec(struct op *t, struct tbl * volatile tp, const char **ap,
  Leave:
 	if (flags & XEXEC) {
 		exstat = rv & 0xFF;
-		unwind(LLEAVE);
+		unwind(LEXIT);
 	}
 	return (rv);
 }
@@ -886,7 +884,7 @@ scriptexec(struct op *tp, const char **ap)
 	*tp->args-- = tp->str;
 
 #ifndef MKSH_SMALL
-	if ((fd = binopen2(tp->str, O_RDONLY)) >= 0) {
+	if ((fd = binopen2(tp->str, O_RDONLY | O_MAYEXEC)) >= 0) {
 		unsigned char *cp;
 #ifndef MKSH_EBCDIC
 		unsigned short m;
@@ -1011,7 +1009,7 @@ scriptexec(struct op *tp, const char **ap)
 	cap.ro = ap;
 	execve(args.rw[0], args.rw, cap.rw);
 
-	/* report both the programme that was run and the bogus interpreter */
+	/* report both the program that was run and the bogus interpreter */
 	errorf(Tf_sD_sD_s, tp->str, sh, cstrerror(errno));
 }
 
@@ -1139,6 +1137,10 @@ builtin(const char *name, int (*func) (const char **))
 		/* is declaration utility (POSIX: export, readonly) */
 		flag |= DECL_UTIL;
 		break;
+	case '#':
+		/* is set or shift */
+		flag |= NEXTLOC_BI;
+		break;
 	default:
 		goto flags_seen;
 	}
@@ -1211,7 +1213,7 @@ findcom(const char *name, int flags)
 	}
 
  Search:
-	if ((!tp || (tp->type == CTALIAS && !(tp->flag&ISSET))) &&
+	if ((!tp || (tp->type == CTALIAS && !(tp->flag & ISSET))) &&
 	    (flags & FC_PATH)) {
 		if (!tp) {
 			if (insert && !(flags & FC_DEFPATH)) {
@@ -1301,10 +1303,10 @@ search_access(const char *fn, int mode)
 }
 
 #ifdef __OS2__
-/* check if path is something we want to find, adding executable extensions */
-#define search_access(fn, mode)	access_ex((search_access), (fn), (mode))
+/* check if path is something we want to find adding executable extensions */
+#define search_access(fn,mode)	access_ex((search_access), (fn), (mode))
 #else
-#define search_access(fn, mode)	(search_access)((fn), (mode))
+#define search_access(fn,mode)	(search_access)((fn), (mode))
 #endif
 
 /*
@@ -1349,10 +1351,8 @@ search_path(const char *name, const char *lpath,
 			XcheckN(xs, xp, p - sp);
 			memcpy(xp, sp, p - sp);
 			xp += p - sp;
-#ifdef __OS2__
-			if (xp > Xstring(xs, xp) && mksh_cdirsep(xp[-1]))
+			if (mksh_cdirsep(xp[-1]))
 				xp--;
-#endif
 			*xp++ = '/';
 		}
 		sp = p;
@@ -1485,9 +1485,11 @@ iosetup(struct ioword *iop, struct tbl *tp)
 			afree(sp, ATEMP);
 			return (-1);
 		}
-		if (u == (int)iop->unit)
+		if (u == (int)iop->unit) {
 			/* "dup from" == "dup to" */
+			iop->ioflag |= IODUPSELF;
 			return (0);
+		}
 		break;
 	    }
 	}
@@ -1595,7 +1597,7 @@ hereinval(struct ioword *iop, int sub, char **resbuf, struct shf *shf)
 		return (-2);
 	}
 	if (iop->ioflag & IOHERESTR) {
-		ccp = evalstr(iop->delim, DOHERESTR | DOSCALAR | DOHEREDOC);
+		ccp = evalstr(iop->delim, DOHERESTR | DOSCALAR);
 	} else if (sub) {
 		/* do substitutions on the content of heredoc */
 		s = pushs(SSTRING, ATEMP);
@@ -1672,7 +1674,7 @@ static const char *
 do_selectargs(const char **ap, bool print_menu)
 {
 	static const char *read_args[] = {
-		Tread, "-r", "REPLY", NULL
+		Tread, Tdr, TREPLY, NULL
 	};
 	char *s;
 	int i, argct;
@@ -1686,13 +1688,13 @@ do_selectargs(const char **ap, bool print_menu)
 		 *	- the user enters a blank line
 		 *	- the REPLY parameter is empty
 		 */
-		if (print_menu || !*str_val(global("REPLY")))
+		if (print_menu || !*str_val(global(TREPLY)))
 			pr_menu(ap);
 		shellf(Tf_s, str_val(global("PS3")));
 		if (call_builtin(findcom(Tread, FC_BI), read_args, Tselect,
 		    false))
 			return (NULL);
-		if (*(s = str_val(global("REPLY"))))
+		if (*(s = str_val(global(TREPLY))))
 			return ((getn(s, &i) && i >= 1 && i <= argct) ?
 			    ap[i - 1] : null);
 		print_menu = true;
@@ -1851,8 +1853,11 @@ dbteste_getopnd(Test_env *te, Test_op op, bool do_eval)
 	if (!do_eval)
 		return (null);
 
-	if (op == TO_STEQL || op == TO_STNEQ)
+	if (op == TO_STEQL || op == TO_STNEQ) {
 		flags |= DOPAT;
+		if (!Flag(FSH))
+			flags |= DODBMAGIC;
+	}
 
 	return (evalstr(s, flags));
 }

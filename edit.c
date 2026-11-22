@@ -5,7 +5,8 @@
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
- *		 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018
+ *		 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018,
+ *		 2019, 2020
  *	mirabilos <m@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -28,7 +29,7 @@
 
 #ifndef MKSH_NO_CMDLINE_EDITING
 
-__RCSID("$MirOS: src/bin/mksh/edit.c,v 1.342 2018/01/14 00:03:00 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/edit.c,v 1.357 2020/10/31 05:02:17 tg Exp $");
 
 /*
  * in later versions we might use libtermcap for this, but since external
@@ -38,6 +39,10 @@ __RCSID("$MirOS: src/bin/mksh/edit.c,v 1.342 2018/01/14 00:03:00 tg Exp $");
  */
 #ifndef MKSH_CLS_STRING
 #define MKSH_CLS_STRING		KSH_ESC_STRING "[;H" KSH_ESC_STRING "[J"
+#endif
+
+#if !defined(MKSH_SMALL) || !MKSH_S_NOVI
+static const char ctrl_x_e[] = "fc -e \"${VISUAL:-${EDITOR:-vi}}\" --";
 #endif
 
 /* tty driver characters we are interested in */
@@ -152,7 +157,7 @@ x_getc(void)
 	char c;
 	ssize_t n;
 
-	while ((n = blocking_read(STDIN_FILENO, &c, 1)) < 0 && errno == EINTR)
+	while ((n = blocking_read(0, &c, 1)) < 0 && errno == EINTR)
 		if (trap) {
 			x_mode(false);
 			runtraps(0);
@@ -176,7 +181,7 @@ x_getc(void)
 static void
 x_putcf(int c)
 {
-	shf_putc(c, shl_out);
+	shf_putc_i(c, shl_out);
 }
 
 /*********************************
@@ -353,7 +358,7 @@ x_glob_hlp_tilde_and_rem_qchar(char *s, bool magic_flag)
 			*--cp = '/';
 		} else {
 			/* ok, expand and replace */
-			cp = shf_smprintf(Tf_sSs, dp, cp);
+			strpathx(cp, dp, cp, 1);
 			if (magic_flag)
 				afree(s, ATEMP);
 			s = cp;
@@ -969,7 +974,6 @@ static char *wbuf[2];		/* window buffers */
 static int wbuf_len;		/* length of window buffers (x_cols - 3) */
 static int win;			/* window buffer in use */
 static char morec;		/* more character at right of window */
-static int lastref;		/* argument to last refresh() */
 static int holdlen;		/* length of holdbuf */
 #endif
 static int pwidth;		/* width of prompt */
@@ -988,17 +992,14 @@ static void x_zots(char *);
 static void x_zotc3(char **);
 static void x_vi_zotc(int);
 static void x_load_hist(char **);
-static int x_search(char *, int, int);
+static int x_search(const char *, int, int);
 #ifndef MKSH_SMALL
 static int x_search_dir(int);
 #endif
-static int x_match(char *, char *);
+static int x_match(const char *, const char *);
 static void x_redraw(int);
 static void x_push(size_t);
-static char *x_mapin(const char *, Area *);
-static char *x_mapout(int);
-static void x_mapout2(int, char **);
-static void x_print(int, int);
+static void x_bind_showone(int, int);
 static void x_e_ungetc(int);
 static int x_e_getc(void);
 static void x_e_putc2(int);
@@ -1145,6 +1146,7 @@ static struct x_defbindings const x_defbindings[] = {
 #ifndef MKSH_SMALL
 	/* more non-standard ones */
 	{ XFUNC_eval_region,		1,  CTRL_E	},
+	{ XFUNC_quote_region,		1,	'Q'	},
 	{ XFUNC_edit_line,		2,	'e'	}
 #endif
 };
@@ -1947,7 +1949,7 @@ x_search_hist(int c)
 				offset = x_match(xbuf, pat);
 				if (offset >= 0) {
 					x_goto(xbuf + offset + (p - pat) -
-					    (*pat == '^'));
+					    (*pat == '^' ? 1 : 0));
 					continue;
 				}
 			}
@@ -1969,18 +1971,21 @@ x_search_hist(int c)
 
 /* search backward from current line */
 static int
-x_search(char *pat, int sameline, int offset)
+x_search(const char *pat, int sameline, int offset)
 {
 	char **hp;
 	int i;
+	size_t patlen = strlen(pat);
 
+	if (*pat == '^')
+		--patlen;
 	for (hp = x_histp - (sameline ? 0 : 1); hp >= history; --hp) {
 		i = x_match(*hp, pat);
 		if (i >= 0) {
 			if (offset < 0)
 				x_e_putc2('\n');
 			x_load_hist(hp);
-			x_goto(xbuf + i + strlen(pat) - (*pat == '^'));
+			x_goto(xbuf + i + patlen);
 			return (i);
 		}
 	}
@@ -2025,7 +2030,7 @@ x_search_dir(int search_dir /* should've been bool */)
 
 /* return position of first match of pattern in string, else -1 */
 static int
-x_match(char *str, char *pat)
+x_match(const char *str, const char *pat)
 {
 	if (*pat == '^') {
 		return ((strncmp(str, pat + 1, strlen(pat + 1)) == 0) ? 0 : -1);
@@ -2389,190 +2394,223 @@ x_vt_hack(int c)
 }
 #endif
 
-static char *
-x_mapin(const char *cp, Area *ap)
+int
+x_bind_check(void)
 {
-	char *news, *op;
+	return (x_tab == NULL);
+}
 
-	strdupx(news, cp, ap);
-	op = news;
-	while (*cp) {
-		switch (*cp) {
-		case '^':
-			cp++;
-			*op++ = ksh_toctrl(*cp);
-			break;
-		case '\\':
-			if (cp[1] == '\\' || cp[1] == '^')
-				++cp;
-			/* FALLTHROUGH */
-		default:
-			*op++ = *cp;
-		}
-		cp++;
+static XString x_bind_show_xs;
+static char *x_bind_show_xp;
+
+static void
+x_bind_show_ch(unsigned char ch)
+{
+	Xcheck(x_bind_show_xs, x_bind_show_xp);
+	switch (ch) {
+	case ORD('^'):
+	case ORD('\\'):
+	case ORD('='):
+		*x_bind_show_xp++ = '\\';
+		*x_bind_show_xp++ = ch;
+		break;
+	default:
+		if (ksh_isctrl(ch)) {
+			*x_bind_show_xp++ = '^';
+			*x_bind_show_xp++ = ksh_unctrl(ch);
+		} else
+			*x_bind_show_xp++ = ch;
+		break;
 	}
-	*op = '\0';
-
-	return (news);
 }
 
 static void
-x_mapout2(int c, char **buf)
+x_bind_showone(int prefix, int key)
 {
-	char *p = *buf;
+	unsigned char f = XFUNC_VALUE(x_tab[prefix][key]);
 
-	if (ksh_isctrl(c)) {
-		*p++ = '^';
-		*p++ = ksh_unctrl(c);
-	} else
-		*p++ = c;
-	*p = 0;
-	*buf = p;
-}
+	if (!x_bind_show_xs.areap)
+		XinitN(x_bind_show_xs, 16, AEDIT);
 
-static char *
-x_mapout(int c)
-{
-	static char buf[8];
-	char *bp = buf;
-
-	x_mapout2(c, &bp);
-	return (buf);
-}
-
-static void
-x_print(int prefix, int key)
-{
-	int f = x_tab[prefix][key];
-
-	if (prefix)
-		/* prefix == 1 || prefix == 2 || prefix == 3 */
-		shf_puts(x_mapout(prefix == 1 ? CTRL_BO :
-		    prefix == 2 ? CTRL_X : 0), shl_stdout);
-#ifdef MKSH_SMALL
-	shprintf("%s = ", x_mapout(key));
-#else
-	shprintf("%s%s = ", x_mapout(key), (f & 0x80) ? "~" : "");
-	if (XFUNC_VALUE(f) != XFUNC_ins_string)
-#endif
-		shprintf(Tf_sN, x_ftab[XFUNC_VALUE(f)].xf_name);
+	x_bind_show_xp = Xstring(x_bind_show_xs, x_bind_show_xp);
+	shf_puts("bind ", shl_stdout);
 #ifndef MKSH_SMALL
-	else
-		shprintf("'%s'\n", x_atab[prefix][key]);
+	if (f == XFUNC_ins_string)
+		shf_puts("-m ", shl_stdout);
 #endif
+	switch (prefix) {
+	case 1:
+		x_bind_show_ch(CTRL_BO);
+		break;
+	case 2:
+		x_bind_show_ch(CTRL_X);
+		break;
+	case 3:
+		x_bind_show_ch(0);
+		break;
+	}
+	x_bind_show_ch(key);
+#ifndef MKSH_SMALL
+	if (x_tab[prefix][key] & 0x80)
+		*x_bind_show_xp++ = '~';
+#endif
+	*x_bind_show_xp = '\0';
+	x_bind_show_xp = Xstring(x_bind_show_xs, x_bind_show_xp);
+	print_value_quoted(shl_stdout, x_bind_show_xp);
+	shf_putc('=', shl_stdout);
+#ifndef MKSH_SMALL
+	if (f == XFUNC_ins_string) {
+		const unsigned char *cp = (const void *)x_atab[prefix][key];
+		unsigned char c;
+
+		while ((c = *cp++))
+			x_bind_show_ch(c);
+		*x_bind_show_xp = '\0';
+		x_bind_show_xp = Xstring(x_bind_show_xs, x_bind_show_xp);
+		print_value_quoted(shl_stdout, x_bind_show_xp);
+	} else
+#endif
+	  shf_puts(x_ftab[f].xf_name, shl_stdout);
+	shf_putc('\n', shl_stdout);
 }
 
 int
-x_bind(const char *a1, const char *a2,
-#ifndef MKSH_SMALL
-    /* bind -m */
-    bool macro,
-#endif
-    /* bind -l */
-    bool list)
+x_bind_list(void)
 {
-	unsigned char f;
+	size_t f;
+
+	for (f = 0; f < NELEM(x_ftab); f++)
+		if (!(x_ftab[f].xf_flags & XF_NOBIND))
+			shprintf(Tf_sN, x_ftab[f].xf_name);
+	return (0);
+}
+
+int
+x_bind_showall(void)
+{
 	int prefix, key;
-	char *m1, *m2;
-#ifndef MKSH_SMALL
-	char *sp = NULL;
-	bool hastilde;
-#endif
 
-	if (x_tab == NULL) {
-		bi_errorf("can't bind, not a tty");
-		return (1);
-	}
-	/* List function names */
-	if (list) {
-		for (f = 0; f < NELEM(x_ftab); f++)
-			if (!(x_ftab[f].xf_flags & XF_NOBIND))
-				shprintf(Tf_sN, x_ftab[f].xf_name);
-		return (0);
-	}
-	if (a1 == NULL) {
-		for (prefix = 0; prefix < X_NTABS; prefix++)
-			for (key = 0; key < X_TABSZ; key++) {
-				f = XFUNC_VALUE(x_tab[prefix][key]);
-				if (f == XFUNC_insert || f == XFUNC_error
-#ifndef MKSH_SMALL
-				    || (macro && f != XFUNC_ins_string)
-#endif
-				    )
-					continue;
-				x_print(prefix, key);
-			}
-		return (0);
-	}
-	m2 = m1 = x_mapin(a1, ATEMP);
-	prefix = 0;
-	for (;; m1++) {
-		key = (unsigned char)*m1;
-		f = XFUNC_VALUE(x_tab[prefix][key]);
-		if (f == XFUNC_meta1)
-			prefix = 1;
-		else if (f == XFUNC_meta2)
-			prefix = 2;
-		else if (f == XFUNC_meta3)
-			prefix = 3;
-		else
-			break;
-	}
-	if (*++m1
-#ifndef MKSH_SMALL
-	    && ((*m1 != '~') || *(m1 + 1))
-#endif
-	    ) {
-		char msg[256];
-		const char *c = a1;
-		m1 = msg;
-		while (*c && (size_t)(m1 - msg) < sizeof(msg) - 3)
-			x_mapout2(*c++, &m1);
-		bi_errorf("too long key sequence: %s", msg);
-		return (1);
-	}
-#ifndef MKSH_SMALL
-	hastilde = tobool(*m1);
-#endif
-	afree(m2, ATEMP);
-
-	if (a2 == NULL) {
-		x_print(prefix, key);
-		return (0);
-	}
-	if (*a2 == 0) {
-		f = XFUNC_insert;
-#ifndef MKSH_SMALL
-	} else if (macro) {
-		f = XFUNC_ins_string;
-		sp = x_mapin(a2, AEDIT);
-#endif
-	} else {
-		for (f = 0; f < NELEM(x_ftab); f++)
-			if (!strcmp(x_ftab[f].xf_name, a2))
+	for (prefix = 0; prefix < X_NTABS; prefix++)
+		for (key = 0; key < X_TABSZ; key++)
+			switch (XFUNC_VALUE(x_tab[prefix][key])) {
+			case XFUNC_error:	/* unset */
+			case XFUNC_insert:	/* auto-insert */
 				break;
-		if (f == NELEM(x_ftab) || x_ftab[f].xf_flags & XF_NOBIND) {
-			bi_errorf("%s: no such function", a2);
+			default:
+				x_bind_showone(prefix, key);
+				break;
+			}
+	return (0);
+}
+
+static unsigned int
+x_bind_getc(const char **ccpp)
+{
+	unsigned int ch, ec;
+
+	if ((ch = ord(**ccpp)))
+		++(*ccpp);
+	switch (ch) {
+	case ORD('^'):
+		ch = ksh_toctrl(**ccpp) | 0x100U;
+		if (**ccpp)
+			++(*ccpp);
+		break;
+	case ORD('\\'):
+		switch ((ec = ord(**ccpp))) {
+		case ORD('^'):
+		case ORD('\\'):
+		case ORD('='):
+			ch = ec | 0x100U;
+			++(*ccpp);
+			break;
+		}
+		break;
+	}
+	return (ch);
+}
+
+int
+x_bind(const char *s SMALLP(bool macro))
+{
+	const char *ccp = s;
+	int prefix, key;
+	unsigned int c;
+#ifndef MKSH_SMALL
+	bool hastilde = false;
+	char *ms = NULL;
+#endif
+
+	prefix = 0;
+	c = x_bind_getc(&ccp);
+	if (!c || c == ORD('=')) {
+		bi_errorf("no key to bind");
+		return (1);
+	}
+	key = c & 0xFF;
+	while ((c = x_bind_getc(&ccp)) != ORD('=')) {
+		if (!c) {
+			x_bind_showone(prefix, key);
+			return (0);
+		}
+		switch (XFUNC_VALUE(x_tab[prefix][key])) {
+		case XFUNC_meta1:
+			prefix = 1;
+			if (0)
+				/* FALLTHROUGH */
+		case XFUNC_meta2:
+			  prefix = 2;
+			if (0)
+				/* FALLTHROUGH */
+		case XFUNC_meta3:
+			  prefix = 3;
+			key = c & 0xFF;
+			continue;
+		}
+#ifndef MKSH_SMALL
+		if (c == ORD('~')) {
+			hastilde = true;
+			continue;
+		}
+#endif
+		bi_errorf("too long key sequence: %s", s);
+		return (-1);
+	}
+
+#ifndef MKSH_SMALL
+	if (macro) {
+		char *cp;
+
+		cp = ms = alloc(strlen(ccp) + 1, AEDIT);
+		while ((c = x_bind_getc(&ccp)))
+			*cp++ = c;
+		*cp = '\0';
+		c = XFUNC_ins_string;
+	} else
+#endif
+	  if (!*ccp) {
+		c = XFUNC_insert;
+	} else {
+		for (c = 0; c < NELEM(x_ftab); ++c)
+			if (!strcmp(x_ftab[c].xf_name, ccp))
+				break;
+		if (c == NELEM(x_ftab) || x_ftab[c].xf_flags & XF_NOBIND) {
+			bi_errorf("%s: no such editing command", ccp);
 			return (1);
 		}
 	}
 
 #ifndef MKSH_SMALL
-	if (XFUNC_VALUE(x_tab[prefix][key]) == XFUNC_ins_string &&
-	    x_atab[prefix][key])
+	if (XFUNC_VALUE(x_tab[prefix][key]) == XFUNC_ins_string)
 		afree(x_atab[prefix][key], AEDIT);
+	x_atab[prefix][key] = ms;
+	if (hastilde)
+		c |= 0x80U;
 #endif
-	x_tab[prefix][key] = f
-#ifndef MKSH_SMALL
-	    | (hastilde ? 0x80 : 0)
-#endif
-	    ;
-#ifndef MKSH_SMALL
-	x_atab[prefix][key] = sp;
-#endif
+	x_tab[prefix][key] = c;
 
-	/* Track what the user has bound so x_mode(true) won't toast things */
-	if (f == XFUNC_insert)
+	/* track what the user has bound, so x_mode(true) won't toast things */
+	if (c == XFUNC_insert)
 		x_bound[(prefix * X_TABSZ + key) / 8] &=
 		    ~(1 << ((prefix * X_TABSZ + key) % 8));
 	else
@@ -3093,10 +3131,6 @@ static int
 x_edit_line(int c MKSH_A_UNUSED)
 {
 	if (x_arg_defaulted) {
-		if (xep == xbuf) {
-			x_e_putc2(KSH_BEL);
-			return (KSTD);
-		}
 		if (modified) {
 			*xep = '\0';
 			histsave(&source->line, xbuf, HIST_STORE, true);
@@ -3105,10 +3139,9 @@ x_edit_line(int c MKSH_A_UNUSED)
 			x_arg = source->line - (histptr - x_histp);
 	}
 	if (x_arg)
-		shf_snprintf(xbuf, xend - xbuf, Tf_sd,
-		    "fc -e ${VISUAL:-${EDITOR:-vi}} --", x_arg);
+		shf_snprintf(xbuf, xend - xbuf, Tf_sd, ctrl_x_e, x_arg);
 	else
-		strlcpy(xbuf, "fc -e ${VISUAL:-${EDITOR:-vi}} --", xend - xbuf);
+		strlcpy(xbuf, ctrl_x_e, xend - xbuf);
 	xep = strnul(xbuf);
 	return (x_newline('\n'));
 }
@@ -3401,13 +3434,13 @@ static int Forwword(int);
 static int Backword(int);
 static int Endword(int);
 static int grabhist(int, int);
-static int grabsearch(int, int, int, const char *);
+static int grabsearch(const char *, int, int, bool);
 static void redraw_line(bool);
-static void refresh(int);
+static void refresh(bool);
 static int outofwin(void);
 static void rewindow(void);
 static int newcol(unsigned char, int);
-static void display(char *, char *, int);
+static void display(char *, char *, bool);
 static void ed_mov_opt(int, char *);
 static int expand_word(int);
 static int complete_word(int, int);
@@ -3507,11 +3540,11 @@ static int inslen;			/* length of input buffer */
 static int srchlen;			/* length of current search pattern */
 static char *ybuf;			/* yank buffer */
 static int yanklen;			/* length of yank buffer */
-static int fsavecmd = ' ';		/* last find command */
+static uint8_t fsavecmd = ORD(' ');	/* last find command */
 static int fsavech;			/* character to find */
 static char lastcmd[MAXVICMD];		/* last non-move command */
 static int lastac;			/* argcnt for lastcmd */
-static int lastsearch = ' ';		/* last search command */
+static uint8_t lastsearch = ORD(' ');	/* last search command */
 static char srchpat[SRCHLEN];		/* last search pattern */
 static int insert;			/* <>0 in insert mode */
 static int hnum;			/* position in history */
@@ -3578,7 +3611,6 @@ x_vi(char *buf)
 	winwidth = x_cols - pwidth - 3;
 	win = 0;
 	morec = ' ';
-	lastref = 1;
 	holdlen = 0;
 
 	editmode = 2;
@@ -3651,21 +3683,25 @@ vi_hook(int ch)
 
 	case VNORMAL:
 		/* PC scancodes */
-		if (!ch) switch (cmdlen = 0, (ch = x_getc())) {
-		case 71: ch = '0'; goto pseudo_vi_command;
-		case 72: ch = 'k'; goto pseudo_vi_command;
-		case 73: ch = 'A'; goto vi_xfunc_search_up;
-		case 75: ch = 'h'; goto pseudo_vi_command;
-		case 77: ch = 'l'; goto pseudo_vi_command;
-		case 79: ch = '$'; goto pseudo_vi_command;
-		case 80: ch = 'j'; goto pseudo_vi_command;
-		case 83: ch = 'x'; goto pseudo_vi_command;
-		default: ch = 0; goto vi_insert_failed;
+		if (!ch) {
+			cmdlen = 0;
+			switch (ch = x_getc()) {
+			case 71: ch = ORD('0'); goto pseudo_vi_command;
+			case 72: ch = ORD('k'); goto pseudo_vi_command;
+			case 73: ch = ORD('A'); goto vi_xfunc_search;
+			case 75: ch = ORD('h'); goto pseudo_vi_command;
+			case 77: ch = ORD('l'); goto pseudo_vi_command;
+			case 79: ch = ORD('$'); goto pseudo_vi_command;
+			case 80: ch = ORD('j'); goto pseudo_vi_command;
+			case 81: ch = ORD('B'); goto vi_xfunc_search;
+			case 83: ch = ORD('x'); goto pseudo_vi_command;
+			default: ch = 0; goto vi_insert_failed;
+			}
 		}
 		if (insert != 0) {
 			if (ch == CTRL_V) {
 				state = VLIT;
-				ch = '^';
+				ch = ORD('^');
 			}
 			switch (vi_insert(ch)) {
 			case -1:
@@ -3676,7 +3712,7 @@ vi_hook(int ch)
 			case 0:
 				if (state == VLIT) {
 					vs->cursor--;
-					refresh(0);
+					refresh(false);
 				} else
 					refresh(insert != 0);
 				break;
@@ -3699,10 +3735,10 @@ vi_hook(int ch)
 					save_cbuf();
 					vs->cursor = 0;
 					vs->linelen = 0;
-					if (putbuf(ch == '/' ? "/" : "?", 1,
-					    false) != 0)
+					if (putbuf(ord(ch) == ORD('/') ?
+					    "/" : "?", 1, false) != 0)
 						return (-1);
-					refresh(0);
+					refresh(false);
 				}
 				if (state == VVERSION) {
 					save_cbuf();
@@ -3710,7 +3746,7 @@ vi_hook(int ch)
 					vs->linelen = 0;
 					putbuf(KSH_VERSION,
 					    strlen(KSH_VERSION), false);
-					refresh(0);
+					refresh(false);
 				}
 			}
 		}
@@ -3722,14 +3758,14 @@ vi_hook(int ch)
 			vi_error();
 		} else
 			vs->cbuf[vs->cursor++] = ch;
-		refresh(1);
+		refresh(true);
 		state = VNORMAL;
 		break;
 
 	case VVERSION:
 		restore_cbuf();
 		state = VNORMAL;
-		refresh(0);
+		refresh(false);
 		break;
 
 	case VARG1:
@@ -3793,7 +3829,7 @@ vi_hook(int ch)
 				if (!srchpat[0]) {
 					vi_error();
 					state = VNORMAL;
-					refresh(0);
+					refresh(false);
 					return (0);
 				}
 			} else {
@@ -3806,17 +3842,17 @@ vi_hook(int ch)
 				srchlen--;
 				vs->linelen -= char_len(locpat[srchlen]);
 				vs->cursor = vs->linelen;
-				refresh(0);
+				refresh(false);
 				return (0);
 			}
 			restore_cbuf();
 			state = VNORMAL;
-			refresh(0);
+			refresh(false);
 		} else if (isched(ch, edchars.kill)) {
 			srchlen = 0;
 			vs->linelen = 1;
 			vs->cursor = 1;
-			refresh(0);
+			refresh(false);
 			return (0);
 		} else if (isched(ch, edchars.werase)) {
 			unsigned int i, n;
@@ -3831,11 +3867,11 @@ vi_hook(int ch)
 			vs = save_es;
 
 			i = (unsigned)srchlen;
-			while (--i >= n)
+			while (i-- > n)
 				vs->linelen -= char_len(locpat[i]);
 			srchlen = (int)n;
 			vs->cursor = vs->linelen;
-			refresh(0);
+			refresh(false);
 			return (0);
 		} else {
 			if (srchlen == SRCHLEN - 1)
@@ -3854,17 +3890,18 @@ vi_hook(int ch)
 					vs->cbuf[vs->linelen++] = ch;
 				}
 				vs->cursor = vs->linelen;
-				refresh(0);
+				refresh(false);
 			}
 			return (0);
 		}
 		break;
 
 	case VPREFIX2:
- vi_xfunc_search_up:
+ vi_xfunc_search:
 		state = VFAIL;
 		switch (ch) {
-		case 'A':
+		case ORD('A'):
+		case ORD('B'):
 			/* the cursor may not be at the BOL */
 			if (!vs->cursor)
 				break;
@@ -3873,13 +3910,14 @@ vi_hook(int ch)
 				vs->cursor = sizeof(srchpat) - 2;
 			/* anchor the search pattern */
 			srchpat[0] = '^';
-			/* take the current line up to the cursor */
-			memmove(srchpat + 1, vs->cbuf, vs->cursor);
+			/* take current line up to the cursor */
+			memcpy(srchpat + 1, vs->cbuf, vs->cursor);
 			srchpat[vs->cursor + 1] = '\0';
 			/* set a magic flag */
 			argc1 = 2 + (int)vs->cursor;
-			/* and emulate a backwards history search */
-			lastsearch = '/';
+			/* and emulate a history search */
+			/* search backwards if PgUp, forwards for PgDn */
+			lastsearch = ch == ORD('A') ? '/' : '?';
 			*curcmd = 'n';
 			goto pseudo_VCMD;
 		}
@@ -3893,7 +3931,7 @@ vi_hook(int ch)
 		switch (vi_cmd(argc1, curcmd)) {
 		case -1:
 			vi_error();
-			refresh(0);
+			refresh(false);
 			break;
 		case 0:
 			if (insert != 0)
@@ -3901,7 +3939,7 @@ vi_hook(int ch)
 			refresh(insert != 0);
 			break;
 		case 1:
-			refresh(0);
+			refresh(false);
 			return (1);
 		case 2:
 			/* back from a 'v' command - don't redraw the screen */
@@ -3916,7 +3954,7 @@ vi_hook(int ch)
 		switch (vi_cmd(lastac, lastcmd)) {
 		case -1:
 			vi_error();
-			refresh(0);
+			refresh(false);
 			break;
 		case 0:
 			if (insert != 0) {
@@ -3929,10 +3967,10 @@ vi_hook(int ch)
 						vi_error();
 				}
 			}
-			refresh(0);
+			refresh(false);
 			break;
 		case 1:
-			refresh(0);
+			refresh(false);
 			return (1);
 		case 2:
 			/* back from a 'v' command - can't happen */
@@ -4097,8 +4135,9 @@ static int
 vi_cmd(int argcnt, const char *cmd)
 {
 	int ncursor;
-	int cur, c1, c2, c3 = 0;
+	int cur, c1, c2;
 	int any;
+	bool b;
 	struct edstate *t;
 
 	if (argcnt == 0 && !is_zerocount(*cmd))
@@ -4369,8 +4408,6 @@ vi_cmd(int argcnt, const char *cmd)
 
 		case ORD('v'):
 			if (!argcnt) {
-				if (vs->linelen == 0)
-					return (-1);
 				if (modified) {
 					vs->cbuf[vs->linelen] = '\0';
 					histsave(&source->line, vs->cbuf,
@@ -4381,12 +4418,9 @@ vi_cmd(int argcnt, const char *cmd)
 			}
 			if (argcnt)
 				shf_snprintf(vs->cbuf, vs->cbufsize, Tf_sd,
-				    "fc -e ${VISUAL:-${EDITOR:-vi}} --",
-				    argcnt);
+				    ctrl_x_e, argcnt);
 			else
-				strlcpy(vs->cbuf,
-				    "fc -e ${VISUAL:-${EDITOR:-vi}} --",
-				    vs->cbufsize);
+				strlcpy(vs->cbuf, ctrl_x_e, vs->cbufsize);
 			vs->linelen = strlen(vs->cbuf);
 			return (2);
 
@@ -4436,25 +4470,23 @@ vi_cmd(int argcnt, const char *cmd)
 
 			/* FALLTHROUGH */
 		case ORD('/'):
-			c3 = 1;
+			c1 = 1;
 			srchlen = 0;
 			lastsearch = *cmd;
-			/* FALLTHROUGH */
+			if (0)
+				/* FALLTHROUGH */
 		case ORD('n'):
 		case ORD('N'):
-			if (lastsearch == ' ')
+			  c1 = 0;
+			if (lastsearch == ORD(' '))
 				return (-1);
-			if (lastsearch == '?')
-				c1 = 1;
-			else
-				c1 = 0;
+			b = (lastsearch == ORD('?'));
 			if (*cmd == 'N')
-				c1 = !c1;
-			if ((c2 = grabsearch(modified, hnum,
-			    c1, srchpat)) < 0) {
-				if (c3) {
+				b = !b;
+			if ((c2 = grabsearch(srchpat, modified, hnum, b)) < 0) {
+				if (c1) {
 					restore_cbuf();
-					refresh(0);
+					refresh(false);
 				}
 				return (-1);
 			} else {
@@ -4648,10 +4680,10 @@ domove(int argcnt, const char *cmd, int sub)
 		/* FALLTHROUGH */
 	case ORD(','):
 	case ORD(';'):
-		if (fsavecmd == ' ')
+		if (fsavecmd == ORD(' '))
 			return (-1);
 		i = ksh_eq(fsavecmd, 'F', 'f');
-		t = fsavecmd > 'a';
+		t = rtt2asc(fsavecmd) > rtt2asc('a');
 		if (*cmd == ',')
 			t = !t;
 		if ((ncursor = findch(fsavech, argcnt, tobool(t),
@@ -5079,20 +5111,20 @@ grabhist(int save, int n)
 }
 
 static int
-grabsearch(int save, int start, int fwd, const char *pat)
+grabsearch(const char *pat, int save, int start, bool fwd)
 {
 	char *hptr;
 	int hist;
 	bool anchored;
 
-	if ((start == 0 && fwd == 0) || (start >= hlast - 1 && fwd == 1))
+	if ((start == 0 && !fwd) || (start >= hlast - 1 && fwd))
 		return (-1);
 	if (fwd)
 		start++;
 	else
 		start--;
 	anchored = *pat == '^' ? (++pat, true) : false;
-	if ((hist = findhist(start, fwd, pat, anchored)) < 0) {
+	if ((hist = findhist(start, pat, fwd, anchored)) < 0) {
 		/* (start != 0 && fwd && match(holdbufp, pat) >= 0) */
 		if (start != 0 && fwd && strcmp(holdbufp, pat) >= 0) {
 			restore_cbuf();
@@ -5125,12 +5157,8 @@ redraw_line(bool newl)
 }
 
 static void
-refresh(int leftside)
+refresh(bool leftside)
 {
-	if (leftside < 0)
-		leftside = lastref;
-	else
-		lastref = leftside;
 	if (outofwin())
 		rewindow();
 	display(wbuf[1 - win], wbuf[win], leftside);
@@ -5186,7 +5214,7 @@ newcol(unsigned char ch, int col)
 }
 
 static void
-display(char *wb1, char *wb2, int leftside)
+display(char *wb1, char *wb2, bool leftside)
 {
 	unsigned char ch;
 	char *twb1, *twb2, mc;
@@ -5341,7 +5369,7 @@ expand_word(int cmd)
 	hnum = hlast;
 	insert = INSERT;
 	lastac = 0;
-	refresh(0);
+	refresh(false);
 	return (rval);
 }
 
@@ -5456,7 +5484,7 @@ complete_word(int cmd, int count)
 	insert = INSERT;
 	/* prevent this from being redone... */
 	lastac = 0;
-	refresh(0);
+	refresh(false);
 
 	return (rval);
 }
@@ -5565,9 +5593,19 @@ x_initterm(const char *termtype)
 {
 	/* default must be 0 (bss) */
 	x_term_mode = 0;
-	/* this is what tmux uses, don't ask me about it */
-	if (!strcmp(termtype, "screen") || !strncmp(termtype, "screen-", 7))
-		x_term_mode = 1;
+	/* catch any of the TERM types tmux uses, don’t ask m̲e̲ about it… */
+	switch (*termtype) {
+	case 's':
+		if (!strncmp(termtype, "screen", 6) &&
+		    (termtype[6] == '\0' || termtype[6] == '-'))
+			x_term_mode = 1;
+		break;
+	case 't':
+		if (!strncmp(termtype, "tmux", 4) &&
+		    (termtype[4] == '\0' || termtype[4] == '-'))
+			x_term_mode = 1;
+		break;
+	}
 }
 
 #ifndef MKSH_SMALL
@@ -5589,39 +5627,40 @@ x_eval_region_helper(const char *cmd, size_t len)
 		afree(wds, ATEMP);
 		strdupx(cp, cp, AEDIT);
 	} else
+		/* command cannot be parsed */
 		cp = NULL;
 	quitenv(NULL);
 	return (cp);
 }
 
 static int
-x_eval_region(int c MKSH_A_UNUSED)
+x_operate_region(char *(*helper)(const char *, size_t))
 {
-	char *evbeg, *evend, *cp;
+	char *rgbeg, *rgend, *cp;
 	size_t newlen;
 	/* only for LINE overflow checking */
 	size_t restlen;
 
 	if (xmp == NULL) {
-		evbeg = xbuf;
-		evend = xep;
+		rgbeg = xbuf;
+		rgend = xep;
 	} else if (xmp < xcp) {
-		evbeg = xmp;
-		evend = xcp;
+		rgbeg = xmp;
+		rgend = xcp;
 	} else {
-		evbeg = xcp;
-		evend = xmp;
+		rgbeg = xcp;
+		rgend = xmp;
 	}
 
 	x_e_putc2('\r');
 	x_clrtoeol(' ', false);
 	x_flush();
 	x_mode(false);
-	cp = x_eval_region_helper(evbeg, evend - evbeg);
+	cp = helper(rgbeg, rgend - rgbeg);
 	x_mode(true);
 
 	if (cp == NULL) {
-		/* command cannot be parsed */
+		/* error return from helper */
  x_eval_region_err:
 		x_e_putc2(KSH_BEL);
 		x_redraw('\r');
@@ -5629,20 +5668,49 @@ x_eval_region(int c MKSH_A_UNUSED)
 	}
 
 	newlen = strlen(cp);
-	restlen = xep - evend;
+	restlen = xep - rgend;
 	/* check for LINE overflow, until this is dynamically allocated */
-	if (evbeg + newlen + restlen >= xend)
+	if (rgbeg + newlen + restlen >= xend)
 		goto x_eval_region_err;
 
-	xmp = evbeg;
-	xcp = evbeg + newlen;
+	xmp = rgbeg;
+	xcp = rgbeg + newlen;
 	xep = xcp + restlen;
-	memmove(xcp, evend, restlen + /* NUL */ 1);
+	memmove(xcp, rgend, restlen + /* NUL */ 1);
 	memcpy(xmp, cp, newlen);
 	afree(cp, AEDIT);
 	x_adjust();
 	x_modified();
 	return (KSTD);
+}
+
+static int
+x_eval_region(int c MKSH_A_UNUSED)
+{
+	return (x_operate_region(x_eval_region_helper));
+}
+
+static char *
+x_quote_region_helper(const char *cmd, size_t len)
+{
+	char *s;
+	size_t newlen;
+	struct shf shf;
+
+	strndupx(s, cmd, len, ATEMP);
+	newlen = len < 256 ? 256 : 4096;
+	shf_sopen(alloc(newlen, AEDIT), newlen, SHF_WR | SHF_DYNAMIC, &shf);
+	shf.areap = AEDIT;
+	shf.flags |= SHF_ALLOCB;
+	print_value_quoted(&shf, s);
+	afree(s, ATEMP);
+	return (shf_sclose(&shf));
+}
+
+static int
+x_quote_region(int c MKSH_A_UNUSED)
+{
+	return (x_operate_region(x_quote_region_helper));
 }
 #endif /* !MKSH_SMALL */
 #endif /* !MKSH_NO_CMDLINE_EDITING */

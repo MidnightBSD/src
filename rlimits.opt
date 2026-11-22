@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2013, 2015
+ * Copyright (c) 2013, 2015, 2019
  *	mirabilos <m@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -16,10 +16,12 @@
  * of dealing in the work, even if advised of the possibility of such
  * damage or existence of a defect, except proven that it results out
  * of said person's immediate fault when using the work as intended.
+ *-
+ * Keep {r,u}limits.opt in sync with each other!
  */
 
 @RLIMITS_DEFNS
-__RCSID("$MirOS: src/bin/mksh/rlimits.opt,v 1.3 2015/12/12 21:08:44 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/rlimits.opt,v 1.5 2020/07/24 20:11:18 tg Exp $");
 @RLIMITS_ITEMS
 #define FN(lname,lid,lfac,lopt) (const struct limits *)(&rlimits_ ## lid),
 @@
@@ -86,6 +88,9 @@ FN("sockbufsiz(KiB)", RLIMIT_SBSIZE, 1024
 >P|RLIMIT_PTHREAD
 FN("threadsperprocess", RLIMIT_PTHREAD, 1
 
+>r|RLIMIT_THREADS
+FN("threadsperprocess", RLIMIT_THREADS, 1
+
 >e|RLIMIT_NICE
 FN("maxnice", RLIMIT_NICE, 1
 
@@ -101,5 +106,8 @@ FN("memory(KiB)", RLIMIT_VMEM, 1024
 FN("virtual-memory(KiB)", RLIMIT_VMEM, 1024
 >v|ULIMIT_V_IS_AS
 FN("address-space(KiB)", RLIMIT_AS, 1024
+
+>x|RLIMIT_LOCKS
+FN("filelocks", RLIMIT_LOCKS, 1
 
 |RLIMITS_OPTCS

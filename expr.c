@@ -2,7 +2,7 @@
 
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
- *		 2011, 2012, 2013, 2014, 2016, 2017, 2018
+ *		 2011, 2012, 2013, 2014, 2016, 2017, 2018, 2019
  *	mirabilos <m@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -23,7 +23,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/expr.c,v 1.103 2018/01/14 01:29:47 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/expr.c,v 1.108 2020/06/20 02:27:50 tg Exp $");
 
 #define EXPRTOK_DEFNS
 #include "exprtok.h"
@@ -864,7 +864,8 @@ ksh_access(const char *fn, int mode)
 	int rv;
 	struct stat sb;
 
-	if ((rv = access(fn, mode)) == 0 && kshuid == 0 && (mode & X_OK) &&
+	if ((rv = access(fn, mode)) == 0 && (mode & X_OK) &&
+	    (kshuid == 0 || ksheuid == 0) &&
 	    (rv = stat(fn, &sb)) == 0 && !S_ISDIR(sb.st_mode) &&
 	    (sb.st_mode & (S_IXUSR|S_IXGRP|S_IXOTH)) == 0)
 		rv = -1;
@@ -885,8 +886,43 @@ static int mb_ucsbsearch(const struct mb_ucsrange arr[], size_t elems,
     unsigned int val) MKSH_A_PURE;
 
 /*
- * Generated from the Unicode Character Database, Version 10.0.0, by
- * MirOS: contrib/code/Snippets/eawparse,v 1.12 2017/09/06 16:05:45 tg Exp $
+ * Generated from the UCD 13.0.0 - see /usr/share/doc/legal/LICENCE-BSD - by
+ * MirOS: contrib/code/Snippets/eawparse,v 1.15 2020/06/15 20:31:13 tg Exp $
+ */
+
+/*-
+ * Parts Copyright © 1991–2020 Unicode, Inc. All rights reserved.
+ * Distributed under the Terms of Use in
+ *     https://www.unicode.org/copyright.html.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of the Unicode data files and any associated documentation
+ * (the "Data Files") or Unicode software and any associated documentation
+ * (the "Software") to deal in the Data Files or Software
+ * without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, and/or sell copies of
+ * the Data Files or Software, and to permit persons to whom the Data Files
+ * or Software are furnished to do so, provided that either
+ * (a) this copyright and permission notice appear with all copies
+ * of the Data Files or Software, or
+ * (b) this copyright and permission notice appear in associated
+ * Documentation.
+ *
+ * THE DATA FILES AND SOFTWARE ARE PROVIDED "AS IS", WITHOUT WARRANTY OF
+ * ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+ * WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT OF THIRD PARTY RIGHTS.
+ * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS
+ * NOTICE BE LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL
+ * DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+ * DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+ * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THE DATA FILES OR SOFTWARE.
+ *
+ * Except as contained in this notice, the name of a copyright holder
+ * shall not be used in advertising or otherwise to promote the sale,
+ * use or other dealings in these Data Files or Software without prior
+ * written authorization of the copyright holder.
  */
 
 static const struct mb_ucsrange mb_ucs_combining[] = {
@@ -909,12 +945,13 @@ static const struct mb_ucsrange mb_ucs_combining[] = {
 	{ 0x0730, 0x074A },
 	{ 0x07A6, 0x07B0 },
 	{ 0x07EB, 0x07F3 },
+	{ 0x07FD, 0x07FD },
 	{ 0x0816, 0x0819 },
 	{ 0x081B, 0x0823 },
 	{ 0x0825, 0x0827 },
 	{ 0x0829, 0x082D },
 	{ 0x0859, 0x085B },
-	{ 0x08D4, 0x08E1 },
+	{ 0x08D3, 0x08E1 },
 	{ 0x08E3, 0x0902 },
 	{ 0x093A, 0x093A },
 	{ 0x093C, 0x093C },
@@ -927,6 +964,7 @@ static const struct mb_ucsrange mb_ucs_combining[] = {
 	{ 0x09C1, 0x09C4 },
 	{ 0x09CD, 0x09CD },
 	{ 0x09E2, 0x09E3 },
+	{ 0x09FE, 0x09FE },
 	{ 0x0A01, 0x0A02 },
 	{ 0x0A3C, 0x0A3C },
 	{ 0x0A41, 0x0A42 },
@@ -947,12 +985,13 @@ static const struct mb_ucsrange mb_ucs_combining[] = {
 	{ 0x0B3F, 0x0B3F },
 	{ 0x0B41, 0x0B44 },
 	{ 0x0B4D, 0x0B4D },
-	{ 0x0B56, 0x0B56 },
+	{ 0x0B55, 0x0B56 },
 	{ 0x0B62, 0x0B63 },
 	{ 0x0B82, 0x0B82 },
 	{ 0x0BC0, 0x0BC0 },
 	{ 0x0BCD, 0x0BCD },
 	{ 0x0C00, 0x0C00 },
+	{ 0x0C04, 0x0C04 },
 	{ 0x0C3E, 0x0C40 },
 	{ 0x0C46, 0x0C48 },
 	{ 0x0C4A, 0x0C4D },
@@ -969,6 +1008,7 @@ static const struct mb_ucsrange mb_ucs_combining[] = {
 	{ 0x0D41, 0x0D44 },
 	{ 0x0D4D, 0x0D4D },
 	{ 0x0D62, 0x0D63 },
+	{ 0x0D81, 0x0D81 },
 	{ 0x0DCA, 0x0DCA },
 	{ 0x0DD2, 0x0DD4 },
 	{ 0x0DD6, 0x0DD6 },
@@ -976,8 +1016,7 @@ static const struct mb_ucsrange mb_ucs_combining[] = {
 	{ 0x0E34, 0x0E3A },
 	{ 0x0E47, 0x0E4E },
 	{ 0x0EB1, 0x0EB1 },
-	{ 0x0EB4, 0x0EB9 },
-	{ 0x0EBB, 0x0EBC },
+	{ 0x0EB4, 0x0EBC },
 	{ 0x0EC8, 0x0ECD },
 	{ 0x0F18, 0x0F19 },
 	{ 0x0F35, 0x0F35 },
@@ -1027,7 +1066,7 @@ static const struct mb_ucsrange mb_ucs_combining[] = {
 	{ 0x1A65, 0x1A6C },
 	{ 0x1A73, 0x1A7C },
 	{ 0x1A7F, 0x1A7F },
-	{ 0x1AB0, 0x1ABE },
+	{ 0x1AB0, 0x1AC0 },
 	{ 0x1B00, 0x1B03 },
 	{ 0x1B34, 0x1B34 },
 	{ 0x1B36, 0x1B3A },
@@ -1070,14 +1109,16 @@ static const struct mb_ucsrange mb_ucs_combining[] = {
 	{ 0xA806, 0xA806 },
 	{ 0xA80B, 0xA80B },
 	{ 0xA825, 0xA826 },
+	{ 0xA82C, 0xA82C },
 	{ 0xA8C4, 0xA8C5 },
 	{ 0xA8E0, 0xA8F1 },
+	{ 0xA8FF, 0xA8FF },
 	{ 0xA926, 0xA92D },
 	{ 0xA947, 0xA951 },
 	{ 0xA980, 0xA982 },
 	{ 0xA9B3, 0xA9B3 },
 	{ 0xA9B6, 0xA9B9 },
-	{ 0xA9BC, 0xA9BC },
+	{ 0xA9BC, 0xA9BD },
 	{ 0xA9E5, 0xA9E5 },
 	{ 0xAA29, 0xAA2E },
 	{ 0xAA31, 0xAA32 },
@@ -1095,6 +1136,7 @@ static const struct mb_ucsrange mb_ucs_combining[] = {
 	{ 0xABE5, 0xABE5 },
 	{ 0xABE8, 0xABE8 },
 	{ 0xABED, 0xABED },
+	{ 0xD7B0, 0xD7FF },
 	{ 0xFB1E, 0xFB1E },
 	{ 0xFE00, 0xFE0F },
 	{ 0xFE20, 0xFE2F },
@@ -1173,7 +1215,7 @@ mb_ucsbsearch(const struct mb_ucsrange arr[], size_t elems, unsigned int val)
 	return (0);
 }
 
-/* Unix column width of a wide character (Unicode code point, really) */
+/* Unix column width of a wide character (UCS code point, really) */
 int
 utf_wcwidth(unsigned int wc)
 {

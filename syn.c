@@ -3,7 +3,7 @@
 /*-
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009,
  *		 2011, 2012, 2013, 2014, 2015, 2016, 2017,
- *		 2018
+ *		 2018, 2020
  *	mirabilos <m@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -24,7 +24,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/syn.c,v 1.127 2018/01/14 00:22:30 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/syn.c,v 1.129 2020/10/31 01:21:58 tg Exp $");
 
 struct nesting_state {
 	int start_token;	/* token than began nesting (eg, FOR) */
@@ -268,12 +268,12 @@ get_command(int cf, int sALIAS)
 {
 	struct op *t;
 	int c, iopn = 0, syniocf, lno;
-	struct ioword *iop, **iops;
+	struct ioword *iop;
 	XPtrV args, vars;
 	struct nesting_state old_nesting;
+	bool check_decl_utility;
+	static struct ioword *iops[NUFILE + 1];
 
-	/* NUFILE is small enough to leave this addition unchecked */
-	iops = alloc2((NUFILE + 1), sizeof(struct ioword *), ATEMP);
 	XPinit(args, 16);
 	XPinit(vars, 16);
 
@@ -281,7 +281,6 @@ get_command(int cf, int sALIAS)
 	switch (c = token(cf|KEYWORD|sALIAS|CMDASN)) {
 	default:
 		REJECT;
-		afree(iops, ATEMP);
 		XPfree(args);
 		XPfree(vars);
 		/* empty line */
@@ -294,100 +293,93 @@ get_command(int cf, int sALIAS)
 		t = newtp(TCOM);
 		t->lineno = source->line;
 		goto get_command_start;
-		while (/* CONSTCOND */ 1) {
-			bool check_decl_utility;
 
-			if (XPsize(args) == 0) {
+ get_command_loop:
+		if (XPsize(args) == 0) {
  get_command_start:
-				check_decl_utility = true;
-				cf = sALIAS | CMDASN;
-			} else if (t->u.evalflags)
-				cf = CMDWORD | CMDASN;
-			else
-				cf = CMDWORD;
-			switch (tpeek(cf)) {
-			case REDIR:
-				while ((iop = synio(cf)) != NULL) {
-					if (iopn >= NUFILE)
-						yyerror(Tf_toomany,
-						    Tredirection);
-					iops[iopn++] = iop;
-				}
-				break;
+			check_decl_utility = true;
+			cf = sALIAS | CMDASN;
+		} else if (t->u.evalflags)
+			cf = CMDWORD | CMDASN;
+		else
+			cf = CMDWORD;
 
-			case LWORD:
-				ACCEPT;
-				if (check_decl_utility) {
-					struct tbl *tt = get_builtin(ident);
-					uint32_t flag;
-
-					flag = tt ? tt->flag : 0;
-					if (flag & DECL_UTIL)
-						t->u.evalflags = DOVACHECK;
-					if (!(flag & DECL_FWDR))
-						check_decl_utility = false;
-				}
-				if ((XPsize(args) == 0 || Flag(FKEYWORD)) &&
-				    is_wdvarassign(yylval.cp))
-					XPput(vars, yylval.cp);
-				else
-					XPput(args, yylval.cp);
-				break;
-
-			case ORD('(' /*)*/):
-				if (XPsize(args) == 0 && XPsize(vars) == 1 &&
-				    is_wdvarassign(yylval.cp)) {
-					char *tcp;
-
-					/* wdarrassign: foo=(bar) */
-					ACCEPT;
-
-					/* manipulate the vars string */
-					tcp = XPptrv(vars)[(vars.len = 0)];
-					/* 'varname=' -> 'varname' */
-					tcp[wdscan(tcp, EOS) - tcp - 3] = EOS;
-
-					/* construct new args strings */
-					XPput(args, wdcopy(builtin_cmd, ATEMP));
-					XPput(args, wdcopy(setA_cmd0, ATEMP));
-					XPput(args, wdcopy(setA_cmd1, ATEMP));
-					XPput(args, tcp);
-					XPput(args, wdcopy(setA_cmd2, ATEMP));
-
-					/* slurp in words till closing paren */
-					while (token(CONTIN) == LWORD)
-						XPput(args, yylval.cp);
-					if (symbol != /*(*/ ')')
-						syntaxerr(NULL);
-				} else {
-					/*
-					 * Check for "> foo (echo hi)"
-					 * which AT&T ksh allows (not
-					 * POSIX, but not disallowed)
-					 */
-					afree(t, ATEMP);
-					if (XPsize(args) == 0 &&
-					    XPsize(vars) == 0) {
-						ACCEPT;
-						goto Subshell;
-					}
-
-					/* must be a function */
-					if (iopn != 0 || XPsize(args) != 1 ||
-					    XPsize(vars) != 0)
-						syntaxerr(NULL);
-					ACCEPT;
-					musthave(/*(*/ ')', 0);
-					t = function_body(XPptrv(args)[0],
-					    sALIAS, false);
-				}
-				goto Leave;
-
-			default:
-				goto Leave;
+		switch (tpeek(cf)) {
+		case REDIR:
+			while ((iop = synio(cf)) != NULL) {
+				if (iopn >= NUFILE)
+					yyerror(Tf_toomany, Tredirection);
+				iops[iopn++] = iop;
 			}
+			goto get_command_loop;
+
+		case LWORD:
+			ACCEPT;
+			if (check_decl_utility) {
+				struct tbl *tt = get_builtin(ident);
+				uint32_t flag;
+
+				flag = tt ? tt->flag : 0;
+				if (flag & DECL_UTIL)
+					t->u.evalflags = DOVACHECK;
+				if (!(flag & DECL_FWDR))
+					check_decl_utility = false;
+			}
+			if ((XPsize(args) == 0 || Flag(FKEYWORD)) &&
+			    is_wdvarassign(yylval.cp))
+				XPput(vars, yylval.cp);
+			else
+				XPput(args, yylval.cp);
+			goto get_command_loop;
+
+		case ORD('(' /*)*/):
+			if (XPsize(args) == 0 && XPsize(vars) == 1 &&
+			    is_wdvarassign(yylval.cp)) {
+				char *tcp;
+
+				/* wdarrassign: foo=(bar) */
+				ACCEPT;
+
+				/* manipulate the vars string */
+				tcp = XPptrv(vars)[(vars.len = 0)];
+				/* 'varname=' -> 'varname' */
+				tcp[wdscan(tcp, EOS) - tcp - 3] = EOS;
+
+				/* construct new args strings */
+				XPput(args, wdcopy(builtin_cmd, ATEMP));
+				XPput(args, wdcopy(setA_cmd0, ATEMP));
+				XPput(args, wdcopy(setA_cmd1, ATEMP));
+				XPput(args, tcp);
+				XPput(args, wdcopy(setA_cmd2, ATEMP));
+
+				/* slurp in words till closing paren */
+				while (token(CONTIN) == LWORD)
+					XPput(args, yylval.cp);
+				if (symbol != /*(*/ ')')
+					syntaxerr(NULL);
+				break;
+			}
+
+			afree(t, ATEMP);
+
+			/*
+			 * Check for "> foo (echo hi)" which AT&T ksh allows
+			 * (not POSIX, but not disallowed)
+			 */
+			if (XPsize(args) == 0 && XPsize(vars) == 0) {
+				ACCEPT;
+				goto Subshell;
+			}
+
+			/* must be a function */
+			if (iopn != 0 || XPsize(args) != 1 || XPsize(vars) != 0)
+				syntaxerr(NULL);
+			ACCEPT;
+			musthave(/*(*/ ')', 0);
+			t = function_body(XPptrv(args)[0],
+			    sALIAS, false);
+			break;
 		}
- Leave:
 		break;
 
 	case ORD('(' /*)*/): {
@@ -516,12 +508,11 @@ get_command(int cf, int sALIAS)
 	}
 
 	if (iopn == 0) {
-		afree(iops, ATEMP);
 		t->ioact = NULL;
 	} else {
 		iops[iopn++] = NULL;
-		iops = aresize2(iops, iopn, sizeof(struct ioword *), ATEMP);
-		t->ioact = iops;
+		t->ioact = alloc2(iopn, sizeof(struct ioword *), ATEMP);
+		memcpy(t->ioact, iops, iopn * sizeof(struct ioword *));
 	}
 
 	if (t->type == TCOM || t->type == TDBRACKET) {

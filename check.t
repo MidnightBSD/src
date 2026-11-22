@@ -1,8 +1,9 @@
-# $MirOS: src/bin/mksh/check.t,v 1.801 2018/01/14 01:47:33 tg Exp $
+# $MirOS: src/bin/mksh/check.t,v 1.853 2020/10/31 03:53:03 tg Exp $
 # -*- mode: sh -*-
 #-
 # Copyright © 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
-#	      2011, 2012, 2013, 2014, 2015, 2016, 2017
+#	      2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018,
+#	      2019, 2020
 #	mirabilos <m@mirbsd.org>
 #
 # Provided that these terms and disclaimer and all copyright notices
@@ -30,20 +31,29 @@
 # (2013/12/02 20:39:44) http://cvsweb.openbsd.org/cgi-bin/cvsweb/src/regress/bin/ksh/?sortby=date
 
 expected-stdout:
-	@(#)MIRBSD KSH R56 2018/01/14
+	KSH R59 2020/10/31
 description:
 	Check base version of full shell
 stdin:
-	echo ${KSH_VERSION%%' +'*}
+	vsn=${KSH_VERSION%%' +'*}
+	echo "${vsn#* }"
 name: KSH_VERSION
+---
+expected-stdout:
+	@(#)MIRBSD
+description:
+	Check this identifies as legacy shell
+stdin:
+	echo "${KSH_VERSION%% *}"
+name: KSH_VERSION-modern
 category: !shell:legacy-yes
 ---
 expected-stdout:
-	@(#)LEGACY KSH R56 2018/01/14
+	@(#)LEGACY
 description:
-	Check base version of legacy shell
+	Check this identifies as legacy shell
 stdin:
-	echo ${KSH_VERSION%%' +'*}
+	echo "${KSH_VERSION%% *}"
 name: KSH_VERSION-legacy
 category: !shell:legacy-no
 ---
@@ -52,6 +62,7 @@ description:
 	Check that the shell version tag does not include EBCDIC
 category: !shell:ebcdic-yes
 stdin:
+	set -o noglob
 	for x in $KSH_VERSION; do
 		[[ $x = '+EBCDIC' ]] && exit 1
 	done
@@ -62,6 +73,7 @@ description:
 	Check that the shell version tag includes EBCDIC
 category: !shell:ebcdic-no
 stdin:
+	set -o noglob
 	for x in $KSH_VERSION; do
 		[[ $x = '+EBCDIC' ]] && exit 0
 	done
@@ -72,6 +84,7 @@ description:
 	Check that the shell version tag does not include TEXTMODE
 category: !shell:textmode-yes
 stdin:
+	set -o noglob
 	for x in $KSH_VERSION; do
 		[[ $x = '+TEXTMODE' ]] && exit 1
 	done
@@ -82,6 +95,7 @@ description:
 	Check that the shell version tag includes TEXTMODE
 category: !shell:textmode-no
 stdin:
+	set -o noglob
 	for x in $KSH_VERSION; do
 		[[ $x = '+TEXTMODE' ]] && exit 0
 	done
@@ -161,6 +175,38 @@ stdin:
 	"$__progname" -c 'print -r -- $PATHSEP'
 expected-stdout:
 	;
+---
+name: selftest-tty-absent
+description:
+	Check that a controlling tty is not present as regress:no-ctty was used
+	(if this test fails for you DO NOT PASS regress:no-ctty and fix every
+	other test that fails: why u use it if u haz ctty?)
+category: regress:no-ctty
+env-setup: !ENV=./envf!
+file-setup: file 644 "envf"
+	PS1=X
+arguments: !-i!
+stdin:
+	echo ok
+expected-stdout:
+	ok
+expected-stderr-pattern:
+	/ksh: warning: won't have full job control\nXX/
+---
+name: selftest-tty-present
+description:
+	Check that a controlling tty is present as regress:no-ctty was not used
+need-ctty: yes
+env-setup: !ENV=./envf!
+file-setup: file 644 "envf"
+	PS1=X
+arguments: !-i!
+stdin:
+	echo ok
+expected-stdout:
+	ok
+expected-stderr: !
+	XX
 ---
 name: alias-1
 description:
@@ -1359,7 +1405,7 @@ need-pass: no
 # the mv command fails on Cygwin and z/OS
 # Hurd aborts the testsuite (permission denied)
 # QNX does not find subdir to cd into
-category: !os:cygwin,!os:gnu,!os:msys,!os:nto,!os:os390,!nosymlink
+category: !os:cygwin,!os:gnu,!os:midipix,!os:msys,!os:nto,!os:os390,!nosymlink
 file-setup: file 644 "x"
 	mkdir noread noread/target noread/target/subdir
 	ln -s noread link
@@ -1966,7 +2012,7 @@ expected-stdout:
 name: eglob-bad-1
 description:
 	Check that globbing isn't done when glob has syntax error
-category: !os:cygwin,!os:msys,!os:os2
+category: !os:cygwin,!os:midipix,!os:msys,!os:os2
 file-setup: file 644 "@(a[b|)c]foo"
 stdin:
 	echo @(a[b|)c]*
@@ -2455,10 +2501,10 @@ expected-stdout:
 name: glob-range-3
 description:
 	Check that globbing matches the right things...
-# breaks on Mac OSX (HFS+ non-standard Unicode canonical decomposition)
+# breaks on Mac OSX (HFS+ non-standard UTF-8 canonical decomposition)
 # breaks on Cygwin 1.7 (files are now UTF-16 or something)
 # breaks on QNX 6.4.1 (says RT)
-category: !os:cygwin,!os:darwin,!os:msys,!os:nto,!os:os2,!os:os390
+category: !os:cygwin,!os:midipix,!os:darwin,!os:msys,!os:nto,!os:os2,!os:os390
 need-pass: no
 file-setup: file 644 "a�c"
 stdin:
@@ -2492,6 +2538,19 @@ stdin:
 expected-stdout:
 	-bc abc bbc cbc ebc
 	@bc
+---
+name: glob-range-6
+description:
+	ksh93 fails this but POSIX probably demands it
+file-setup: file 644 "abc"
+file-setup: file 644 "cbc"
+stdin:
+	echo *b*
+	[ '*b*' = *b* ] && echo yep; echo $?
+expected-stdout:
+	abc cbc
+	2
+expected-stderr-pattern: /.*/
 ---
 name: glob-word-1
 description:
@@ -2688,7 +2747,7 @@ expected-stdout:
 	h\b
 	done
 ---
-name: heredoc-9a
+name: heredoc-9
 description:
 	Check that here strings work.
 stdin:
@@ -2703,6 +2762,19 @@ stdin:
 	tr abcdefghijklmnopqrstuvwxyz nopqrstuvwxyzabcdefghijklm <<<"$(echo "foo bar")"
 	tr abcdefghijklmnopqrstuvwxyz nopqrstuvwxyzabcdefghijklm <<<"A $(echo "foo bar") B"
 	tr abcdefghijklmnopqrstuvwxyz nopqrstuvwxyzabcdefghijklm <<<\$b\$b$bar
+	fnord=42
+	bar="bar
+		 \$fnord baz"
+	tr abcdefghijklmnopqrstuvwxyz nopqrstuvwxyzabcdefghijklm <<<$bar
+	tr abcdefghijklmnopqrstuvwxyz nopqrstuvwxyzabcdefghijklm <<< bar
+	echo $(tr r z <<<'bar' 2>/dev/null)
+	cat <<< "$(  :                                                             )aa"
+	IFS=$'\n'
+	x=(a "b c")
+	tr ac 12 <<< ${x[*]}
+	tr ac 34 <<< "${x[*]}"
+	tr ac 56 <<< ${x[@]}
+	tr ac 78 <<< "${x[@]}"
 expected-stdout:
 	sbb
 	sbb
@@ -2715,54 +2787,17 @@ expected-stdout:
 	A sbb one B
 	$o$oone
 		onm
----
-name: heredoc-9b
-description:
-	Check that a corner case of here strings works like bash
-stdin:
-	fnord=42
-	bar="bar
-		 \$fnord baz"
-	tr abcdefghijklmnopqrstuvwxyz nopqrstuvwxyzabcdefghijklm <<<$bar
-expected-stdout:
-	one $sabeq onm
-category: bash
----
-name: heredoc-9c
-description:
-	Check that a corner case of here strings works like ksh93, zsh
-stdin:
-	fnord=42
-	bar="bar
-		 \$fnord baz"
-	tr abcdefghijklmnopqrstuvwxyz nopqrstuvwxyzabcdefghijklm <<<$bar
-expected-stdout:
 	one
 		 $sabeq onm
----
-name: heredoc-9d
-description:
-	Check another corner case of here strings
-stdin:
-	tr abcdefghijklmnopqrstuvwxyz nopqrstuvwxyzabcdefghijklm <<< bar
-expected-stdout:
 	one
----
-name: heredoc-9e
-description:
-	Check here string related regression with multiple iops
-stdin:
-	echo $(tr r z <<<'bar' 2>/dev/null)
-expected-stdout:
 	baz
----
-name: heredoc-9f
-description:
-	Check long here strings
-stdin:
-	cat <<< "$(  :                                                             )aa"
-expected-stdout:
 	aa
+	1
+	b 2
+	3
+	b 4
+	5 b 6
+	7 b 8
 ---
 name: heredoc-10
 description:
@@ -3032,6 +3067,19 @@ expected-stdout:
 	got zero on stdin
 	got four on fd#4
 	got five on fd#5
+---
+name: heredoc-15
+description:
+	Check high-bit7 separators work
+stdin:
+	u=ä
+	tr a-z A-Z <<-…
+		m${u}h
+	…
+	echo ok
+expected-stdout:
+	MäH
+	ok
 ---
 name: heredoc-comsub-1
 description:
@@ -3525,6 +3573,25 @@ stdin:
 	EOM
 expected-stdout:
 	'blah  1'
+---
+name: single-quotes-in-heredoc-trim
+description:
+	In some cases, single quotes inside {} in heredoc are not normal
+stdin:
+	x=notOK
+	cat <<EOF
+	1: ${x#not} ${x:+${x#not}}
+	2: ${x#\n\o\t} ${x:+${x#\n\o\t}}
+	3: ${x#"not"} ${x:+${x#"not"}}
+	4: ${x#'not'} ${x:+${x#'not'}}
+	5: ${x#$'not'} ${x:+${x#$'not'}}
+	EOF
+expected-stdout:
+	1: OK OK
+	2: OK OK
+	3: OK OK
+	4: OK OK
+	5: OK OK
 ---
 name: history-basic
 description:
@@ -4916,6 +4983,17 @@ expected-stdout:
 	var=onetwo threefour
 	<onetwo threefour> .
 ---
+name: IFS-subst-11
+description:
+	Check leading non-whitespace after trim makes only one field
+stdin:
+	showargs() { for s_arg in "$@"; do echo -n "<$s_arg> "; done; echo .; }
+	v="foo!one!two!three"
+	IFS="!"
+	showargs x ${v:3} y
+expected-stdout:
+	<x> <> <one> <two> <three> <y> .
+---
 name: IFS-arith-1
 description:
 	http://austingroupbugs.net/view.php?id=832
@@ -6031,7 +6109,7 @@ expected-stderr-pattern: /does\/not\/exist/
 ---
 name: regression-28
 description:
-	variable assignements not detected well
+	variable assignments not detected well
 stdin:
 	a.x=1 echo hi
 expected-exit: e != 0
@@ -6106,7 +6184,7 @@ expected-stdout:
 ---
 name: regression-35
 description:
-	Tempory files used for here-docs in functions get trashed after
+	Temporay files used for here-docs in functions get trashed after
 	the function is parsed (before it is executed)
 stdin:
 	f1() {
@@ -6588,12 +6666,35 @@ name: regression-62
 description:
 	Check if test -nt/-ot succeeds if second(first) file is missing.
 stdin:
+	matrix() {
+		local a b c d e f g h
+		test a -nt b; a=$?
+		test b -nt a; b=$?
+		test a -ot b; c=$?
+		test b -ot a; d=$?
+		test a -nt a; e=$?
+		test b -nt b; f=$?
+		test a -ot a; g=$?
+		test b -ot b; h=$?
+		echo $1 $a $b $c $d / $e $f $g $h .
+	}
+	matrix a
 	:>a
-	test a -nt b && echo nt OK || echo nt BAD
-	test b -ot a && echo ot OK || echo ot BAD
+	matrix b
+	sleep 2		# mtime granularity for OS/2 and FAT
+	:>b
+	matrix c
+	sleep 2
+	echo dummy >a	# Debian GNU/Hurd #955270
+	matrix d
+	rm a
+	matrix e
 expected-stdout:
-	nt OK
-	ot OK
+	a 1 1 1 1 / 1 1 1 1 .
+	b 0 1 1 0 / 1 1 1 1 .
+	c 1 0 0 1 / 1 1 1 1 .
+	d 0 1 1 0 / 1 1 1 1 .
+	e 1 0 0 1 / 1 1 1 1 .
 ---
 name: regression-63
 description:
@@ -6835,6 +6936,21 @@ expected-stdout:
 	3 10 .
 	4 -2147483646 .
 ---
+name: export-1
+description:
+	Check allexport works, basic
+stdin:
+	qa=1
+	set -A qb 2 3
+	set -a
+	qc=4
+	set -A qd 5 6
+	export -p | grep '^export q'
+expected-stdout:
+	export qc=4
+	export qd[0]=5
+	export qd[1]=6
+---
 name: readonly-0
 description:
 	Ensure readonly is honoured for assignments and unset
@@ -7038,13 +7154,13 @@ stdin:
 name: exec-function-environment-1
 description:
 	Check assignments in function calls and whether they affect
-	the current execution environment (ksh93, SUSv4)
+	the current execution environment
 stdin:
 	f() { a=2; }; g() { b=3; echo y$c-; }; a=1 f; b=2; c=1 g
 	echo x$a-$b- z$c-
 expected-stdout:
 	y1-
-	x2-3- z1-
+	x-3- z-
 ---
 name: exec-modern-korn-shell
 description:
@@ -7065,7 +7181,7 @@ stdin:
 	print =4
 	(exec lq)
 expected-stdout-pattern:
-	/=1\none\n=2\ntwo\n=3\n.*: ls: not found\n=4\ntf\n/
+	/=1\none\n=2\ntwo\n=3\n.*: ls: inaccessible or not found\n=4\ntf\n/
 ---
 name: exec-ksh88
 description:
@@ -7086,7 +7202,7 @@ stdin:
 	print =4
 	(exec lq)
 expected-stdout-pattern:
-	/=1\n.*: print: not found\n=2\n.*: foo: not found\n=3\n.*: ls: not found\n=4\ntf\n/
+	/=1\n.*: print: inaccessible or not found\n=2\n.*: foo: inaccessible or not found\n=3\n.*: ls: inaccessible or not found\n=4\ntf\n/
 ---
 name: xxx-what-do-you-call-this-1
 stdin:
@@ -7178,6 +7294,32 @@ stdin:
 expected-stdout:
 	HI
 	2 4
+---
+name: xxx-substitution-eval-order-2
+description:
+	Check some corner cases
+stdin:
+	unset var
+	i=42
+	: ${var+${q[i=777]}} required to be lazy by POSIX
+	echo 1=$i
+	var=meow
+	i=42
+	: ${var+${q[i=777]}} eval since var is now set
+	echo 2=$i
+	unset var
+	i=42
+	: ${var#${q[i=777]}} pattern is needed even if var is empty
+	echo 3=$i
+	var=meow
+	i=42
+	: ${var#${q[i=777]}}
+	echo 4=$i
+expected-stdout:
+	1=42
+	2=777
+	3=777
+	4=777
 ---
 name: xxx-set-option-1
 description:
@@ -7280,6 +7422,30 @@ expected-stdout:
 	trap: 4
 	exit: 4
 ---
+name: xxx-stat-1
+description:
+	Check that tests on files are consistent
+	(fails when run as root, unfortunately)
+category: disabled
+stdin:
+	mkdir a
+	echo x >a/b
+	test -e a/b; echo 1e $? .
+	test -f a/b; echo 1f $? .
+	chmod 0 a
+	test -e a/b; echo 2e $? .
+	test -f a/b; echo 2f $? .
+	chmod 700 a
+	test -e a/b; echo 3e $? .
+	test -f a/b; echo 3f $? .
+expected-stdout:
+	1e 0 .
+	1f 0 .
+	2e 1 .
+	2f 1 .
+	3e 0 .
+	3f 0 .
+---
 name: xxx-clean-chars-1
 description:
 	Check MAGIC character is stuffed correctly
@@ -7291,7 +7457,7 @@ expected-stdout:
 name: xxx-param-subst-qmark-1
 description:
 	Check suppresion of error message with null string.  According to
-	POSIX, it shouldn't print the error as 'word' isn't ommitted.
+	POSIX, it shouldn't print the error as 'word' isn't omitted.
 	ksh88/93, Solaris /bin/sh and /usr/xpg4/bin/sh all print the error.
 stdin:
 	unset foo
@@ -7452,7 +7618,7 @@ stdin:
 	showargs 18 "$a"
 	set -A bla
 	typeset bla[1]=~:~
-	global gbl=~ g2=$1
+	typeset -g gbl=~ g2=$1
 	local lcl=~ l2=$1
 	readonly ro=~ r2=$1
 	showargs 19 "${bla[1]}" a=~ "$gbl" "$lcl" "$ro" "$g2" "$l2" "$r2"
@@ -7633,6 +7799,32 @@ expected-stdout:
 	1 ok
 expected-exit: 1
 ---
+name: exit-err-10
+description:
+	Debian #269067 (cf. regression-38 but with eval)
+arguments: !-e!
+stdin:
+	eval false || true
+	echo = $? .
+expected-stdout:
+	= 0 .
+---
+name: exit-err-11
+description:
+	Fix -e inside eval, from Martijn Dekker; expected-stdout from ksh93
+stdin:
+	"$__progname" -c 'eval '\''echo ${-//[!eh]}; false; echo phantom e'\''; echo x$?'
+	echo = $?
+	"$__progname" -ec 'eval '\''echo ${-//[!eh]}; false; echo phantom e'\''; echo x$?'
+	echo = $?
+expected-stdout:
+	h
+	phantom e
+	x0
+	= 0
+	eh
+	= 1
+---
 name: exit-enoent-1
 description:
 	SUSv4 says that the shell should exit with 126/127 in some situations
@@ -7704,11 +7896,9 @@ expected-exit: 9
 ---
 name: exit-trap-2
 description:
-	Check that ERR and EXIT traps are run just like ksh93 does.
-	GNU bash does not run ERtrap in ±e eval-undef but runs it
-	twice (bug?) in +e eval-false, so does ksh93 (bug?), which
-	also has a bug to continue execution (echoing "and out" and
-	returning 0) in +e eval-undef.
+	Check that ERR and EXIT traps are run just like GNU bash does.
+	ksh93 runs ERtrap after “parameter null or not set” (which mksh
+	used to do) but (bug) continues “and out”, exit 0, in +e eval-undef.
 file-setup: file 644 "x"
 	v=; unset v
 	trap 'echo EXtrap' EXIT
@@ -7792,7 +7982,6 @@ expected-stdout:
 	= eval-false 1 .
 	and run ${v?}
 	x: v: parameter null or not set
-	ERtrap
 	EXtrap
 	= eval-undef 1 .
 	and run true
@@ -7814,12 +8003,12 @@ expected-stdout:
 	= eval-true 0 .
 	and run false
 	ERtrap
+	ERtrap
 	and out
 	EXtrap
 	= eval-false 0 .
 	and run ${v?}
 	x: v: parameter null or not set
-	ERtrap
 	EXtrap
 	= eval-undef 1 .
 	and run true
@@ -7835,6 +8024,23 @@ expected-stdout:
 	xu: v: parameter null or not set
 	EXtrap
 	= noeval-undef 1 .
+---
+name: exit-trap-3
+description:
+	Check that the EXIT trap is run in many places, Debian #910276
+stdin:
+	fkt() {
+		trap -- "echo $1 >&2" EXIT
+	}
+	fkt shell_exit
+	$(fkt fn_exit)
+	$(trap -- "echo comsub_exit >&2" EXIT)
+	(trap -- "echo subshell_exit >&2" EXIT)
+expected-stderr:
+	fn_exit
+	comsub_exit
+	subshell_exit
+	shell_exit
 ---
 name: exit-trap-interactive
 description:
@@ -7871,6 +8077,55 @@ expected-stdout:
 	ja
 	nein
 expected-stderr-pattern: !/unexpected op/
+---
+name: test-str-pattern
+description:
+	Check that [[ x = $y ]] can take extglobs, like ksh93
+stdin:
+	[[ -n $BASH_VERSION ]] && shopt -s extglob
+	function one {
+		n=$1 x=$2 y=$3 z=${4:-$3}
+		[[ $x = $y ]]; a=$?
+		[[ $x = "$y" ]]; b=$?
+		eval '[[ $x = '"$z"' ]]; c=$?'
+		eval '[[ $x = "'"$z"'" ]]; d=$?'
+		echo $n $a $b $c $d .
+	}
+	x='a\'
+	[[ $x = a\  ]]; echo 01 $? .
+	[[ $x = a\\ ]]; echo 02 $? .
+	one 03 'a\'	'a\'	'a\\'
+	one 04 'a\b'	'a\b'
+	one 05 'a\b'	'a\\b'
+	one 06 'foo'	'f+(o)'
+	one 07 'f+(o)'	'f+(o)'
+	one 08 'f+(o'	'f+(o'	'f+\(o'
+	one 09 foo	'f+(o'	'f+\(o'
+	one 10 abcde	'a\*e'
+	one 11 'a*e'	'a\*e'
+	one 12 'a\*e'	'a\*e'
+	echo extras:
+	x='f+(o'
+	z='f+(o'
+	eval '[[ $x = "'"$z"'" ]]; echo 14 $? "(08:4)" .'
+	x=foo
+	eval '[[ $x = "'"$z"'" ]]; echo 15 $? "(09:4)" .'
+expected-stdout:
+	01 1 .
+	02 0 .
+	03 0 0 0 0 .
+	04 1 0 1 0 .
+	05 0 1 0 0 .
+	06 0 1 0 1 .
+	07 1 0 1 0 .
+	08 0 0 0 1 .
+	09 1 1 1 1 .
+	10 1 1 1 1 .
+	11 0 1 0 1 .
+	12 1 0 1 0 .
+	extras:
+	14 0 (08:4) .
+	15 1 (09:4) .
 ---
 name: test-precedence-1
 description:
@@ -8198,8 +8453,10 @@ description:
 stdin:
 	set -o braceexpand
 	set +o sh
-	[[ $(set +o) == *@(-o sh)@(| *) ]] && echo sh || echo nosh
-	[[ $(set +o) == *@(-o braceexpand)@(| *) ]] && echo brex || echo nobrex
+	[[ -o sh ]] && echo sh
+	[[ -o !sh ]] && echo nosh
+	[[ -o braceexpand ]] && echo brex
+	[[ -o !braceexpand ]] && echo nobrex
 	echo {a,b,c}
 	set +o braceexpand
 	echo {a,b,c}
@@ -8207,12 +8464,17 @@ stdin:
 	echo {a,b,c}
 	set -o sh
 	echo {a,b,c}
-	[[ $(set +o) == *@(-o sh)@(| *) ]] && echo sh || echo nosh
-	[[ $(set +o) == *@(-o braceexpand)@(| *) ]] && echo brex || echo nobrex
+	[[ -o sh ]] && echo sh
+	[[ -o !sh ]] && echo nosh
+	[[ -o braceexpand ]] && echo brex
+	[[ -o !braceexpand ]] && echo nobrex
 	set -o braceexpand
 	echo {a,b,c}
-	[[ $(set +o) == *@(-o sh)@(| *) ]] && echo sh || echo nosh
-	[[ $(set +o) == *@(-o braceexpand)@(| *) ]] && echo brex || echo nobrex
+	[[ -o sh ]] && echo sh
+	[[ -o !sh ]] && echo nosh
+	[[ -o braceexpand ]] && echo brex
+	[[ -o !braceexpand ]] && echo nobrex
+	[[ $(exec -a -set "$__progname" -o) = *login+(' ')on* ]]; echo $?
 expected-stdout:
 	nosh
 	brex
@@ -8225,44 +8487,110 @@ expected-stdout:
 	a b c
 	sh
 	brex
+	0
 ---
 name: sh-mode-2a
 description:
 	Check that posix or sh mode is *not* automatically turned on
 category: !binsh
 stdin:
-	ln -s "$__progname" ksh || cp "$__progname" ksh
-	ln -s "$__progname" sh || cp "$__progname" sh
-	ln -s "$__progname" ./-ksh || cp "$__progname" ./-ksh
-	ln -s "$__progname" ./-sh || cp "$__progname" ./-sh
-	for shell in {,-}{,k}sh; do
-		print -- $shell $(./$shell +l -c \
-		    '[[ $(set +o) == *"-o "@(sh|posix)@(| *) ]] && echo sh || echo nosh')
+	for shell in {,-}{,r}{,k,mk}sh {,-}{,R}{,K,MK}SH.EXE; do
+		ln -s "$__progname" ./$shell || cp "$__progname" ./$shell
+		print -- $shell $(./$shell +l -c '
+			[[ -o sh || -o posix ]] && echo sh
+			[[ -o !sh && -o !posix ]] && echo nosh
+			[[ -o restricted ]] && echo lim || echo ok
+		    ')
 	done
 expected-stdout:
-	sh nosh
-	ksh nosh
-	-sh nosh
-	-ksh nosh
+	sh nosh ok
+	ksh nosh ok
+	mksh nosh ok
+	rsh nosh lim
+	rksh nosh lim
+	rmksh nosh lim
+	-sh nosh ok
+	-ksh nosh ok
+	-mksh nosh ok
+	-rsh nosh lim
+	-rksh nosh lim
+	-rmksh nosh lim
+	SH.EXE nosh ok
+	KSH.EXE nosh ok
+	MKSH.EXE nosh ok
+	RSH.EXE nosh lim
+	RKSH.EXE nosh lim
+	RMKSH.EXE nosh lim
+	-SH.EXE nosh ok
+	-KSH.EXE nosh ok
+	-MKSH.EXE nosh ok
+	-RSH.EXE nosh lim
+	-RKSH.EXE nosh lim
+	-RMKSH.EXE nosh lim
 ---
 name: sh-mode-2b
 description:
 	Check that posix or sh mode *is* automatically turned on
 category: binsh
 stdin:
-	ln -s "$__progname" ksh || cp "$__progname" ksh
-	ln -s "$__progname" sh || cp "$__progname" sh
-	ln -s "$__progname" ./-ksh || cp "$__progname" ./-ksh
-	ln -s "$__progname" ./-sh || cp "$__progname" ./-sh
-	for shell in {,-}{,k}sh; do
-		print -- $shell $(./$shell +l -c \
-		    '[[ $(set +o) == *"-o "@(sh|posix)@(| *) ]] && echo sh || echo nosh')
+	for shell in {,-}{,r}{,k,mk}sh {,-}{,R}{,K,MK}SH.EXE; do
+		ln -s "$__progname" ./$shell || cp "$__progname" ./$shell
+		print -- $shell $(./$shell +l -c '
+			[[ -o sh || -o posix ]] && echo sh
+			[[ -o !sh && -o !posix ]] && echo nosh
+			[[ -o restricted ]] && echo lim || echo ok
+		    ')
 	done
 expected-stdout:
-	sh sh
-	ksh nosh
-	-sh sh
-	-ksh nosh
+	sh sh ok
+	ksh nosh ok
+	mksh nosh ok
+	rsh sh lim
+	rksh nosh lim
+	rmksh nosh lim
+	-sh sh ok
+	-ksh nosh ok
+	-mksh nosh ok
+	-rsh sh lim
+	-rksh nosh lim
+	-rmksh nosh lim
+	SH.EXE sh ok
+	KSH.EXE nosh ok
+	MKSH.EXE nosh ok
+	RSH.EXE sh lim
+	RKSH.EXE nosh lim
+	RMKSH.EXE nosh lim
+	-SH.EXE sh ok
+	-KSH.EXE nosh ok
+	-MKSH.EXE nosh ok
+	-RSH.EXE sh lim
+	-RKSH.EXE nosh lim
+	-RMKSH.EXE nosh lim
+---
+name: sh-options
+description:
+	Check that "set +o" DTRT per POSIX
+stdin:
+	t() {
+		[[ -o vi ]]; a=$?
+		[[ -o pipefail ]]; b=$?
+		echo $((++i)) $a $b .
+	}
+	set -e
+	set -o vi
+	set +o pipefail
+	set +e
+	t
+	x=$(set +o)
+	set +o vi
+	set -o pipefail
+	t
+	eval "$x"
+	t
+expected-stdout:
+	1 0 1 .
+	2 1 0 .
+	3 0 1 .
 ---
 name: pipeline-1
 description:
@@ -8444,12 +8772,32 @@ stdin:
 expected-stdout:
 	<16#1     > <     16#1> <16#000001> <16#1     > <     16#1> <0000016#1>
 ---
+name: typeset-padding-3
+description:
+	Check for a regression in which UTF-8 wasn’t left-padded right
+stdin:
+	set -U
+	nl=$'\n'
+	typeset -L20 x='.  ak'
+	typeset -R20 y='.  ak'
+	print -r -- "<$x> (1$nl<12345678910 345678920$nl<$y> 1)"
+	typeset -L20 x='.  aẞ'
+	typeset -R20 y='.  aẞ'
+	print -r -- "<$x> (2$nl<12345678910 345678920$nl<$y> 2)"
+expected-stdout:
+	<.  ak               > (1
+	<12345678910 345678920
+	<               .  ak> 1)
+	<.  aẞ               > (2
+	<12345678910 345678920
+	<               .  aẞ> 2)
+---
 name: utf8bom-1
 description:
 	Check that the UTF-8 Byte Order Mark is ignored as the first
 	multibyte character of the shell input (with -c, from standard
 	input, as file, or as eval argument), but nowhere else
-# breaks on Mac OSX (HFS+ non-standard Unicode canonical decomposition)
+# breaks on Mac OSX (HFS+ non-standard UTF-8 canonical decomposition)
 category: !os:darwin,!shell:ebcdic-yes
 stdin:
 	mkdir foo
@@ -8505,9 +8853,10 @@ description:
 	XXX if the OS can already execute them, we lose
 	note: cygwin execve(2) doesn't return to us with ENOEXEC, we lose
 	note: Ultrix perl5 t4 returns 65280 (exit-code 255) and no text
+	note: A/UX perl5 returns 6400 (exit-code 25), passes #1-3
 	XXX fails when LD_PRELOAD is set with -e and Perl chokes it (ASan)
 need-pass: no
-category: !os:cygwin,!os:msys,!os:ultrix,!os:uwin-nt,!smksh
+category: !os:aux,!os:cygwin,!os:midipix,!os:msys,!os:ultrix,!os:uwin-nt,!smksh
 env-setup: !FOO=BAR!
 stdin:
 	print '#!'"$__progname"'\nprint "1 a=$ENV{FOO}";' >t1
@@ -9456,8 +9805,7 @@ expected-stdout:
 ---
 name: varexpand-substr-3
 description:
-	Check that some things that work in bash fail.
-	This is by design. Oh and vice versa, nowadays.
+	Match bash5
 stdin:
 	export x=abcdefghi n=2
 	"$__progname" -c 'echo v${x:(n)}x'
@@ -9465,15 +9813,15 @@ stdin:
 	"$__progname" -c 'echo x${x:n}x'
 	"$__progname" -c 'echo y${x:}x'
 	"$__progname" -c 'echo z${x}x'
-	# next fails only in bash
-	"$__progname" -c 'x=abcdef;y=123;echo ${x:${y:2:1}:2}' >/dev/null 2>&1; echo $?
+	"$__progname" -c 'x=abcdef;y=123;echo q${x:${y:2:1}:2}q'
 expected-stdout:
 	vcdefghix
 	wcdefghix
+	xcdefghix
 	zabcdefghix
-	0
+	qdeq
 expected-stderr-pattern:
-	/x:n.*bad substitution.*\n.*bad substitution/
+	/x:}.*bad substitution/
 ---
 name: varexpand-substr-4
 description:
@@ -10328,7 +10676,7 @@ expected-stdout:
 ---
 name: integer-base-one-3Ws
 description:
-	some sample code for hexdumping Unicode
+	some sample code for hexdumping UCS-2
 	not NUL safe; input lines must be NL terminated
 stdin:
 	set -U
@@ -10496,7 +10844,7 @@ expected-stdout:
 ---
 name: integer-base-one-3Wr
 description:
-	some sample code for hexdumping Unicode; NUL and binary safe
+	some sample code for hexdumping UCS-2; NUL and binary safe
 stdin:
 	set -U
 	{
@@ -10616,7 +10964,7 @@ expected-stdout:
 ---
 name: integer-base-one-5A
 description:
-	Check to see that we’re NUL and Unicode safe
+	Check to see that we’re NUL and UCS safe
 category: !shell:ebcdic-yes
 stdin:
 	set +U
@@ -10630,7 +10978,7 @@ expected-stdout:
 ---
 name: integer-base-one-5E
 description:
-	Check to see that we’re NUL and Unicode safe
+	Check to see that we’re NUL and UCS safe
 category: !shell:ebcdic-no
 stdin:
 	set +U
@@ -10644,7 +10992,7 @@ expected-stdout:
 ---
 name: integer-base-one-5W
 description:
-	Check to see that we’re NUL and Unicode safe
+	Check to see that we’re NUL and UCS safe
 stdin:
 	set -U
 	print 'a\0b€c' >x
@@ -10675,6 +11023,43 @@ stdin:
 	fi
 expected-stdout:
 	okay
+---
+name: ulimit-3
+description:
+	Check that there are no duplicate limits (if this fails,
+	immediately contact with system information the developers)
+stdin:
+	[[ -z $(set | grep ^opt) ]]; mis=$?
+	set | grep ^opt | sed 's/^/unexpectedly set in environment: /'
+	opta='<used for showing all limits>'
+	optH='<used to set hard limits>'
+	optS='<used to set soft limits>'
+	ulimit -a >tmpf
+	set -o noglob
+	while IFS= read -r line; do
+		x=${line:1:1}
+		if [[ -z $x || ${#x}/${%x} != 1/1 ]]; then
+			print -r -- "weird line: $line"
+			(( mis |= 1 ))
+			continue
+		fi
+		set -- $line
+		nameref v=opt$x
+		if [[ -n $v ]]; then
+			print -r -- "duplicate -$x \"$2\" already seen as \"$v\""
+			(( mis |= 2 ))
+		fi
+		v=$2
+	done <tmpf
+	if (( mis & 2 )); then
+		echo failed
+	elif (( mis & 1 )); then
+		echo inconclusive
+	else
+		echo done
+	fi
+expected-stdout:
+	done
 ---
 name: redir-1
 description:
@@ -11036,7 +11421,7 @@ description:
 	(Inspired by PR 2450 on OpenBSD.) Calling
 		FOO=bar f
 	where f is a ksh style function, should not set FOO in the current
-	env. If f is a Bourne style function, FOO should be set. Furthermore,
+	env. If f is a Bourne style function, (new) also not. Furthermore,
 	the function should receive a correct value of FOO. However, differing
 	from oksh, setting FOO in the function itself must change the value in
 	setting FOO in the function itself should not change the value in
@@ -11082,7 +11467,7 @@ stdin:
 	if [ $? != 0 ]; then
 		exit 1
 	fi
-	if [ x$FOO != xfoo ]; then
+	if [ x$FOO != x ]; then
 		exit 1
 	fi
 	FOO=barbar
@@ -11097,7 +11482,7 @@ stdin:
 	if [ $? != 0 ]; then
 		exit 1
 	fi
-	if [ x$FOO != xfoo ]; then
+	if [ x$FOO != xbarbar ]; then
 		exit 1
 	fi
 ---
@@ -11105,13 +11490,11 @@ name: fd-cloexec-1
 description:
 	Verify that file descriptors > 2 are private for Korn shells
 	AT&T ksh93 does this still, which means we must keep it as well
-	XXX fails on some old Perl installations
-need-pass: no
 stdin:
 	cat >cld <<-EOF
 		#!$__perlname
-		open(my \$fh, ">&", 9) or die "E: open \$!";
-		syswrite(\$fh, "Fowl\\n", 5) or die "E: write \$!";
+		open(FH, ">&9") or die "E: open \$!";
+		syswrite(FH, "Fowl\\n", 5) or die "E: write \$!";
 	EOF
 	chmod +x cld
 	exec 9>&1
@@ -11124,13 +11507,11 @@ name: fd-cloexec-2
 description:
 	Verify that file descriptors > 2 are not private for POSIX shells
 	See Debian Bug #154540, Closes: #499139
-	XXX fails on some old Perl installations
-need-pass: no
 stdin:
 	cat >cld <<-EOF
 		#!$__perlname
-		open(my \$fh, ">&", 9) or die "E: open \$!";
-		syswrite(\$fh, "Fowl\\n", 5) or die "E: write \$!";
+		open(FH, ">&9") or die "E: open \$!";
+		syswrite(FH, "Fowl\\n", 5) or die "E: write \$!";
 	EOF
 	chmod +x cld
 	test -n "$POSH_VERSION" || set -o posix
@@ -11138,6 +11519,34 @@ stdin:
 	./cld
 expected-stdout:
 	Fowl
+---
+name: fd-cloexec-3
+description:
+	Another check for close-on-exec
+stdin:
+	print '#!'"$__progname" >ts
+	cat >>ts <<'EOF'
+	s=ERR
+	read -rN-1 -u$1 s 2>/dev/null; e=$?
+	print -r -- "($1, $((!e)), $s)"
+	EOF
+	chmod +x ts
+	print foo >tx
+	runtest() {
+		s=$1; shift
+		print -r -- $("$__progname" "$@" -c "$s") "$@" .
+	}
+	runtest 'exec 3<tx; ./ts 3 3<&3; ./ts 3'
+	runtest 'exec 3<tx; ./ts 3 3<&3; ./ts 3' -o posix
+	runtest 'exec 3<tx; ./ts 3 3<&3; ./ts 3' -o sh
+	runtest 'exec 3<tx; ./ts 4 4<&3; ./ts 4 4<&3'
+	runtest 'exec 3<tx; ./ts 3 3<&3; ./ts 3 3<&3'
+expected-stdout:
+	(3, 1, foo) (3, 0, ERR) .
+	(3, 1, foo) (3, 1, ) -o posix .
+	(3, 1, foo) (3, 1, ) -o sh .
+	(4, 1, foo) (4, 1, ) .
+	(3, 1, foo) (3, 1, ) .
 ---
 name: comsub-1a
 description:
@@ -11667,10 +12076,10 @@ expected-stdout:
 	EOFN
 	)|tr u x); }
 	function reread_IOWRITE_IOCLOB_IOHERE_noIOSKIP {
-		x=$( ( \cat >|bar <<"EOFN" 
+		x=$( ( \cat >|bar <<"EOFN" ) | \tr u x 
 		foo
 	EOFN
-	) | \tr u x ) 
+	) 
 	} 
 	inline_IOWRITE_noIOCLOB_IOHERE_IOSKIP() {
 		cat  1>bar  <<-EOFI
@@ -11700,10 +12109,10 @@ expected-stdout:
 		EOFI
 	)|tr u x); }
 	function reread_IOWRITE_noIOCLOB_IOHERE_IOSKIP {
-		x=$( ( \cat >bar <<-EOFI 
+		x=$( ( \cat >bar <<-EOFI ) | \tr u x 
 	foo
 	EOFI
-	) | \tr u x ) 
+	) 
 	} 
 	inline_IORDWR_IODUP() {
 		sh  1<>/dev/console  0<&1  2>&1
@@ -12466,7 +12875,7 @@ stdin:
 	echo =14
 	(mypid=$$; try mypid)
 	echo =15
-	) 2>&1 | sed -e 's/^[^]]*]//' -e 's/^[^:]*: *//'
+	) 2>&1 | sed -e 's/^[A-Za-z]://' -e 's/^[^]]*]//' -e 's/^[^:]*: *//'
 	exit ${PIPESTATUS[0]}
 expected-stdout:
 	y
@@ -13045,7 +13454,7 @@ description:
 	Crashed during March 2011, fixed on vernal equinōx ☺
 category: os:mirbsd,os:openbsd
 stdin:
-	export MALLOC_OPTIONS=FGJPRSX
+	export MALLOC_OPTIONS=FGJRSX
 	"$__progname" -c 'x=$(tr z r <<<baz); echo $x'
 expected-stdout:
 	bar
@@ -13169,21 +13578,91 @@ expected-stdout:
 	after	0='swc' 1='二' 2=''
 	= done
 ---
+name: command-set
+description:
+	Same but with set
+stdin:
+	showargs() { for s_arg in "$@"; do echo -n "<$s_arg> "; done; echo .; }
+	showargs 1 "$@"
+	set -- foo bar baz
+	showargs 2 "$@"
+	command set -- miau 'meow nyao'
+	showargs 3 "$@"
+expected-stdout:
+	<1> .
+	<2> <foo> <bar> <baz> .
+	<3> <miau> <meow nyao> .
+---
+name: command-readonly
+description:
+	These should not exit on error when prefixed
+stdin:
+	exec 2>/dev/null
+	"$__progname" -c 'readonly v; export v=foo || echo ok'
+	echo ef=$?
+	"$__progname" -c 'readonly v; command export v=foo || echo ok'
+	echo en=$?
+	"$__progname" -c 'readonly v; readonly v=foo || echo ok'
+	echo rf=$?
+	"$__progname" -c 'readonly v; command readonly v=foo || echo ok'
+	echo rn=$?
+expected-stdout:
+	ef=2
+	ok
+	en=0
+	rf=2
+	ok
+	rn=0
+---
+name: command-dot-regression
+description:
+	Check a regression in fixing the above does not appear
+stdin:
+	cat >test.mksh <<\EOF
+	set -- one two
+	shift
+	for s_arg in "$#" "$@"; do echo -n "<$s_arg> "; done; echo .
+	EOF
+	"$__progname" -c '. ./test.mksh' dummy oh dear this is not good
+	echo =
+	"$__progname" -c 'command . ./test.mksh' dummy oh dear this is not good
+expected-stdout:
+	<1> <two> .
+	=
+	<1> <two> .
+---
 name: command-pvV-posix-priorities
 description:
 	For POSIX compatibility, command -v should find aliases and reserved
 	words, and command -p[vV] should find aliases, reserved words, and
 	builtins over external commands.
 stdin:
+	# extra checks prep
+	mkdir mrr
+	:>mrr/miau
+	chmod +x mrr/miau
+	# priorities
 	PATH=/bin:/usr/bin
 	alias foo="bar baz"
+	alias '[ab]=:'
 	bar() { :; }
-	for word in 'if' 'foo' 'bar' 'set' 'true'; do
+	for word in 'if' 'foo' 'bar' 'set' 'true' '[ab]'; do
 		command -v "$word"
 		command -pv "$word"
 		command -V "$word"
 		command -pV "$word"
 	done
+	# extra checks
+	alias '[ab]'
+	whence '[ab]'
+	PATH=mrr
+	case $(command -v miau) {
+	(mrr/miau) echo fail ;;
+	(!(/*|[A-Z]:/*)) echo fail2 ;;
+	($PWD/mrr/miau) echo ok ;;
+	(/*|[A-Z]:/*) echo pwd bad? ;;
+	(*) echo not reached ;;
+	}
 expected-stdout:
 	if
 	if
@@ -13205,6 +13684,13 @@ expected-stdout:
 	true
 	true is a shell builtin
 	true is a shell builtin
+	alias '[ab]'=:
+	alias '[ab]'=:
+	'[ab]' is an alias for :
+	'[ab]' is an alias for :
+	'[ab]'=:
+	:
+	ok
 ---
 name: whence-preserve-tradition
 description:

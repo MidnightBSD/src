@@ -1,11 +1,11 @@
 /*	$OpenBSD: c_ksh.c,v 1.37 2015/09/10 22:48:58 nicm Exp $	*/
 /*	$OpenBSD: c_sh.c,v 1.46 2015/07/20 20:46:24 guenther Exp $	*/
 /*	$OpenBSD: c_test.c,v 1.18 2009/03/01 20:11:06 otto Exp $	*/
-/*	$OpenBSD: c_ulimit.c,v 1.19 2013/11/28 10:33:37 sobrado Exp $	*/
 
 /*-
  * Copyright (c) 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
- *		 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017
+ *		 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017,
+ *		 2019, 2020
  *	mirabilos <m@mirbsd.org>
  *
  * Provided that these terms and disclaimer and all copyright notices
@@ -38,7 +38,7 @@
 #endif
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/funcs.c,v 1.353 2018/01/14 01:26:49 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/funcs.c,v 1.379 2020/08/27 19:52:44 tg Exp $");
 
 #if HAVE_KILLPG
 /*
@@ -51,12 +51,7 @@ __RCSID("$MirOS: src/bin/mksh/funcs.c,v 1.353 2018/01/14 01:26:49 tg Exp $");
 #define mksh_kill	kill
 #endif
 
-/* XXX conditions correct? */
-#if !defined(RLIM_INFINITY) && !defined(MKSH_NO_LIMITS)
-#define MKSH_NO_LIMITS	1
-#endif
-
-#ifdef MKSH_NO_LIMITS
+#ifdef MKSH_UNLIMITED
 #define c_ulimit	c_true
 #endif
 
@@ -117,8 +112,6 @@ const struct builtin mkshbuiltins[] = {
 	{Tfalse, c_false},
 	{"fc", c_fc},
 	{Tgetopts, c_getopts},
-	/* deprecated, replaced by typeset -g */
-	{"^=global", c_typeset},
 	{Tjobs, c_jobs},
 	{"kill", c_kill},
 	{"let", c_let},
@@ -129,8 +122,8 @@ const struct builtin mkshbuiltins[] = {
 	{"!realpath", c_realpath},
 	{"~rename", c_rename},
 	{"*=return", c_exitreturn},
-	{Tsgset, c_set},
-	{"*=shift", c_shift},
+	{Tsghset, c_set},
+	{"*=#shift", c_shift},
 	{Tgsource, c_dot},
 #if !defined(MKSH_UNEMPLOYED) && HAVE_GETSID
 	{Tsuspend, c_suspend},
@@ -177,11 +170,8 @@ struct kill_info {
 	int name_width;
 };
 
-static const struct t_op {
-	char op_text[4];
-	Test_op op_num;
-} u_ops[] = {
-	{"-a",	TO_FILAXST },
+const struct t_op u_ops[] = {
+/* 0*/	{"-a",	TO_FILAXST },
 	{"-b",	TO_FILBDEV },
 	{"-c",	TO_FILCDEV },
 	{"-d",	TO_FILID },
@@ -193,22 +183,23 @@ static const struct t_op {
 	{"-h",	TO_FILSYM },
 	{"-k",	TO_FILSTCK },
 	{"-L",	TO_FILSYM },
-	{"-n",	TO_STNZE },
+/*12*/	{"-n",	TO_STNZE },
 	{"-O",	TO_FILUID },
-	{"-o",	TO_OPTION },
+/*14*/	{"-o",	TO_OPTION },
 	{"-p",	TO_FILFIFO },
-	{"-r",	TO_FILRD },
+/*16*/	{"-r",	TO_FILRD },
 	{"-S",	TO_FILSOCK },
 	{"-s",	TO_FILGZ },
 	{"-t",	TO_FILTT },
-	{"-u",	TO_FILSETU },
+/*20*/	{"-u",	TO_FILSETU },
 	{"-v",	TO_ISSET },
 	{"-w",	TO_FILWR },
-	{"-x",	TO_FILEX },
+/*23*/	{"-x",	TO_FILEX },
 	{"-z",	TO_STZER },
 	{"",	TO_NONOP }
 };
-static const struct t_op b_ops[] = {
+cta(u_ops_size, NELEM(u_ops) == 26);
+const struct t_op b_ops[] = {
 	{"=",	TO_STEQL },
 	{"==",	TO_STEQL },
 	{"!=",	TO_STNEQ },
@@ -327,11 +318,11 @@ c_print(const char **wp)
 #ifndef MKSH_MIDNIGHTBSD01ASH_COMPAT
 		    Flag(FSH) ||
 #endif
-		    Flag(FAS_BUILTIN)) {
+		    as_builtin) {
 			/* BSD "echo" cmd, Debian Policy 10.4 compliant */
 			++wp;
  bsd_echo:
-			if (*wp && !strcmp(*wp, "-n")) {
+			if (*wp && !strcmp(*wp, Tdn)) {
 				po.nl = false;
 				++wp;
 			}
@@ -493,7 +484,7 @@ c_print(const char **wp)
 						Xput(xs, xp, '\\');
 					}
 				} else if ((unsigned int)c > 0xFF) {
-					/* generic function returned Unicode */
+					/* generic function returned UCS */
 					po.ts[utf_wctomb(po.ts, c - 0x100)] = 0;
 					c = 0;
 					do {
@@ -710,7 +701,23 @@ do_whence(const char **wp, int fcflags, bool vflag, bool iscommand)
 						    "exported " : "",
 						    Talias);
 				}
-				shf_puts(tp->val.s, shl_stdout);
+				if (!mksh_abspath(tp->val.s)) {
+					const char *xcwd = current_wd[0] ?
+					    current_wd : ".";
+					size_t xlen = strlen(xcwd);
+					size_t clen = strlen(tp->val.s) + 1;
+					char *xp = alloc(xlen + 1 + clen, ATEMP);
+
+					memcpy(xp, xcwd, xlen);
+					if (mksh_cdirsep(xp[xlen - 1]))
+						--xlen;
+					xp[xlen++] = '/';
+					memcpy(xp + xlen, tp->val.s, clen);
+					simplify_path(xp);
+					shf_puts(xp, shl_stdout);
+					afree(xp, ATEMP);
+				} else
+					shf_puts(tp->val.s, shl_stdout);
 			} else {
 				if (vflag)
 					shprintf(Tnot_found_s, id);
@@ -718,12 +725,16 @@ do_whence(const char **wp, int fcflags, bool vflag, bool iscommand)
 			}
 			break;
 		case CALIAS:
-			if (vflag) {
-				shprintf("%s is an %s%s for ", id,
+			if (!vflag && iscommand)
+				shprintf(Tf_s_, Talias);
+			if (vflag || iscommand)
+				print_value_quoted(shl_stdout, id);
+			if (vflag)
+				shprintf(" is an %s%s for ",
 				    (tp->flag & EXPORT) ? "exported " : "",
 				    Talias);
-			} else if (iscommand)
-				shprintf("%s %s=", Talias, id);
+			else if (iscommand)
+				shf_putc('=', shl_stdout);
 			print_value_quoted(shl_stdout, tp->val.s);
 			break;
 		case CKEYWD:
@@ -745,10 +756,15 @@ do_whence(const char **wp, int fcflags, bool vflag, bool iscommand)
 bool
 valid_alias_name(const char *cp)
 {
-	if (ord(*cp) == ORD('-'))
+	switch (ord(*cp)) {
+	case ORD('+'):
+	case ORD('-'):
 		return (false);
-	if (ord(cp[0]) == ORD('[') && ord(cp[1]) == ORD('[') && !cp[2])
-		return (false);
+	case ORD('['):
+		if (ord(cp[1]) == ORD('[') && !cp[2])
+			return (false);
+		break;
+	}
 	while (*cp)
 		if (ctype(*cp, C_ALIAS))
 			++cp;
@@ -837,7 +853,7 @@ c_alias(const char **wp)
 			if ((ap->flag & (ISSET|xflag)) == (ISSET|xflag)) {
 				if (pflag)
 					shprintf(Tf_s_, Talias);
-				shf_puts(ap->name, shl_stdout);
+				print_value_quoted(shl_stdout, ap->name);
 				if (prefix != '+') {
 					shf_putc('=', shl_stdout);
 					print_value_quoted(shl_stdout, ap->val.s);
@@ -867,7 +883,7 @@ c_alias(const char **wp)
 			if (ap != NULL && (ap->flag&ISSET)) {
 				if (pflag)
 					shprintf(Tf_s_, Talias);
-				shf_puts(ap->name, shl_stdout);
+				print_value_quoted(shl_stdout, ap->name);
 				if (prefix != '+') {
 					shf_putc('=', shl_stdout);
 					print_value_quoted(shl_stdout, ap->val.s);
@@ -1291,54 +1307,32 @@ c_bind(const char **wp)
 #ifndef MKSH_SMALL
 	bool macro = false;
 #endif
-	bool list = false;
-	const char *cp;
-	char *up;
 
-	while ((optc = ksh_getopt(wp, &builtin_opt,
-#ifndef MKSH_SMALL
-	    "lm"
-#else
-	    "l"
-#endif
-	    )) != -1)
+	if (x_bind_check()) {
+		bi_errorf("can't bind, not a tty");
+		return (1);
+	}
+
+	while ((optc = ksh_getopt(wp, &builtin_opt, "lm")) != -1)
 		switch (optc) {
 		case 'l':
-			list = true;
-			break;
+			return (x_bind_list());
 #ifndef MKSH_SMALL
 		case 'm':
 			macro = true;
 			break;
 #endif
-		case '?':
+		default:
 			return (1);
 		}
 	wp += builtin_opt.optind;
 
 	if (*wp == NULL)
-		/* list all */
-		rv = x_bind(NULL, NULL,
-#ifndef MKSH_SMALL
-		    false,
-#endif
-		    list);
+		return (x_bind_showall());
 
-	for (; *wp != NULL; wp++) {
-		if ((cp = cstrchr(*wp, '=')) == NULL)
-			up = NULL;
-		else {
-			strdupx(up, *wp, ATEMP);
-			up[cp++ - *wp] = '\0';
-		}
-		if (x_bind(up ? up : *wp, cp,
-#ifndef MKSH_SMALL
-		    macro,
-#endif
-		    false))
-			rv = 1;
-		afree(up, ATEMP);
-	}
+	do {
+		rv |= x_bind(*wp SMALLP(macro));
+	} while (*++wp);
 
 	return (rv);
 }
@@ -1347,10 +1341,17 @@ c_bind(const char **wp)
 int
 c_shift(const char **wp)
 {
-	struct block *l = e->loc;
 	int n;
 	mksh_ari_t val;
 	const char *arg;
+	struct block *l = e->loc;
+
+	if ((l->flags & BF_RESETSPEC)) {
+		/* prevent pollution */
+		l->flags &= ~BF_RESETSPEC;
+		/* operate on parent environment */
+		l = l->next;
+	}
 
 	if (ksh_getopt(wp, &builtin_opt, null) == '?')
 		return (1);
@@ -1369,6 +1370,7 @@ c_shift(const char **wp)
 		bi_errorf(Tf_sD_s, Tbadnum, arg);
 		return (1);
 	}
+
 	if (l->argc < n) {
 		bi_errorf("nothing to shift");
 		return (1);
@@ -1583,7 +1585,6 @@ c_wait(const char **wp)
 	return (rv);
 }
 
-static const char REPLY[] = "REPLY";
 int
 c_read(const char **wp)
 {
@@ -1664,7 +1665,7 @@ c_read(const char **wp)
 		if (!builtin_opt.optarg[0])
 			fd = 0;
 		else if ((fd = check_fd(builtin_opt.optarg, R_OK, &ccp)) < 0) {
-			bi_errorf(Tf_sD_sD_s, "-u", builtin_opt.optarg, ccp);
+			bi_errorf(Tf_sD_sD_s, Tdu, builtin_opt.optarg, ccp);
 			return (2);
 		}
 		break;
@@ -1673,7 +1674,7 @@ c_read(const char **wp)
 	}
 	wp += builtin_opt.optind;
 	if (*wp == NULL)
-		*--wp = REPLY;
+		*--wp = TREPLY;
 
 	if (intoarray && wp[1] != NULL) {
 		bi_errorf(Ttoo_many_args);
@@ -2023,7 +2024,6 @@ int
 c_eval(const char **wp)
 {
 	struct source *s, *saves = source;
-	unsigned char savef;
 	int rv;
 
 	if (ksh_getopt(wp, &builtin_opt, null) == '?')
@@ -2066,10 +2066,7 @@ c_eval(const char **wp)
 	/* SUSv4: OR with a high value never written otherwise */
 	exstat |= 0x4000;
 
-	savef = Flag(FERREXIT);
-	Flag(FERREXIT) |= 0x80;
 	rv = shell(s, 2);
-	Flag(FERREXIT) = savef;
 	source = saves;
 	afree(s, ATEMP);
 	if (exstat & 0x4000)
@@ -2231,7 +2228,13 @@ c_set(const char **wp)
 	int argi;
 	bool setargs;
 	struct block *l = e->loc;
-	const char **owp;
+
+	if ((l->flags & BF_RESETSPEC)) {
+		/* prevent pollution */
+		l->flags &= ~BF_RESETSPEC;
+		/* operate on parent environment */
+		l = l->next;
+	}
 
 	if (wp[1] == NULL) {
 		static const char *args[] = { Tset, "-", NULL };
@@ -2242,6 +2245,8 @@ c_set(const char **wp)
 		return (2);
 	/* set $# and $* */
 	if (setargs) {
+		const char **owp;
+
 		wp += argi - 1;
 		owp = wp;
 		/* save $0 */
@@ -2573,25 +2578,25 @@ c_mknod(const char **wp)
 #endif
 
 /*-
-   test(1) roughly accepts the following grammar:
-	oexpr	::= aexpr | aexpr "-o" oexpr ;
-	aexpr	::= nexpr | nexpr "-a" aexpr ;
-	nexpr	::= primary | "!" nexpr ;
-	primary	::= unary-operator operand
-		| operand binary-operator operand
-		| operand
-		| "(" oexpr ")"
-		;
-
-	unary-operator ::= "-a"|"-b"|"-c"|"-d"|"-e"|"-f"|"-G"|"-g"|"-H"|"-h"|
-			   "-k"|"-L"|"-n"|"-O"|"-o"|"-p"|"-r"|"-S"|"-s"|"-t"|
-			   "-u"|"-v"|"-w"|"-x"|"-z";
-
-	binary-operator ::= "="|"=="|"!="|"<"|">"|"-eq"|"-ne"|"-gt"|"-ge"|
-			    "-lt"|"-le"|"-ef"|"-nt"|"-ot";
-
-	operand ::= <anything>
-*/
+ * test(1) roughly accepts the following grammar:
+ *	oexpr	::= aexpr | aexpr "-o" oexpr ;
+ *	aexpr	::= nexpr | nexpr "-a" aexpr ;
+ *	nexpr	::= primary | "!" nexpr ;
+ *	primary	::= unary-operator operand
+ *		| operand binary-operator operand
+ *		| operand
+ *		| "(" oexpr ")"
+ *		;
+ *
+ *	unary-operator ::= "-a"|"-b"|"-c"|"-d"|"-e"|"-f"|"-G"|"-g"|"-H"|"-h"|
+ *			   "-k"|"-L"|"-n"|"-O"|"-o"|"-p"|"-r"|"-S"|"-s"|"-t"|
+ *			   "-u"|"-v"|"-w"|"-x"|"-z";
+ *
+ *	binary-operator ::= "="|"=="|"!="|"<"|">"|"-eq"|"-ne"|"-gt"|"-ge"|
+ *			    "-lt"|"-le"|"-ef"|"-nt"|"-ot";
+ *
+ *	operand ::= <anything>
+ */
 
 /* POSIX says > 1 for errors */
 #define T_ERR_EXIT 2
@@ -2743,12 +2748,35 @@ test_isop(Test_meta meta, const char *s)
 }
 
 #ifdef __OS2__
-#define test_access(name, mode) access_ex(access, (name), (mode))
-#define test_stat(name, buffer) stat_ex((name), (buffer))
+#define test_access(name,mode)	access_ex(access, (name), (mode))
+#define test_stat(name,buffer)	stat_ex(stat, (name), (buffer))
+#define test_lstat(name,buffer)	stat_ex(lstat, (name), (buffer))
 #else
-#define test_access(name, mode) access((name), (mode))
-#define test_stat(name, buffer) stat((name), (buffer))
+#define test_access(name,mode)	access((name), (mode))
+#define test_stat(name,buffer)	stat((name), (buffer))
+#define test_lstat(name,buffer)	lstat((name), (buffer))
 #endif
+
+#if HAVE_ST_MTIM
+#undef st_mtimensec
+#define st_mtimensec st_mtim.tv_nsec
+#endif
+
+static int
+mtimecmp(const struct stat *sb1, const struct stat *sb2)
+{
+	if (sb1->st_mtime < sb2->st_mtime)
+		return (-1);
+	if (sb1->st_mtime > sb2->st_mtime)
+		return (1);
+#if (HAVE_ST_MTIMENSEC || HAVE_ST_MTIM)
+	if (sb1->st_mtimensec < sb2->st_mtimensec)
+		return (-1);
+	if (sb1->st_mtimensec > sb2->st_mtimensec)
+		return (1);
+#endif
+	return (0);
+}
 
 int
 test_eval(Test_env *te, Test_op op, const char *opnd1, const char *opnd2,
@@ -2843,31 +2871,31 @@ test_eval(Test_env *te, Test_op op, const char *opnd1, const char *opnd2,
 
 	/* -d */
 	case TO_FILID:
-		return (stat(opnd1, &b1) == 0 && S_ISDIR(b1.st_mode));
+		return (test_stat(opnd1, &b1) == 0 && S_ISDIR(b1.st_mode));
 
 	/* -c */
 	case TO_FILCDEV:
-		return (stat(opnd1, &b1) == 0 && S_ISCHR(b1.st_mode));
+		return (test_stat(opnd1, &b1) == 0 && S_ISCHR(b1.st_mode));
 
 	/* -b */
 	case TO_FILBDEV:
-		return (stat(opnd1, &b1) == 0 && S_ISBLK(b1.st_mode));
+		return (test_stat(opnd1, &b1) == 0 && S_ISBLK(b1.st_mode));
 
 	/* -p */
 	case TO_FILFIFO:
-		return (stat(opnd1, &b1) == 0 && S_ISFIFO(b1.st_mode));
+		return (test_stat(opnd1, &b1) == 0 && S_ISFIFO(b1.st_mode));
 
 	/* -h or -L */
 	case TO_FILSYM:
 #ifdef MKSH__NO_SYMLINK
 		return (0);
 #else
-		return (lstat(opnd1, &b1) == 0 && S_ISLNK(b1.st_mode));
+		return (test_lstat(opnd1, &b1) == 0 && S_ISLNK(b1.st_mode));
 #endif
 
 	/* -S */
 	case TO_FILSOCK:
-		return (stat(opnd1, &b1) == 0 && S_ISSOCK(b1.st_mode));
+		return (test_stat(opnd1, &b1) == 0 && S_ISSOCK(b1.st_mode));
 
 	/* -H => HP context dependent files (directories) */
 	case TO_FILCDF:
@@ -2886,7 +2914,7 @@ test_eval(Test_env *te, Test_op op, const char *opnd1, const char *opnd2,
 		 */
 
 		nv = shf_smprintf("%s+", opnd1);
-		i = (stat(nv, &b1) == 0 && S_ISCDF(b1.st_mode));
+		i = (test_stat(nv, &b1) == 0 && S_ISCDF(b1.st_mode));
 		afree(nv, ATEMP);
 		return (i);
 	}
@@ -2896,18 +2924,18 @@ test_eval(Test_env *te, Test_op op, const char *opnd1, const char *opnd2,
 
 	/* -u */
 	case TO_FILSETU:
-		return (stat(opnd1, &b1) == 0 &&
+		return (test_stat(opnd1, &b1) == 0 &&
 		    (b1.st_mode & S_ISUID) == S_ISUID);
 
 	/* -g */
 	case TO_FILSETG:
-		return (stat(opnd1, &b1) == 0 &&
+		return (test_stat(opnd1, &b1) == 0 &&
 		    (b1.st_mode & S_ISGID) == S_ISGID);
 
 	/* -k */
 	case TO_FILSTCK:
 #ifdef S_ISVTX
-		return (stat(opnd1, &b1) == 0 &&
+		return (test_stat(opnd1, &b1) == 0 &&
 		    (b1.st_mode & S_ISVTX) == S_ISVTX);
 #else
 		return (0);
@@ -2915,7 +2943,8 @@ test_eval(Test_env *te, Test_op op, const char *opnd1, const char *opnd2,
 
 	/* -s */
 	case TO_FILGZ:
-		return (stat(opnd1, &b1) == 0 && (off_t)b1.st_size > (off_t)0);
+		return (test_stat(opnd1, &b1) == 0 &&
+		    (off_t)b1.st_size > (off_t)0);
 
 	/* -t */
 	case TO_FILTT:
@@ -2928,11 +2957,13 @@ test_eval(Test_env *te, Test_op op, const char *opnd1, const char *opnd2,
 
 	/* -O */
 	case TO_FILUID:
-		return (stat(opnd1, &b1) == 0 && (uid_t)b1.st_uid == ksheuid);
+		return (test_stat(opnd1, &b1) == 0 &&
+		    (uid_t)b1.st_uid == ksheuid);
 
 	/* -G */
 	case TO_FILGID:
-		return (stat(opnd1, &b1) == 0 && (gid_t)b1.st_gid == getegid());
+		return (test_stat(opnd1, &b1) == 0 &&
+		    (gid_t)b1.st_gid == kshegid);
 
 	/*
 	 * Binary Operators
@@ -2963,6 +2994,38 @@ test_eval(Test_env *te, Test_op op, const char *opnd1, const char *opnd2,
 	/* > */
 	case TO_STGT:
 		return (strcmp(opnd1, opnd2) > 0);
+
+	/* -nt */
+	case TO_FILNT:
+		/*
+		 * ksh88/ksh93 succeed if file2 can't be stated
+		 * (subtly different from 'does not exist').
+		 */
+		return (test_stat(opnd1, &b1) == 0 &&
+		    (((s = test_stat(opnd2, &b2)) == 0 &&
+		    mtimecmp(&b1, &b2) > 0) || s < 0));
+
+	/* -ot */
+	case TO_FILOT:
+		/*
+		 * ksh88/ksh93 succeed if file1 can't be stated
+		 * (subtly different from 'does not exist').
+		 */
+		return (test_stat(opnd2, &b2) == 0 &&
+		    (((s = test_stat(opnd1, &b1)) == 0 &&
+		    mtimecmp(&b1, &b2) < 0) || s < 0));
+
+	/* -ef */
+	case TO_FILEQ:
+		return (test_stat(opnd1, &b1) == 0 &&
+		    test_stat(opnd2, &b2) == 0 &&
+		    b1.st_dev == b2.st_dev && b1.st_ino == b2.st_ino);
+
+	/* all other cases */
+	case TO_NONOP:
+	case TO_NONNULL:
+		/* throw the error */
+		break;
 
 	/* -eq */
 	case TO_INTEQ:
@@ -3000,37 +3063,6 @@ test_eval(Test_env *te, Test_op op, const char *opnd1, const char *opnd2,
 			break;
 		}
 		/* NOTREACHED */
-
-	/* -nt */
-	case TO_FILNT:
-		/*
-		 * ksh88/ksh93 succeed if file2 can't be stated
-		 * (subtly different from 'does not exist').
-		 */
-		return (stat(opnd1, &b1) == 0 &&
-		    (((s = stat(opnd2, &b2)) == 0 &&
-		    b1.st_mtime > b2.st_mtime) || s < 0));
-
-	/* -ot */
-	case TO_FILOT:
-		/*
-		 * ksh88/ksh93 succeed if file1 can't be stated
-		 * (subtly different from 'does not exist').
-		 */
-		return (stat(opnd2, &b2) == 0 &&
-		    (((s = stat(opnd1, &b1)) == 0 &&
-		    b1.st_mtime < b2.st_mtime) || s < 0));
-
-	/* -ef */
-	case TO_FILEQ:
-		return (stat (opnd1, &b1) == 0 && stat (opnd2, &b2) == 0 &&
-		    b1.st_dev == b2.st_dev && b1.st_ino == b2.st_ino);
-
-	/* all other cases */
-	case TO_NONOP:
-	case TO_NONNULL:
-		/* throw the error */
-		break;
 	}
 	(*te->error)(te, 0, "internal error: unknown op");
 	return (1);
@@ -3149,7 +3181,7 @@ ptest_isa(Test_env *te, Test_meta meta)
 {
 	/* Order important - indexed by Test_meta values */
 	static const char * const tokens[] = {
-		"-o", "-a", "!", "(", ")"
+		Tdo, Tda, "!", "(", ")"
 	};
 	Test_op rv;
 
@@ -3190,214 +3222,6 @@ ptest_error(Test_env *te, int ofs, const char *msg)
 	else
 		bi_errorf(Tf_s, msg);
 }
-
-#ifndef MKSH_NO_LIMITS
-#define SOFT	0x1
-#define HARD	0x2
-
-/* Magic to divine the 'm' and 'v' limits */
-
-#ifdef RLIMIT_AS
-#if !defined(RLIMIT_VMEM) || (RLIMIT_VMEM == RLIMIT_AS) || \
-    !defined(RLIMIT_RSS) || (RLIMIT_VMEM == RLIMIT_RSS)
-#define ULIMIT_V_IS_AS
-#elif defined(RLIMIT_VMEM)
-#if !defined(RLIMIT_RSS) || (RLIMIT_RSS == RLIMIT_AS)
-#define ULIMIT_V_IS_AS
-#else
-#define ULIMIT_V_IS_VMEM
-#endif
-#endif
-#endif
-
-#ifdef RLIMIT_RSS
-#ifdef ULIMIT_V_IS_VMEM
-#define ULIMIT_M_IS_RSS
-#elif defined(RLIMIT_VMEM) && (RLIMIT_VMEM == RLIMIT_RSS)
-#define ULIMIT_M_IS_VMEM
-#else
-#define ULIMIT_M_IS_RSS
-#endif
-#if defined(ULIMIT_M_IS_RSS) && defined(RLIMIT_AS) && (RLIMIT_RSS == RLIMIT_AS)
-#undef ULIMIT_M_IS_RSS
-#endif
-#endif
-
-#if !defined(RLIMIT_AS) && !defined(ULIMIT_M_IS_VMEM) && defined(RLIMIT_VMEM)
-#define ULIMIT_V_IS_VMEM
-#endif
-
-#if !defined(ULIMIT_V_IS_VMEM) && defined(RLIMIT_VMEM) && \
-    (!defined(RLIMIT_RSS) || (defined(RLIMIT_AS) && (RLIMIT_RSS == RLIMIT_AS)))
-#define ULIMIT_M_IS_VMEM
-#endif
-
-#if defined(ULIMIT_M_IS_VMEM) && defined(RLIMIT_AS) && \
-    (RLIMIT_VMEM == RLIMIT_AS)
-#undef ULIMIT_M_IS_VMEM
-#endif
-
-#if defined(ULIMIT_M_IS_RSS) && defined(ULIMIT_M_IS_VMEM)
-# error nonsensical m ulimit
-#endif
-
-#if defined(ULIMIT_V_IS_VMEM) && defined(ULIMIT_V_IS_AS)
-# error nonsensical v ulimit
-#endif
-
-struct limits {
-	/* limit resource */
-	int resource;
-	/* multiply by to get rlim_{cur,max} values */
-	unsigned int factor;
-	/* getopts char */
-	char optchar;
-	/* limit name */
-	char name[1];
-};
-
-#define RLIMITS_DEFNS
-#define FN(lname,lid,lfac,lopt)				\
-	static const struct {				\
-		int resource;				\
-		unsigned int factor;			\
-		char optchar;				\
-		char name[sizeof(lname)];		\
-	} rlimits_ ## lid = {				\
-		lid, lfac, lopt, lname			\
-	};
-#include "rlimits.gen"
-
-static void print_ulimit(const struct limits *, int);
-static int set_ulimit(const struct limits *, const char *, int);
-
-static const struct limits * const rlimits[] = {
-#define RLIMITS_ITEMS
-#include "rlimits.gen"
-};
-
-static const char rlimits_opts[] =
-#define RLIMITS_OPTCS
-#include "rlimits.gen"
-    ;
-
-int
-c_ulimit(const char **wp)
-{
-	size_t i = 0;
-	int how = SOFT | HARD, optc, what = 'f';
-	bool all = false;
-
-	while ((optc = ksh_getopt(wp, &builtin_opt, rlimits_opts)) != -1)
-		switch (optc) {
-		case 'H':
-			how = HARD;
-			break;
-		case 'S':
-			how = SOFT;
-			break;
-		case 'a':
-			all = true;
-			break;
-		case '?':
-			bi_errorf("usage: ulimit [-%s] [value]", rlimits_opts);
-			return (1);
-		default:
-			what = optc;
-		}
-
-	while (i < NELEM(rlimits)) {
-		if (rlimits[i]->optchar == what)
-			goto found;
-		++i;
-	}
-	internal_warningf("ulimit: %c", what);
-	return (1);
- found:
-	if (wp[builtin_opt.optind]) {
-		if (all || wp[builtin_opt.optind + 1]) {
-			bi_errorf(Ttoo_many_args);
-			return (1);
-		}
-		return (set_ulimit(rlimits[i], wp[builtin_opt.optind], how));
-	}
-	if (!all)
-		print_ulimit(rlimits[i], how);
-	else for (i = 0; i < NELEM(rlimits); ++i) {
-		shprintf("-%c: %-20s  ", rlimits[i]->optchar, rlimits[i]->name);
-		print_ulimit(rlimits[i], how);
-	}
-	return (0);
-}
-
-static int
-set_ulimit(const struct limits *l, const char *v, int how)
-{
-	rlim_t val = (rlim_t)0;
-	struct rlimit limit;
-
-	if (strcmp(v, "unlimited") == 0)
-		val = (rlim_t)RLIM_INFINITY;
-	else {
-		mksh_uari_t rval;
-
-		if (!evaluate(v, (mksh_ari_t *)&rval, KSH_RETURN_ERROR, false))
-			return (1);
-		/*
-		 * Avoid problems caused by typos that evaluate misses due
-		 * to evaluating unset parameters to 0...
-		 * If this causes problems, will have to add parameter to
-		 * evaluate() to control if unset params are 0 or an error.
-		 */
-		if (!rval && !ctype(v[0], C_DIGIT)) {
-			bi_errorf("invalid %s limit: %s", l->name, v);
-			return (1);
-		}
-		val = (rlim_t)((rlim_t)rval * l->factor);
-	}
-
-	if (getrlimit(l->resource, &limit) < 0) {
-#ifndef MKSH_SMALL
-		bi_errorf("limit %s could not be read, contact the mksh developers: %s",
-		    l->name, cstrerror(errno));
-#endif
-		/* some can't be read */
-		limit.rlim_cur = RLIM_INFINITY;
-		limit.rlim_max = RLIM_INFINITY;
-	}
-	if (how & SOFT)
-		limit.rlim_cur = val;
-	if (how & HARD)
-		limit.rlim_max = val;
-	if (!setrlimit(l->resource, &limit))
-		return (0);
-	if (errno == EPERM)
-		bi_errorf("%s exceeds allowable %s limit", v, l->name);
-	else
-		bi_errorf("bad %s limit: %s", l->name, cstrerror(errno));
-	return (1);
-}
-
-static void
-print_ulimit(const struct limits *l, int how)
-{
-	rlim_t val = (rlim_t)0;
-	struct rlimit limit;
-
-	if (getrlimit(l->resource, &limit)) {
-		shf_puts("unknown\n", shl_stdout);
-		return;
-	}
-	if (how & SOFT)
-		val = limit.rlim_cur;
-	else if (how & HARD)
-		val = limit.rlim_max;
-	if (val == (rlim_t)RLIM_INFINITY)
-		shf_puts("unlimited\n", shl_stdout);
-	else
-		shprintf("%lu\n", (unsigned long)(val / l->factor));
-}
-#endif
 
 int
 c_rename(const char **wp)
@@ -3455,7 +3279,7 @@ c_realpath(const char **wp)
 int
 c_cat(const char **wp)
 {
-	int fd = STDIN_FILENO, rv;
+	int fd = 0, rv;
 	ssize_t n, w;
 	const char *fn = "<stdin>";
 	char *buf, *cp;
@@ -3463,7 +3287,7 @@ c_cat(const char **wp)
 #define MKSH_CAT_BUFSIZ 4096
 
 	/* parse options: POSIX demands we support "-u" as no-op */
-	while ((rv = ksh_getopt(wp, &builtin_opt, "u")) != -1) {
+	while ((rv = ksh_getopt(wp, &builtin_opt, Tu)) != -1) {
 		switch (rv) {
 		case 'u':
 			/* we already operate unbuffered */
@@ -3488,7 +3312,7 @@ c_cat(const char **wp)
 		if (*wp) {
 			fn = *wp++;
 			if (ksh_isdash(fn))
-				fd = STDIN_FILENO;
+				fd = 0;
 			else if ((fd = binopen2(fn, O_RDONLY)) < 0) {
 				bi_errorf(Tf_sD_s, fn, cstrerror(errno));
 				rv = 1;
@@ -3507,7 +3331,7 @@ c_cat(const char **wp)
 					opipe = block_pipe();
 					continue;
 				}
-				/* an error occured during reading */
+				/* an error occurred during reading */
 				bi_errorf(Tf_sD_s, fn, cstrerror(errno));
 				rv = 1;
 				break;
@@ -3517,7 +3341,7 @@ c_cat(const char **wp)
 			while (n) {
 				if (intrsig)
 					goto has_intrsig;
-				if ((w = write(STDOUT_FILENO, cp, n)) != -1) {
+				if ((w = write(1, cp, n)) != -1) {
 					n -= w;
 					cp += w;
 					continue;
@@ -3536,17 +3360,17 @@ c_cat(const char **wp)
 					/* fake receiving signal */
 					rv = ksh_sigmask(SIGPIPE);
 				} else {
-					/* an error occured during writing */
+					/* an error occurred during writing */
 					bi_errorf(Tf_sD_s, "<stdout>",
 					    cstrerror(errno));
 					rv = 1;
 				}
-				if (fd != STDIN_FILENO)
+				if (fd != 0)
 					close(fd);
 				goto out;
 			}
 		}
-		if (fd != STDIN_FILENO)
+		if (fd != 0)
 			close(fd);
 	} while (*wp);
 

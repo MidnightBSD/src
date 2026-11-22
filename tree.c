@@ -23,7 +23,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/tree.c,v 1.95 2018/01/14 00:03:05 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/tree.c,v 1.100 2020/10/31 04:28:54 tg Exp $");
 
 #define INDENT	8
 
@@ -36,6 +36,19 @@ static void iofree(struct ioword **, Area *);
 
 /* "foo& ; bar" and "foo |& ; bar" are invalid */
 static bool prevent_semicolon;
+
+/* here document diversion */
+static unsigned short ptree_nest;
+static bool ptree_hashere;
+static struct shf ptree_heredoc;
+#define ptree_outhere(shf) do {					\
+	if (ptree_hashere) {					\
+		shf_puts(shf_sclose(&ptree_heredoc), (shf));	\
+		shf_putc('\n', (shf));				\
+		ptree_hashere = false;				\
+		/*prevent_semicolon = true;*/			\
+	}							\
+} while (/* CONSTCOND */ 0)
 
 static const char Telif_pT[] = "elif %T";
 
@@ -82,8 +95,11 @@ ptree(struct op *t, int indent, struct shf *shf)
 			w = (const char **)t->vars;
 			while (*w)
 				fptreef(shf, indent, Tf_S_, *w++);
-		} else
+		}
+#ifndef MKSH_SMALL
+		  else
 			shf_puts("#no-vars# ", shf);
+#endif
 		if (t->args) {
 			w = t->args;
 			if (*w && **w == CHAR) {
@@ -97,8 +113,11 @@ ptree(struct op *t, int indent, struct shf *shf)
 			}
 			while (*w)
 				fptreef(shf, indent, Tf_S_, *w++);
-		} else
+		}
+#ifndef MKSH_SMALL
+		  else
 			shf_puts("#no-args# ", shf);
+#endif
 		break;
 	case TEXEC:
 		t = t->left;
@@ -221,36 +240,9 @@ ptree(struct op *t, int indent, struct shf *shf)
 		prevent_semicolon = false;
 		break;
 	}
-	if ((ioact = t->ioact) != NULL) {
-		bool need_nl = false;
-
+	if ((ioact = t->ioact) != NULL)
 		while (*ioact != NULL)
 			pioact(shf, *ioact++);
-		/* Print here documents after everything else... */
-		ioact = t->ioact;
-		while (*ioact != NULL) {
-			struct ioword *iop = *ioact++;
-
-			/* heredoc is NULL when tracing (set -x) */
-			if ((iop->ioflag & (IOTYPE | IOHERESTR)) == IOHERE &&
-			    iop->heredoc) {
-				shf_putc('\n', shf);
-				shf_puts(iop->heredoc, shf);
-				fptreef(shf, indent, Tf_s,
-				    evalstr(iop->delim, 0));
-				need_nl = true;
-			}
-		}
-		/*
-		 * Last delimiter must be followed by a newline (this
-		 * often leads to an extra blank line, but it's not
-		 * worth worrying about)
-		 */
-		if (need_nl) {
-			shf_putc('\n', shf);
-			prevent_semicolon = true;
-		}
-	}
 }
 
 static void
@@ -272,11 +264,29 @@ pioact(struct shf *shf, struct ioword *iop)
 		shf_putc('<', shf);
 		break;
 	case IOHERE:
+		if (flag & IOHERESTR) {
+			shf_puts("<<<", shf);
+			goto ioheredelim;
+		}
 		shf_puts("<<", shf);
 		if (flag & IOSKIP)
 			shf_putc('-', shf);
-		else if (flag & IOHERESTR)
-			shf_putc('<', shf);
+		if (iop->heredoc /* nil when tracing */) {
+			/* here document diversion */
+			if (!ptree_hashere) {
+				shf_sopen(NULL, 0, SHF_WR | SHF_DYNAMIC,
+				    &ptree_heredoc);
+				ptree_hashere = true;
+			}
+			shf_putc('\n', &ptree_heredoc);
+			shf_puts(iop->heredoc, &ptree_heredoc);
+			/* iop->delim is set before iop->heredoc */
+			shf_puts(evalstr(iop->delim, 0), &ptree_heredoc);
+		}
+ ioheredelim:
+		/* delim is NULL during syntax error printing */
+		if (iop->delim && !(iop->ioflag & IONDELIM))
+			wdvarput(shf, iop->delim, 0, WDS_TPUTS);
 		break;
 	case IOCAT:
 		shf_puts(">>", shf);
@@ -293,11 +303,8 @@ pioact(struct shf *shf, struct ioword *iop)
 		shf_puts(flag & IORDUP ? "<&" : ">&", shf);
 		break;
 	}
-	/* name/delim are NULL when printing syntax errors */
-	if (type == IOHERE) {
-		if (iop->delim && !(iop->ioflag & IONDELIM))
-			wdvarput(shf, iop->delim, 0, WDS_TPUTS);
-	} else if (iop->ioname) {
+	/* name is NULL for IOHERE or when printing syntax errors */
+	if (iop->ioname) {
 		if (flag & IONAMEXP)
 			print_value_quoted(shf, iop->ioname);
 		else
@@ -342,13 +349,6 @@ wdvarput(struct shf *shf, const char *wp, int quotelevel, int opmode)
 			c = ord(*wp++);
 			if (opmode & WDS_TPUTS)
 				switch (c) {
-				case ORD('\n'):
-					if (quotelevel == 0) {
-						c = ORD('\'');
-						shf_putc(c, shf);
-						shf_putc(ORD('\n'), shf);
-					}
-					break;
 				default:
 					if (quotelevel == 0)
 						/* FALLTHROUGH */
@@ -467,6 +467,9 @@ vfptreef(struct shf *shf, int indent, const char *fmt, va_list va)
 {
 	int c;
 
+	if (!ptree_nest++)
+		ptree_hashere = false;
+
 	while ((c = ord(*fmt++))) {
 		if (c == '%') {
 			switch ((c = ord(*fmt++))) {
@@ -504,10 +507,10 @@ vfptreef(struct shf *shf, int indent, const char *fmt, va_list va)
 						shf_putc(';', shf);
 					shf_putc(' ', shf);
 				} else {
-					int i;
+					int i = indent;
 
+					ptree_outhere(shf);
 					shf_putc('\n', shf);
-					i = indent;
 					while (i >= 8) {
 						shf_putc('\t', shf);
 						i -= 8;
@@ -530,6 +533,9 @@ vfptreef(struct shf *shf, int indent, const char *fmt, va_list va)
  dont_trash_prevent_semicolon:
 		;
 	}
+
+	if (!--ptree_nest)
+		ptree_outhere(shf);
 }
 
 /*
@@ -808,7 +814,7 @@ vistree(char *dst, size_t sz, struct op *t)
 		c = ksh_unctrl(c);
 	} else if (UTFMODE && rtt2asc(c) > 0x7F) {
 		/* better not try to display broken multibyte chars */
-		/* also go easy on the Unicode: no U+FFFD here */
+		/* also go easy on the UCS: no U+FFFD here */
 		c = ORD('?');
 	}
 	*dst++ = c;
@@ -821,7 +827,7 @@ vistree(char *dst, size_t sz, struct op *t)
 
 #ifdef DEBUG
 void
-dumpchar(struct shf *shf, int c)
+dumpchar(struct shf *shf, unsigned char c)
 {
 	if (ksh_isctrl(c)) {
 		/* C0 or C1 control character or DEL */
