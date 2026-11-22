@@ -1,0 +1,20 @@
+# rtsold.unit - native prowld(8) unit for rtsold(8)
+#
+# Replaces the rc.d/rtsold shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with rtsold_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/rtsold.
+#
+# rtsold runs in the foreground (-f).  Unlike rc.d/rtsold the unit does not
+# wait for duplicate address detection after it starts.
+
+label = "org.midnightbsd.rtsold";
+description = "Router solicitation daemon";
+type = "daemon";
+rc_name = "rtsold";
+run_at_load = true;
+keep_alive = true;
+provides = ["rtsold"];
+wants = ["netif"];
+before = ["NETWORKING"];
+program = "/usr/sbin/rtsold";
+arguments = ["-f","@rtsold_flags@"];

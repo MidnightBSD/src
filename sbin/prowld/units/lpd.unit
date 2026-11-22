@@ -1,0 +1,22 @@
+# lpd.unit - native prowld(8) unit for lpd(8)
+#
+# Replaces the rc.d/lpd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with lpd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/lpd.
+#
+# chkprintcap runs first when chkprintcap_enable is set.  lpd runs in the
+# foreground (-F).
+
+label = "org.midnightbsd.lpd";
+description = "Line printer spooler daemon";
+type = "daemon";
+rc_name = "lpd";
+run_at_load = true;
+keep_alive = true;
+required_files = ["/etc/printcap"];
+provides = ["lpd"];
+wants = ["DAEMON"];
+before = ["LOGIN"];
+start_pre = [["?chkprintcap_enable","-/usr/sbin/chkprintcap","@chkprintcap_flags@"]];
+program = "/usr/sbin/lpd";
+arguments = ["-F","@lpd_flags@"];

@@ -1,0 +1,20 @@
+# rwhod.unit - native prowld(8) unit for rwhod(8)
+#
+# Replaces the rc.d/rwhod shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with rwhod_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/rwhod.
+#
+# rwhod always detaches.  prowld finds it by name.
+
+label = "org.midnightbsd.rwhod";
+description = "System status server";
+type = "daemon";
+rc_name = "rwhod";
+run_at_load = true;
+keep_alive = true;
+provides = ["rwho", "rwhod"];
+wants = ["DAEMON"];
+before = ["LOGIN"];
+pid_name = "rwhod";
+program = "/usr/sbin/rwhod";
+arguments = ["@rwhod_flags@"];

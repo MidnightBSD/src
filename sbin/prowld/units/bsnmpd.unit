@@ -1,0 +1,20 @@
+# bsnmpd.unit - native prowld(8) unit for bsnmpd(8)
+#
+# Replaces the rc.d/bsnmpd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with bsnmpd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/bsnmpd.
+#
+# bsnmpd runs in the foreground (-d); its stderr log is discarded.
+
+label = "org.midnightbsd.bsnmpd";
+description = "Simple and extensible SNMP daemon";
+type = "daemon";
+rc_name = "bsnmpd";
+run_at_load = true;
+keep_alive = true;
+provides = ["bsnmpd"];
+wants = ["NETWORKING", "syslogd"];
+program = "/usr/sbin/bsnmpd";
+arguments = ["-d","-p","@bsnmpd_pidfile:-/var/run/snmpd.pid@","@bsnmpd_flags@"];
+standard_out_path = "/dev/null";
+standard_error_path = "/dev/null";

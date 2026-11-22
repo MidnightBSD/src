@@ -1,0 +1,22 @@
+# ypxfrd.unit - native prowld(8) unit for rpc.ypxfrd(8)
+#
+# Replaces the rc.d/ypxfrd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with nis_ypxfrd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/ypxfrd.
+#
+# rpc.ypxfrd always detaches from its parent and has no foreground mode.  The
+# shell only does what has to come first: rpcbind and ypserv are started if
+# they are not running, as rc.d/ypxfrd does.  prowld finds the daemon by name.
+
+label = "org.midnightbsd.ypxfrd";
+description = "NIS map transfer server";
+type = "daemon";
+rc_name = "nis_ypxfrd";
+run_at_load = true;
+keep_alive = true;
+provides = ["ypxfrd"];
+wants = [];
+activates = ["rpcbind", "ypserv"];
+program = "/bin/sh";
+pid_name = "rpc.ypxfrd";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config ypxfrd\nif [ -z \"$(domainname)\" ]; then\n    echo \"NIS domainname(1) is not set.\"\n    exit 1\nfi\nexec /usr/sbin/rpc.ypxfrd $nis_ypxfrd_flags", "ypxfrd"];

@@ -1,0 +1,20 @@
+# mdnsresponder.unit - native prowld(8) unit for mDNSResponderPosix(8)
+#
+# Replaces the rc.d/mdnsresponder shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with mdnsresponder_enable in
+# rc.conf; mdnsresponder_flags is honoured as in rc.d/mdnsresponder.
+#
+# mDNSResponderPosix runs in the foreground unless given -b, which the
+# rc.d script adds.  mdnsd and mdnsresponder conflict.
+
+label = "org.midnightbsd.mdnsresponder";
+description = "Multicast DNS responder";
+type = "daemon";
+rc_name = "mdnsresponder";
+run_at_load = true;
+keep_alive = true;
+provides = ["mdnsresponder"];
+conflicts = ["mdnsd"];
+wants = ["DAEMON"];
+program = "/usr/bin/mDNSResponderPosix";
+arguments = ["-P","@mdnsresponder_pidfile:-/var/run/mdnsresponder.pid@","@mdnsresponder_flags@"];

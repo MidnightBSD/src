@@ -1,0 +1,23 @@
+# inetd.unit - native prowld(8) unit for inetd(8)
+#
+# Replaces the rc.d/inetd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with inetd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/inetd.
+#
+# inetd only keeps its pidfile, which "service inetd reload" needs, when it
+# detaches from its parent, so it is not run in the foreground (-d).  prowld
+# watches the daemon through its pidfile, and "prowlctl reload" sends it SIGHUP
+# to reread its configuration.
+
+label = "org.midnightbsd.inetd";
+description = "Internet super-server";
+type = "daemon";
+rc_name = "inetd";
+run_at_load = true;
+keep_alive = true;
+provides = ["inetd"];
+wants = ["DAEMON", "LOGIN", "FILESYSTEMS"];
+required_files = ["/etc/inetd.conf"];
+pid_file = "/var/run/inetd.pid";
+program = "@inetd_program:-/usr/sbin/inetd@";
+arguments = ["@inetd_flags@"];

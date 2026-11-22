@@ -31,6 +31,7 @@
 .Nd user age and date of birth tracking daemon
 .Sh SYNOPSIS
 .Nm
+.Op Fl F
 .Sh DESCRIPTION
 The
 .Nm
@@ -48,6 +49,17 @@ runs as the
 user once its directories are set up,
 and stores its data in a SQLite3 database located at
 .Pa /var/db/aged/aged.db .
+.Pp
+The option is as follows:
+.Bl -tag -width indent
+.It Fl F
+Stay in the foreground instead of detaching, so that a process supervisor
+such as
+.Xr prowld 8
+can watch the daemon directly.
+Errors are still reported through
+.Xr syslog 3 .
+.El
 .Sh SECURITY
 Access control is enforced using the
 .Fn getpeereid

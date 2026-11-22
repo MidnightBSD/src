@@ -1,0 +1,22 @@
+# powerd.unit - native prowld(8) unit for powerd(8)
+#
+# Replaces the rc.d/powerd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with powerd_enable in
+# rc.conf; powerd_flags is honoured as in rc.d/powerd.
+#
+# powerd only stays in the foreground in verbose mode (-v), so its output is
+# discarded.  The wrapper restores the highest CPU frequency when powerd stops,
+# as rc.d/powerd does.
+
+label = "org.midnightbsd.powerd";
+description = "Modify the power profile based on AC line state";
+type = "daemon";
+rc_name = "powerd";
+run_at_load = true;
+keep_alive = true;
+nojail = true;
+provides = ["powerd"];
+wants = ["DAEMON"];
+before = ["LOGIN"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config powerd\npowerd_poststop()\n{\n    sysctl dev.cpu.0.freq=$(sysctl -n dev.cpu.0.freq_levels | sed -e 's:/.*::') > /dev/null 2>&1\n}\n/usr/sbin/powerd -v $powerd_flags > /dev/null 2>&1 &\npid=$!\ntrap 'kill $pid 2> /dev/null' TERM INT\nwait $pid\nrc=$?\ntrap - TERM INT\nkill -0 $pid 2> /dev/null && wait $pid\npowerd_poststop\nexit $rc", "powerd"];

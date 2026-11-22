@@ -1,0 +1,22 @@
+# routed.unit - native prowld(8) unit for routed(8)
+#
+# Replaces the rc.d/routed shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with routed_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/routed.
+#
+# routed runs in the foreground (-d); its tracing output is discarded.
+
+label = "org.midnightbsd.routed";
+description = "Network RIP and router discovery routing daemon";
+type = "daemon";
+rc_name = "routed";
+run_at_load = true;
+keep_alive = true;
+nojail = true;
+provides = ["routed", "dynamicrouting"];
+wants = ["netif", "routing"];
+before = ["NETWORK"];
+program = "@routed_program:-/sbin/routed@";
+arguments = ["-d","@routed_flags@"];
+standard_out_path = "/dev/null";
+standard_error_path = "/dev/null";

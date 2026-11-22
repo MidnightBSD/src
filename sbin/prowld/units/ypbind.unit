@@ -1,0 +1,23 @@
+# ypbind.unit - native prowld(8) unit for ypbind(8)
+#
+# Replaces the rc.d/ypbind shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with ypbind_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/ypbind.
+#
+# ypbind always detaches.  The shell only does what has to come first (rpcbind,
+# the NIS domain name); prowld finds the daemon by name.
+# It is enabled by nis_client_enable.
+
+label = "org.midnightbsd.ypbind";
+description = "NIS domain binding daemon";
+type = "daemon";
+run_at_load = true;
+keep_alive = true;
+rc_name = "nis_client";
+provides = ["ypbind"];
+wants = ["ypserv", "nisdomain"];
+before = ["DAEMON"];
+activates = ["rpcbind"];
+program = "/bin/sh";
+pid_name = "ypbind";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config ypbind\n[ -n \"$(domainname)\" ] || { echo \"NIS domainname(1) is not set.\" >&2; exit 1; }\nexec /usr/sbin/ypbind $nis_client_flags", "ypbind"];

@@ -1,3 +1,5 @@
+PACKAGE=	tests
+
 ATF_TESTS_C+=	shutdown_test
 
 LIBADD=		sqlite3

@@ -1,0 +1,21 @@
+# sdpd.unit - native prowld(8) unit for sdpd(8)
+#
+# Replaces the rc.d/sdpd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with sdpd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/sdpd.
+#
+# sdpd runs in the foreground (-d).
+
+label = "org.midnightbsd.sdpd";
+description = "Bluetooth Service Discovery Protocol daemon";
+type = "daemon";
+rc_name = "sdpd";
+run_at_load = true;
+keep_alive = true;
+nojail = true;
+provides = ["sdpd"];
+wants = ["DAEMON"];
+before = ["LOGIN"];
+required_modules = ["ng_btsocket"];
+program = "/usr/sbin/sdpd";
+arguments = ["-d","-c","@sdpd_control:-/var/run/sdp@","-g","@sdpd_groupname:-nobody@","-u","@sdpd_username:-nobody@","@sdpd_flags@"];

@@ -1,0 +1,21 @@
+# local_unbound.unit - native prowld(8) unit for local-unbound(8)
+#
+# Replaces the rc.d/local_unbound shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with local_unbound_enable in
+# rc.conf; local_unbound_flags is honoured as in rc.d/local_unbound.
+#
+# Creates the configuration and fetches the DNSSEC root anchor on first start,
+# as rc.d/local_unbound does.  local-unbound runs in the foreground (-d) so
+# that prowld supervises it directly.
+
+label = "org.midnightbsd.local_unbound";
+description = "Local caching forwarding resolver";
+type = "daemon";
+rc_name = "local_unbound";
+run_at_load = true;
+keep_alive = true;
+provides = ["local_unbound"];
+wants = ["FILESYSTEMS", "defaultroute", "netwait", "resolv"];
+before = ["NETWORKING"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config local_unbound\n[ -n \"$local_unbound_workdir\" ] || local_unbound_workdir=/var/unbound\n[ -n \"$local_unbound_config\" ] || local_unbound_config=$local_unbound_workdir/unbound.conf\n[ -n \"$local_unbound_anchor\" ] || local_unbound_anchor=$local_unbound_workdir/root.key\n[ -n \"$local_unbound_flags\" ] || local_unbound_flags=\"-c $local_unbound_config\"\nif [ ! -f \"$local_unbound_config\" ]; then\n    /etc/rc.d/local_unbound setup || exit 1\nfi\nif [ ! -s \"$local_unbound_anchor\" ]; then\n    /etc/rc.d/local_unbound anchor\nfi\nexec /usr/sbin/local-unbound -d $local_unbound_flags", "local_unbound"];

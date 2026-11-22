@@ -1,0 +1,24 @@
+# aged.unit - native prowld(8) unit for aged(8)
+#
+# Replaces the rc.d/aged shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with aged_enable in
+# rc.conf.
+#
+# aged runs in the foreground (-F) so that prowld supervises it directly.
+# It creates and takes ownership of its own state directories.
+
+label = "org.midnightbsd.aged";
+description = "Age verification daemon";
+type = "daemon";
+rc_name = "aged";
+run_at_load = true;
+keep_alive = true;
+provides = ["aged"];
+wants = ["DAEMON"];
+before = ["LOGIN"];
+start_pre = [
+  ["/usr/bin/install", "-d", "-o", "root", "-g", "wheel", "-m", "0755", "/var/run/aged"],
+  ["/usr/bin/install", "-d", "-o", "aged", "-g", "aged", "-m", "0700", "/var/db/aged"]
+];
+program = "/usr/sbin/aged";
+arguments = ["-F","@aged_flags@"];

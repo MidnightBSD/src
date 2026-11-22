@@ -25,6 +25,7 @@
  */
 
 #define _XOPEN_SOURCE
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -135,7 +136,7 @@ safe_atoi(const char *str, int *val)
 }
 
 int
-main(void)
+main(int argc, char **argv)
 {
 	int server_fd;
 	int client_fd;
@@ -148,11 +149,28 @@ main(void)
 	cap_rights_t rights;
 	int status = 0;
 	int stopping;
+	int ch;
+	bool foreground = false;
+
+	while ((ch = getopt(argc, argv, "F")) != -1) {
+		switch (ch) {
+		case 'F':
+			foreground = true;
+			break;
+		default:
+			fprintf(stderr, "usage: aged [-F]\n");
+			exit(1);
+		}
+	}
+	if (optind != argc) {
+		fprintf(stderr, "usage: aged [-F]\n");
+		exit(1);
+	}
 
 	umask(0077);
 	openlog("aged", LOG_PID | LOG_NDELAY, LOG_DAEMON);
 
-	if (daemon(0, 0) == -1) {
+	if (!foreground && daemon(0, 0) == -1) {
 		syslog(LOG_ERR, "daemon: %m");
 		exit(1);
 	}

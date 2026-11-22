@@ -1,0 +1,23 @@
+# ftpproxy@.unit - native prowld(8) template unit for ftpproxy(8)
+#
+# Replaces the rc.d/ftpproxy shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with ftpproxy_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/ftpproxy.
+#
+# One instance per name in ftpproxy_instances, with its flags in
+# ftpproxy_<name>, or a single "default" instance using ftpproxy_flags.
+# ftp-proxy stays in the foreground only in debug mode (-d), so its output
+# is discarded.
+
+label = "org.midnightbsd.ftpproxy@%i";
+description = "Internet File Transfer Protocol proxy daemon";
+type = "daemon";
+run_at_load = true;
+keep_alive = true;
+instances_var = "ftpproxy_instances";
+default_instance = "default";
+rc_name = "ftpproxy";
+provides = ["ftp-proxy"];
+wants = ["DAEMON", "pf"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config ftpproxy\ninst=%i\nif [ \"$inst\" = default ]; then\n    flags=$ftpproxy_flags\nelse\n    eval flags=\\\"\\$ftpproxy_$inst\\\"\nfi\nexec /usr/sbin/ftp-proxy -d $flags > /dev/null 2>&1", "ftpproxy"];

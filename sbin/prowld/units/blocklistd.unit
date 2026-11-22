@@ -1,0 +1,20 @@
+# blocklistd.unit - native prowld(8) unit for blocklistd(8)
+#
+# Replaces the rc.d/blocklistd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with blocklistd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/blocklistd.
+#
+# blocklistd runs in the foreground (-f).
+
+label = "org.midnightbsd.blocklistd";
+description = "System blocklist daemon";
+type = "daemon";
+rc_name = "blocklistd";
+run_at_load = true;
+keep_alive = true;
+provides = ["blocklistd"];
+wants = ["netif", "ipfilter", "ipfw", "pf"];
+conflicts = ["blacklistd"];
+required_files = ["/etc/blocklistd.conf"];
+program = "/usr/sbin/blocklistd";
+arguments = ["-f","@blocklistd_flags@"];

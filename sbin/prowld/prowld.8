@@ -1,0 +1,1137 @@
+.\" Copyright (c) 2026 Lucas Holt
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.Dd April 18, 2026
+.Dt PROWLD 8
+.Os
+.Sh NAME
+.Nm prowld
+.Nd MidnightBSD service management daemon
+.Sh SYNOPSIS
+.Nm
+.Op Fl d
+.Op Fl s Ar rundir
+.Op Fl u Ar unitdir
+.Sh DESCRIPTION
+.Nm
+is a dependency-aware, parallel-execution service manager for MidnightBSD.
+It supersedes the traditional sequential
+.Xr rc 8
+startup model while maintaining full backward compatibility with existing
+.Pa /etc/rc.d
+scripts and the
+.Xr service 8
+command.
+.Pp
+.Nm
+reads unit files from several directories, wraps legacy
+.Xr rc.d 8
+scripts as compatibility shims, builds a directed acyclic dependency graph,
+and starts services in parallel based on dependency ordering.
+It is typically started by
+.Xr rc 8
+early in the boot sequence and runs for the lifetime of the system.
+.Pp
+The following options are available:
+.Bl -tag -width "-u unitdir"
+.It Fl d
+Debug mode.
+.Nm
+runs in the foreground and writes log messages to standard error in
+addition to
+.Xr syslog 3 .
+.It Fl s Ar rundir
+Override the runtime state directory.
+By default,
+.Nm
+uses
+.Pa /var/run/prowld
+for its control socket, PID file, and sd_notify sockets.
+If that directory is not writable
+.Po
+for example, on read-only installation media
+.Pc ,
+.Nm
+automatically falls back to
+.Pa /tmp/prowld .
+The
+.Fl s
+flag forces a specific directory regardless of writability.
+All other runtime paths
+.Pq notify socket directory, PID file, IPC socket, generated unit directory
+are derived from
+.Ar rundir .
+.It Fl u Ar unitdir
+Read unit files from
+.Ar unitdir
+only, and do not scan the
+.Xr rc.d 8
+directories.
+This gives a self-contained
+.Nm
+that never reads or starts anything belonging to the running system.
+It is intended for tests, together with
+.Fl s .
+.El
+.Pp
+When the kernel runs
+.Nm
+as
+.Xr init 8
+(process ID 1) it takes its flags from the kernel instead; see
+.Sx RUNNING AS INIT .
+.Sh CONFIGURATION FILE
+.Nm
+reads daemon-level configuration from
+.Pa /etc/prowld/prowld.conf
+on startup and when
+.Dv SIGHUP
+is received.
+The file is parsed by
+.Xr libucl 3
+and accepts UCL or JSON syntax.
+The file must be owned by root and must not be world-writable;
+.Nm
+ignores it otherwise.
+.Pp
+The following keys are recognised:
+.Bl -tag -width "max_concurrent_starts"
+.It Va max_concurrent_starts
+Maximum number of jobs that may be simultaneously transitioning to the
+.Cm starting
+state.
+Accepts an integer greater than or equal to zero, or the string
+.Dq auto .
+Zero and
+.Dq auto
+both select the default of
+.Va ncpu * 2 ,
+with a floor of 4.
+This limits parallelism during the startup wave without affecting the
+number of already-running jobs.
+.It Va shutdown_timeout
+System-wide budget in seconds for orderly shutdown.
+Services marked
+.Va shutdown_wait: true
+or with
+.Dv KEYWORD: shutdown
+receive graceful stop handling; if they do not exit within their individual
+.Va exit_timeout ,
+they are killed.
+.Nm
+waits for all such services to finish, up to
+.Va shutdown_timeout
+seconds total.
+Default: 300.
+.It Va debug
+Boolean.
+Enables debug logging to standard error.
+The command-line
+.Fl d
+flag always takes precedence.
+Default: false.
+.El
+.Pp
+Example:
+.Bd -literal -offset indent
+max_concurrent_starts = auto
+shutdown_timeout = 120
+debug = false
+.Ed
+.Sh UNIT FILES
+Unit files are parsed by
+.Xr libucl 3
+and accept UCL, JSON, or simplified YAML syntax.
+Files must have the
+.Pa .unit
+extension.
+.Pp
+Unit file directories are searched in the following order;
+a file at a higher-priority path with the same
+.Va label
+fully replaces the lower-priority file:
+.Bl -enum -compact
+.It
+.Pa /etc/prowld/units.d/
+.It
+.Pa /usr/local/etc/prowld/units.d/
+.It
+.Pa /etc/prowld/overrides.d/
+.It
+.Pa /var/run/prowld/generated.d/
+.Pq runtime-generated; follows Fl s Ar rundir
+.El
+.Pp
+A minimal unit file:
+.Bd -literal -offset indent
+{
+  "label": "org.midnightbsd.sshd",
+  "description": "OpenSSH Daemon",
+  "program": "/usr/sbin/sshd",
+  "arguments": ["-D"],
+  "run_at_load": true,
+  "keep_alive": true
+}
+.Ed
+.Ss Identity Fields
+.Bl -tag -width "description"
+.It Va label
+.Pq required
+Unique reverse-DNS identifier for the job,
+for example
+.Dq org.midnightbsd.sshd .
+Must contain only alphanumerics, dots, hyphens, and underscores.
+Must not begin with a dot or contain the sequence
+.Dq .. .
+.It Va description
+Human-readable description string.
+.It Va type
+One of
+.Cm daemon
+(long-running process),
+.Cm oneshot
+(runs to completion and exits),
+.Cm timer
+(schedule-driven),
+or
+.Cm socket
+(activated on first connection).
+Default:
+.Cm daemon .
+.It Va rc_name
+Variable prefix used in
+.Pa /etc/rc.conf
+for the
+.Va _enable
+flag.
+Defaults to the last dot-separated component of
+.Va label
+.Pq e.g., Va org.midnightbsd.sshd No produces Va sshd_enable .
+Set this explicitly to avoid collisions between units whose labels
+would otherwise derive to the same name.
+.El
+.Ss Execution Fields
+.Bl -tag -width "working_directory"
+.It Va program
+.Pq required unless Va arguments[0] is a full path
+Absolute path to the executable.
+.It Va arguments
+Array of strings passed as
+.Vt argv .
+The executable name is prepended automatically as
+.Vt argv[0] .
+.It Va environment
+Object of key/value pairs merged into the process environment.
+The child process receives only the variables listed here; it does
+not inherit
+.Nm Ap s
+own environment.
+.It Va working_directory
+Directory to
+.Xr chdir 2
+into before executing the program.
+.It Va root_directory
+Optional filesystem isolation boundary.
+When set,
+.Nm
+calls
+.Xr chroot 2
+into this directory before dropping privileges and executing the program.
+.Xr chdir 2
+to
+.Pa /
+is performed immediately after
+.Xr chroot 2
+to ensure the process cannot access paths outside the new root via a
+lingering working-directory reference.
+.Va working_directory ,
+if also set, is then interpreted relative to the chroot root.
+.Xr chroot 2
+is called as root and must succeed;
+if it fails the service is not started.
+Note that
+.Xr chroot 2
+alone is not a complete security sandbox:
+a service running as root inside the chroot can still escape it.
+Pair
+.Va root_directory
+with
+.Va user
+to drop privileges before the program runs.
+.It Va user , Va group
+Drop privileges to this user and group before
+.Xr execve 2 .
+Supplementary groups are set from the password database.
+.It Va umask
+Octal umask string applied before execution
+.Pq e.g., Dq 0022 .
+.El
+.Ss Lifecycle Fields
+.Bl -tag -width "throttle_interval"
+.It Va run_at_load
+If true, start the job automatically when it is loaded and all
+dependencies are satisfied.
+Default: false.
+.It Va keep_alive
+Boolean or object controlling the restart policy after the process exits.
+.Pp
+When set to
+.Cm true ,
+the job is always restarted regardless of exit status
+(equivalent to
+.Va { "always": true } ) .
+.Pp
+When set to an object, the following boolean keys are recognised:
+.Bl -tag -width "successful_exit" -compact
+.It Va always
+Restart unconditionally.
+.It Va crashed
+Restart when the process exits with a non-zero status or is killed by a signal.
+.It Va successful_exit
+Restart even when the process exits cleanly with status 0.
+.El
+.It Va throttle_interval
+Minimum seconds between restart attempts.
+Prevents rapid restart loops after repeated failures.
+Default: 10.
+.It Va exit_timeout
+Seconds to wait after
+.Dv SIGTERM
+before sending
+.Dv SIGKILL
+during stop or watchdog kill.
+Default: 20.
+.It Va shutdown_wait
+If true, the job receives graceful shutdown handling during system shutdown:
+.Nm
+waits for it to exit before returning to init, bounded by
+.Va shutdown_timeout
+in
+.Pa prowld.conf .
+Equivalent to
+.Dv KEYWORD: shutdown
+in rc.d scripts.
+Default: false.
+.El
+.Ss Dependency Fields
+.Bl -tag -width "conflicts"
+.It Va requires
+Array of capability names that must be in the
+.Cm running
+or
+.Cm completed
+state before this job starts.
+If a required dependency fails,
+this job transitions to
+.Cm failed .
+Implies
+.Va after .
+.It Va wants
+Like
+.Va requires ,
+but failure or absence of the dependency does not fail this job.
+Implies
+.Va after .
+.It Va before
+This job must be started before the listed jobs.
+Adds a reverse dependency edge to those jobs.
+.It Va after
+This job must be started after the listed jobs.
+.It Va conflicts
+Array of job labels that cannot run while this job is running.
+Starting this job stops the listed jobs.
+.It Va provides
+Array of capability names this job satisfies.
+Other jobs depending on these names are unblocked when this job reaches
+.Cm running .
+.El
+.Ss I/O Fields
+.Bl -tag -width "standard_error_path"
+.It Va standard_in_path
+Path for standard input.
+Defaults to
+.Pa /dev/null .
+.It Va standard_out_path
+Path for standard output.
+If unset, the job inherits the standard output of
+.Nm .
+.It Va standard_error_path
+Path for standard error.
+If unset, the job inherits the standard error of
+.Nm .
+.El
+.Ss Resource Fields
+.Bl -tag -width "resource_limits"
+.It Va nice
+Nice value applied via
+.Xr setpriority 2
+before execution.
+Positive values lower priority; negative values raise it (root only).
+Default: 0.
+.It Va resource_limits
+Object controlling
+.Xr setrlimit 2
+values.
+Recognised keys:
+.Bl -tag -width "max_processes" -compact
+.It Va max_open_files
+Maximum number of open file descriptors
+.Pq Dv RLIMIT_NOFILE .
+.It Va max_processes
+Maximum number of processes
+.Pq Dv RLIMIT_NPROC .
+.El
+.El
+.Ss Notification Fields
+.Bl -tag -width "watchdog_sec"
+.It Va notify_type
+Readiness notification protocol.
+.Cm none
+.Pq default :
+the job is considered running after
+.Va throttle_interval
+seconds if its process is still alive.
+.Cm notify :
+the job must send
+.Dv READY=1
+on its sd_notify socket before
+.Nm
+marks it running; if
+.Dv READY=1
+is not received within
+.Va exit_timeout
+seconds the job is killed.
+.It Va watchdog_sec
+Watchdog interval in seconds.
+When non-zero,
+.Nm
+sets
+.Ev WATCHDOG_USEC
+and
+.Ev WATCHDOG_PID
+in the job environment.
+The job must send
+.Dv WATCHDOG=1
+at least once per interval or
+.Nm
+sends
+.Dv SIGTERM
+followed by
+.Dv SIGKILL
+after
+.Va exit_timeout
+seconds.
+0 disables the watchdog.
+Default: 0.
+.El
+.Ss Socket Activation Fields
+The
+.Va sockets
+field is an object whose keys are logical socket names and whose values
+describe the socket to bind.
+See
+.Sx SOCKET ACTIVATION
+for details.
+.Pp
+Each socket entry recognises the following keys:
+.Bl -tag -width "seqpacket"
+.It Va type
+Socket type:
+.Cm stream
+.Pq default, TCP-style ,
+.Cm dgram
+.Pq UDP-style ,
+or
+.Cm seqpacket .
+.It Va path
+Filesystem path for an
+.Dv AF_UNIX
+socket.
+Mutually exclusive with
+.Va port .
+.It Va port
+TCP or UDP port number for an
+.Dv AF_INET
+or
+.Dv AF_INET6
+socket.
+.It Va host
+Bind address for inet sockets.
+If omitted,
+.Nm
+binds to all interfaces
+.Pq Dv INADDR_ANY / Dv in6addr_any .
+If the address contains a colon,
+.Dv AF_INET6
+is assumed; otherwise
+.Dv AF_INET .
+The value is passed to
+.Xr inet_pton 3
+and must be a valid numeric address for the chosen family
+.Pq e.g.\& Dq 127.0.0.1 or Dq ::1 .
+A malformed value is a hard configuration error:
+.Nm
+logs
+.Dv LOG_ERR ,
+refuses to bind any socket for that job, and places the job in the
+.Cm failed
+state.
+It does not fall back to binding all interfaces.
+This ensures that a typo in a loopback-only address
+.Pq e.g.\& Dq 127.0.0,1
+produces a visible failure rather than silently exposing the service
+on all network interfaces.
+.It Va backlog
+Listen backlog passed to
+.Xr listen 2 .
+0 uses
+.Dv SOMAXCONN .
+Ignored for datagram sockets.
+Default: 0.
+.El
+.Sh SOCKET ACTIVATION
+Jobs with a
+.Va sockets
+block are activated on demand.
+.Nm
+binds and listens on all configured sockets at load time, before the job
+process is started.
+When the first incoming connection or datagram arrives on any of the job's
+sockets,
+.Nm
+fork/execs the job and passes the bound socket file descriptors starting at
+fd 3 using the
+.Ev LISTEN_FDS
+protocol:
+.Bl -tag -width "LISTEN_FDNAMES"
+.It Ev LISTEN_FDS
+Number of file descriptors passed, starting at fd 3.
+.It Ev LISTEN_PID
+PID of the process the descriptors were intended for.
+Daemons should verify this matches their own PID.
+.It Ev LISTEN_FDNAMES
+Colon-separated list of logical socket names, in fd order.
+Derived from the keys of the unit's
+.Va sockets
+block.
+.El
+.Pp
+This protocol is wire-compatible with systemd socket activation, so daemons
+built for Linux using
+.Fn sd_listen_fds
+work without modification.
+.Pp
+After the daemon exits,
+.Nm
+re-arms the socket watchers and waits for the next connection.
+While waiting, the job is in the
+.Cm running
+state from the dependency scheduler's perspective, so dependent jobs
+are not blocked.
+.Sh READY NOTIFICATION
+When
+.Va notify_type
+is set to
+.Cm notify ,
+.Nm
+creates a Unix datagram socket at
+.Pa /var/run/prowld/notify/<label>
+before forking the job and sets
+.Ev NOTIFY_SOCKET
+in the child's environment.
+The job signals readiness by sending a datagram containing
+.Dv READY=1
+to that socket.
+.Pp
+The following
+.Dv KEY=value
+pairs are recognised in notification datagrams:
+.Bl -tag -width "EXTEND_TIMEOUT_USEC=n"
+.It Dv READY=1
+Mark the job as running.
+Cancels the readiness timeout timer.
+.It Dv STATUS=text
+Set a human-readable status line shown by
+.Xr prowlctl 8
+.Cm status .
+.It Dv MAINPID=pid
+Update the tracked main PID.
+Useful for daemons that double-fork after sending
+.Dv READY=1 .
+The value is accepted only if all three of the following conditions hold:
+.Bl -enum -compact
+.It
+The candidate PID exists in the kernel process table.
+.It
+Its effective UID matches the user the job was configured to run as
+(or root when no
+.Cm user
+is specified).
+.It
+It is a descendant of the currently tracked service PID,
+verified by walking the parent-PID chain via
+.Xr sysctl 3 .
+.El
+A value that fails any check is rejected and logged at
+.Dv LOG_WARNING ;
+the previously tracked PID is left unchanged.
+This prevents a compromised service from redirecting
+.Nm Ap s
+stop and watchdog signals onto unrelated processes.
+.It Dv WATCHDOG=1
+Reset the watchdog timer.
+.It Dv RELOADING=1
+Log that the service is reloading configuration.
+.It Dv STOPPING=1
+Log that the service is shutting down.
+.It Dv ERRNO=n
+Log a startup error code.
+.It Dv EXTEND_TIMEOUT_USEC=n
+Extend the current readiness timeout by
+.Ar n
+microseconds.
+.El
+.Pp
+Unknown keys are silently ignored for forward compatibility.
+.Sh BACKWARD COMPATIBILITY
+All existing scripts in
+.Pa /etc/rc.d
+and
+.Pa /usr/local/etc/rc.d
+are automatically discovered and wrapped as compatibility shim jobs.
+The
+.Dv REQUIRE ,
+.Dv PROVIDE ,
+.Dv BEFORE ,
+and
+.Dv KEYWORD
+headers are parsed and translated into
+.Nm
+dependency fields.
+.Pp
+Enable state is read from
+.Pa /etc/rc.conf
+using the
+.Va <name>_enable
+variable, exactly as
+.Xr rc.subr 8
+does.
+A service with
+.Va foo_enable=NO
+is loaded and appears in
+.Xr prowlctl 8
+output but is not started.
+.Pp
+If a native unit file and an
+.Pa rc.d
+script both claim the same
+.Va provides ,
+the native unit wins and the
+.Pa rc.d
+script is skipped.
+This allows incremental migration: shipping a native unit file
+automatically retires the rc.d script without any administrator action.
+.Pp
+.Sy Trust requirements for rc.d scripts .
+Because rc.d scripts are executed as root,
+.Nm
+applies the same ownership and writability checks to scanned scripts as
+it does to native unit files and the configuration file.
+A script is silently skipped and a
+.Dv LOG_WARNING
+message is emitted if any of the following conditions are true:
+.Bl -bullet -compact
+.It
+The directory entry is not a regular file
+.Pq symlinks are rejected .
+.It
+The file is not owned by root
+.Pq uid\ 0 .
+.It
+The file has the world-writable bit set.
+.El
+Scripts that are not executable are also skipped, as before.
+Administrators who install rc.d scripts must ensure that the scripts
+and their parent directories
+.Pq Pa /etc/rc.d , Pa /usr/local/etc/rc.d
+are owned by root and not world-writable.
+.Sh READ-ONLY MEDIA
+.Nm
+is designed to operate correctly on read-only installation media
+.Pq CD-ROMs, read-only USB flash
+and in early-boot environments where
+.Pa /var
+is not yet writable.
+.Pp
+If the runtime directory
+.Pq Pa /var/run/prowld by default
+cannot be created,
+.Nm
+automatically falls back to
+.Pa /tmp/prowld ,
+which is typically backed by a memory filesystem.
+All derived paths
+.Pq IPC socket, PID file, sd_notify sockets, generated unit directory
+are rebuilt under the fallback root.
+The
+.Fl s Ar rundir
+flag forces a specific root without triggering auto-detection.
+.Pp
+Both the primary run directory and the
+.Pa /tmp/prowld
+fallback are validated before use.
+When a directory already exists,
+.Nm
+checks that it is a real directory
+.Pq not a symlink ,
+is owned by root
+.Pq uid\ 0 ,
+and has no group or other write bits.
+If the primary directory fails these checks it is treated as unavailable
+and the fallback is attempted.
+If the fallback directory fails the same checks
+.Nm
+logs a
+.Dv LOG_ERR
+message and exits immediately rather than operating under a directory
+that may be attacker-controlled.
+This prevents a local user who pre-creates
+.Pa /tmp/prowld
+from keeping ownership of the directory tree and placing symlinks
+.Pq e.g.\& Pa prowld.pid , Pa prowld.sock
+that would redirect root writes to arbitrary files.
+.Pp
+If the IPC socket cannot be bound,
+.Nm
+logs a warning and continues operating without the management socket.
+Service management proceeds normally;
+.Xr prowlctl 8
+commands are unavailable until the socket becomes accessible.
+.Pp
+If
+.Nm
+is executed as PID 1
+.Pq i.e., Fn getpid returns 1 ,
+.Xr daemon 3
+is not called, and debug output is forced to standard error.
+When the main event loop exits, the system is halted via
+.Fn reboot RB_HALT
+rather than returning from
+.Fn main ,
+since PID 1 must never exit.
+.Sh RUNNING AS INIT
+.Nm
+can replace
+.Xr init 8 .
+Select it with the loader variable
+.Va init_path ,
+for example
+.Dl init_path="/sbin/prowld"
+in
+.Pa /boot/loader.conf .
+As process ID 1,
+.Nm
+does itself what
+.Xr init 8
+and
+.Pa /etc/rc
+do: it runs the
+.Pa /etc/rc.d
+scripts as rc-shim jobs in dependency order, with the environment
+.Xr rc 8
+gives them
+.Pq Va autoboot=yes , Va rc_fast=yes , Va RC_PID
+and the
+.Cm faststart
+argument.
+The rc.d scripts see no difference, and
+.Va rc.conf
+remains the source of the enable state.
+Because
+.Pa /usr
+is not mounted when it starts and a reroot must be able to unmount the old
+root,
+.Nm
+is linked statically, as
+.Xr init 8
+is.
+.Pp
+The kernel passes boot flags to init, and
+.Nm
+understands the same ones:
+.Bl -tag -width ".Fl s"
+.It Fl s
+Single-user mode.
+.It Fl f
+Fast boot: run the rc.d scripts without
+.Va autoboot ,
+so that file system checks are skipped.
+.Nm
+passes this itself when it starts over after single-user mode.
+.It Fl d
+Mount
+.Xr devfs 4
+on
+.Pa /dev
+even if it looks mounted.
+This is done automatically when
+.Pa /
+and
+.Pa /dev
+are on the same device, which is the case after a reroot.
+.It Fl r
+Second phase of a reroot.
+Used internally.
+.El
+.Pp
+Other flags are ignored.
+.Ss Boot
+.Nm
+becomes a session leader, opens
+.Pa /dev/console
+as standard input, output and error, and sets the login name to
+.Dq root .
+It then honours the loader variables that
+.Xr init 8
+honours:
+.Bl -tag -width ".Va init_script"
+.It Va init_exec
+Run this script in place of init.
+It is expected to end by rebooting.
+.It Va init_script
+Run this script before the boot starts; if it exits non-zero, go to
+single-user mode.
+.It Va init_chroot
+Change root to this directory before starting.
+.It Va init_shell
+The shell for single-user mode and for the scripts above
+.Pq default Pa /bin/sh .
+.El
+.Pp
+The control socket, the PID file and the state directories are created only
+once the
+.Dv FILESYSTEMS
+rc.d script has finished, when the root file system is writable.
+Until then
+.Xr prowlctl 8
+cannot connect.
+.Pp
+For every enabled line of
+.Xr ttys 5 ,
+.Nm
+runs a keep-alive job
+.Pq Dq org.midnightbsd.getty. Ns Ar tty
+that starts the line's getty with the line's terminal type, once the
+.Dv LOGIN
+rc.d milestone is reached.
+Lines marked
+.Dq onifexists
+or
+.Dq onifconsole
+get a getty only if the device exists.
+The user accounting records for boot and shutdown are written by the
+.Xr utx 8
+rc.d script
+.Pq Pa /etc/rc.d/utx ,
+which runs at boot and from
+.Pa /etc/rc.shutdown .
+.Ss Single-user mode
+Single-user mode starts when the kernel passes
+.Fl s ,
+when
+.Va init_script
+fails, or on
+.Dv SIGTERM ,
+which is how
+.Va stop_boot
+in
+.Xr rc.subr 8
+aborts a boot.
+All processes are terminated and a shell is started on the console.
+If the console is not
+.Dq secure
+in
+.Xr ttys 5
+and root has a password,
+.Nm
+asks for it first, as
+.Xr init 8
+does; an empty password or end of file goes to multi-user mode instead.
+When the shell exits,
+.Nm
+starts over with
+.Fl f .
+.Ss Shutdown and reroot
+On
+.Dv SIGINT ,
+.Dv SIGUSR1 ,
+.Dv SIGUSR2
+or
+.Dv SIGWINCH
+.Nm
+runs
+.Pa /etc/rc.shutdown ,
+stops its own jobs, sends
+.Dv SIGTERM
+and then
+.Dv SIGKILL
+to everything that is left, synchronizes the disks and calls
+.Xr reboot 2
+with the matching flags.
+.Pp
+On
+.Dv SIGEMT
+.Pq Xr reboot 8 Fl r
+it does the same, but then copies itself to a
+.Xr tmpfs 4
+mounted on
+.Pa /dev/reroot ,
+runs from there, calls
+.Xr reboot 2
+with
+.Dv RB_REROOT
+to unmount and mount the root file system again, and executes the
+.Xr init 8
+of the new root
+.Pq Va init_path
+or
+.Va kern.init_path ) .
+.Sh RUNNING IN A JAIL
+.Nm
+can be the service manager of a jail, in place of
+.Pa /etc/rc .
+When it finds that it is in a jail
+.Pq Va security.jail.jailed
+it runs the rc.d boot sequence itself, as it does when it is init, but it
+does not manage a console, gettys or the machine.
+Scripts with
+.Dq KEYWORD: nojail
+are not started.
+Start it as the jail's
+.Va exec.start :
+.Bd -literal -offset indent
+www {
+	path = "/jails/www";
+	host.hostname = "www.example.org";
+	mount.devfs;
+	exec.start = "/sbin/prowld";
+	exec.stop = "/sbin/prowlctl shutdown";
+}
+.Ed
+.Pp
+.Xr jail 8
+removes a jail by killing everything in it, so give it an
+.Va exec.stop
+command.
+.Cm prowlctl shutdown
+asks
+.Nm
+to stop, and returns only after it has gone.
+.Nm
+then runs
+.Pa /etc/rc.shutdown
+with the argument
+.Dq jail
+and stops its own jobs, so that daemons are stopped by their scripts in
+reverse dependency order before the jail is removed.
+Note that
+.Va exec.stop
+is only used when
+.Xr jail 8
+reads it from its configuration file or command line when it removes the
+jail.
+.Sh SIGNALS
+These are the signals when
+.Nm
+runs as a daemon.
+When it is
+.Xr init 8
+the signals are those of
+.Xr init 8 ,
+described below.
+.Bl -tag -width "SIGTERM"
+.It Dv SIGTERM , Dv SIGINT
+Begin an orderly shutdown.
+All managed services are stopped
+.Pq graceful for those marked Va shutdown_wait ,
+forced for others.
+When all services have exited,
+.Nm
+itself exits.
+.It Dv SIGHUP
+Reload configuration.
+.Nm
+re-reads
+.Pa prowld.conf ,
+rescans all unit directories, rescans the rc.d directories, rebuilds the
+dependency graph, and schedules any newly eligible jobs.
+Running jobs are not interrupted.
+.It Dv SIGCHLD
+Reap all available child processes.
+.Nm
+uses
+.Fn waitpid -1 ... WNOHANG
+in a loop; no action is required from the administrator.
+.El
+.Pp
+As init:
+.Bl -tag -width "SIGUSR1"
+.It Dv SIGHUP
+Re-read
+.Xr ttys 5 .
+Gettys on lines that were switched off are stopped, lines that were switched
+on get one.
+.It Dv SIGINT
+Reboot.
+.It Dv SIGTERM
+Single-user mode.
+.It Dv SIGUSR1
+Halt.
+.It Dv SIGUSR2
+Halt and power off.
+.It Dv SIGWINCH
+Power cycle, if the hardware can.
+.It Dv SIGEMT
+Reroot.
+.El
+.Pp
+.Xr init 8
+also handles
+.Dv SIGTSTP ,
+which stops further logins;
+.Nm
+does not.
+.Sh FILES
+.Bl -tag -width "/var/run/prowld/generated.d/" -compact
+.It Pa /etc/prowld/prowld.conf
+Daemon configuration file.
+.It Pa /etc/prowld/units.d/
+Base system unit files (do not edit; use overrides.d).
+.It Pa /usr/local/etc/prowld/units.d/
+Ports and packages unit files.
+.It Pa /etc/prowld/overrides.d/
+Local administrator overrides.
+.It Pa /var/run/prowld/
+Runtime state directory.
+Replaced by
+.Pa /tmp/prowld
+on read-only media or when
+.Fl s
+is given.
+.It Pa /var/run/prowld/prowld.sock
+Control socket
+.Pq Unix domain, mode 0660, owned root:wheel .
+.It Pa /var/run/prowld/prowld.pid
+PID file.
+.It Pa /var/run/prowld/notify/
+Per-job sd_notify datagram sockets
+.Pq mode 0700 .
+.It Pa /var/run/prowld/generated.d/
+Runtime-generated unit files
+.Pq e.g., from prowl-generator .
+.It Pa /var/db/prowld/masked.d/
+Symlinks to
+.Pa /dev/null
+for masked services.
+Each symlink is named after the job's label.
+.It Pa /var/log/prowld/
+.Nm
+own log directory.
+.It Pa /var/log/prowld/jobs/
+Per-job log files
+.Pq mode 0750 .
+.It Pa /etc/rc.conf
+Authoritative source for service enable state.
+.It Pa /etc/ttys
+Terminal lines to run a getty on, when
+.Nm
+is init.
+.It Pa /etc/rc.shutdown
+Run at shutdown, and by a jail's
+.Nm
+when it is stopped.
+.It Pa /dev/reroot
+Temporary
+.Xr tmpfs 4
+holding a copy of
+.Nm
+during a reroot.
+.El
+.Sh DIAGNOSTICS
+.Nm
+logs to
+.Xr syslog 3
+under the
+.Dv LOG_DAEMON
+facility.
+With
+.Fl d ,
+messages are also written to standard error.
+.Pp
+A job that fails to start repeatedly is placed in the
+.Cm failed
+state and is not restarted unless
+.Cm keep_alive
+is configured.
+Use
+.Xr prowlctl 8
+.Cm status
+to inspect the last exit code.
+.Pp
+Dependency loops are looked for at load time.
+When jobs wait for each other, as a script from a port can do with
+.Dq REQUIRE
+and
+.Dq BEFORE ,
+.Nm
+ignores one of the waits and logs the loop at
+.Dv LOG_WARNING ,
+the way
+.Xr rcorder 8
+does.
+It prefers to ignore a wait that exists only because of another job's
+.Cm before .
+No job is failed because of a loop.
+.Sh EXIT STATUS
+.Ex -std
+.Sh SEE ALSO
+.Xr kqueue 2 ,
+.Xr reboot 2 ,
+.Xr syslog 3 ,
+.Xr rc.conf 5 ,
+.Xr ttys 5 ,
+.Xr init 8 ,
+.Xr jail 8 ,
+.Xr prowlctl 8 ,
+.Xr rc 8 ,
+.Xr rcorder 8 ,
+.Xr service 8 ,
+.Xr sysrc 8 ,
+.Xr utx 8
+.Sh HISTORY
+.Nm
+first appeared in MidnightBSD 4.1.
+.Sh AUTHORS
+.An Lucas Holt Aq Mt luke@MidnightBSD.org
+for the MidnightBSD Project.

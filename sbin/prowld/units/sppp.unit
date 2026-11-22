@@ -1,0 +1,19 @@
+# sppp.unit - native prowld(8) unit for sppp(8)
+#
+# Replaces the rc.d/sppp shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with sppp_enable in
+# rc.conf.
+# Lists the interfaces in sppp_interfaces and applies spppconfig_<if>.
+
+
+label = "org.midnightbsd.sppp";
+description = "Configure sppp(4) interfaces";
+type = "oneshot";
+rc_name = "sppp";
+run_at_load = true;
+nojail = true;
+provides = ["sppp"];
+wants = ["root"];
+before = ["netif"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config sppp\nfor ifn in $sppp_interfaces; do\n    eval spppcontrol_args=\\$spppconfig_$ifn\n    if [ -n \"$spppcontrol_args\" ]; then\n        eval spppcontrol $ifn $spppcontrol_args\n    fi\ndone", "sppp"];

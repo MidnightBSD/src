@@ -1,0 +1,20 @@
+# rpcbind.unit - native prowld(8) unit for rpcbind(8)
+#
+# Replaces the rc.d/rpcbind shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with rpcbind_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/rpcbind.
+#
+# rpcbind stays in the foreground only in debug mode (-d), so its output is
+# discarded.  Its sockets in /var/run are removed before it starts and after it
+# stops, as rc.d/rpcbind does.
+
+label = "org.midnightbsd.rpcbind";
+description = "Universal addresses to RPC program number mapper";
+type = "daemon";
+rc_name = "rpcbind";
+run_at_load = true;
+keep_alive = true;
+provides = ["rpcbind"];
+wants = ["NETWORKING", "rdate", "syslogd"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config rpcbind\nrm -f /var/run/rpcbind.*\n[ -n \"$rpcbind_program\" ] || rpcbind_program=/usr/sbin/rpcbind\n$rpcbind_program -d $rpcbind_flags > /dev/null 2>&1 &\npid=$!\ntrap 'kill $pid 2> /dev/null' TERM INT\nwait $pid\nrc=$?\ntrap - TERM INT\nkill -0 $pid 2> /dev/null && wait $pid\nrm -f /var/run/rpcbind.*\nexit $rc", "rpcbind"];

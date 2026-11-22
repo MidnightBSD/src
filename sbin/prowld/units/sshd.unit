@@ -1,0 +1,21 @@
+# sshd.unit - native prowld(8) unit for sshd(8)
+#
+# Replaces the rc.d/sshd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with sshd_enable in
+# rc.conf; sshd_flags is honoured as in rc.d/sshd.
+#
+# Generates missing host keys and checks the configuration before every
+# start, as rc.d/sshd does.  sshd runs in the foreground (-D).
+
+label = "org.midnightbsd.sshd";
+description = "Secure Shell Daemon";
+type = "daemon";
+rc_name = "sshd";
+run_at_load = true;
+keep_alive = true;
+provides = ["sshd"];
+wants = ["LOGIN", "FILESYSTEMS"];
+required_files = ["/etc/ssh/sshd_config"];
+start_pre = [["/etc/rc.d/sshd","keygen"],["/etc/rc.d/sshd","configtest"]];
+program = "/usr/sbin/sshd";
+arguments = ["-D","@sshd_flags@"];

@@ -1,0 +1,25 @@
+# watchdogd.unit - native prowld(8) unit for watchdogd(8)
+#
+# Replaces the rc.d/watchdogd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with watchdogd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/watchdogd.
+#
+# watchdogd stays in the foreground only in debug mode (-d), so its output is
+# discarded.  When watchdogd_shutdown_timeout is set, a stop_post
+# command disarms the watchdog once watchdogd has ended, as an administrative
+# stop does in rc.d/watchdogd.  It also runs if watchdogd crashes.
+
+label = "org.midnightbsd.watchdogd";
+description = "Watchdog daemon";
+type = "daemon";
+rc_name = "watchdogd";
+run_at_load = true;
+keep_alive = true;
+nojail = true;
+provides = ["watchdogd"];
+wants = ["FILESYSTEMS", "syslogd"];
+program = "/usr/sbin/watchdogd";
+arguments = ["-d", "-I", "/var/run/watchdogd.pid", "@watchdogd_timeout:+-t@", "@watchdogd_timeout@", "@watchdogd_shutdown_timeout:+-x@", "@watchdogd_shutdown_timeout@", "@watchdogd_flags@"];
+stdout_path = "/dev/null";
+stderr_path = "/dev/null";
+stop_post = [["+watchdogd_shutdown_timeout", "/usr/sbin/watchdog", "-t", "0"]];
