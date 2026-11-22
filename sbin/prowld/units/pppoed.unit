@@ -16,5 +16,5 @@ nojail = true;
 provides = ["pppoed"];
 wants = ["NETWORKING"];
 before = ["DAEMON"];
-program = "/bin/sh";
-arguments = ["-c", ". /etc/rc.subr\nload_rc_config pppoed\nif [ -n \"$pppoed_provider\" ]; then\n    pppoed_flags=\"$pppoed_flags -p $pppoed_provider\"\nfi\n# the provider may be \"*\"\nset -f\nexec /usr/libexec/pppoed -F $pppoed_flags $pppoed_interface", "pppoed"];
+program = "/usr/libexec/pppoed";
+arguments = ["-F","@pppoed_flags@","@pppoed_provider:+-p@","@pppoed_provider@","@pppoed_interface@"];

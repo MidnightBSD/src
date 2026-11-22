@@ -4,10 +4,11 @@
 # a native unit is skipped.  Enable and disable it with nfs_server_enable in
 # rc.conf; the other rc.conf variables are honoured as in rc.d/nfsd.
 #
-# nfsd always detaches from its parent and has no foreground mode.  The shell
-# only does what has to come first: the NFSv4, privileged-port and max I/O
-# settings of rc.d/nfsd, and starting mountd, rpcbind and nfsuserd if needed.
-# prowld finds the daemon by name and stops it with SIGUSR1, as rc.d/nfsd does.
+# nfsd always detaches from its parent and has no foreground mode.  The NFSv4,
+# privileged-port and max I/O settings of rc.d/nfsd are start_pre commands;
+# mountd, rpcbind (unless NFSv4 only) and nfsuserd (with nfs_server_managegids)
+# are started first if they are not running.  prowld finds the daemon by name
+# and stops it with SIGUSR1, as rc.d/nfsd does.  Its output is discarded.
 
 label = "org.midnightbsd.nfsd";
 description = "Remote NFS server";
@@ -17,8 +18,17 @@ run_at_load = true;
 keep_alive = true;
 provides = ["nfsd"];
 wants = ["mountcritremote", "hostname", "gssd", "nfsuserd"];
-activates = ["mountd"];
-program = "/bin/sh";
+activates = ["mountd", "!nfsv4_server_only rpcbind", "?nfs_server_managegids nfsuserd"];
+required_modules = ["nfsd"];
 pid_name = "nfsd";
 stop_signal = "USR1";
-arguments = ["-c", ". /etc/rc.subr\nload_rc_config nfsd\nload_kld nfsd || exit 1\nif [ -n \"$nfs_server_maxio\" ] && ! check_jail jailed; then\n    sysctl vfs.nfsd.srvmaxio=$nfs_server_maxio > /dev/null || echo \"Failed to set server max I/O\"\nfi\nif checkyesno nfs_reserved_port_only; then\n    echo \"NFS on reserved port only=YES\"\n    sysctl vfs.nfsd.nfs_privport=1 > /dev/null\nelse\n    sysctl vfs.nfsd.nfs_privport=0 > /dev/null\nfi\nif checkyesno nfs_server_managegids; then\n    /etc/rc.d/nfsuserd status > /dev/null 2>&1 || /etc/rc.d/nfsuserd onestart || exit 1\nfi\nif checkyesno nfsv4_server_enable; then\n    sysctl vfs.nfsd.server_max_nfsvers=4 > /dev/null\nelif ! checkyesno nfsv4_server_only; then\n    echo \"NFSv4 is disabled\"\n    sysctl vfs.nfsd.server_max_nfsvers=3 > /dev/null\nfi\nif ! checkyesno nfsv4_server_only; then\n    /etc/rc.d/rpcbind status > /dev/null 2>&1 || /etc/rc.d/rpcbind onestart || exit 1\nfi\nif [ -n \"$nfs_server_vhost\" ]; then\n    set -- -V \"$nfs_server_vhost\"\nelse\n    set --\nfi\nexec /usr/sbin/nfsd $nfs_server_flags \"$@\"", "nfsd"];
+stdout_path = "/dev/null";
+start_pre = [
+	["+nfs_server_maxio","-/sbin/sysctl","vfs.nfsd.srvmaxio=@nfs_server_maxio@"],
+	["?nfs_reserved_port_only","/sbin/sysctl","vfs.nfsd.nfs_privport=1"],
+	["!nfs_reserved_port_only","/sbin/sysctl","vfs.nfsd.nfs_privport=0"],
+	["?nfsv4_server_enable","/sbin/sysctl","vfs.nfsd.server_max_nfsvers=4"],
+	["!nfsv4_server_enable","!nfsv4_server_only","/sbin/sysctl","vfs.nfsd.server_max_nfsvers=3"]
+];
+program = "/usr/sbin/nfsd";
+arguments = ["@nfs_server_flags@","@nfs_server_vhost:+-V@","@nfs_server_vhost@"];

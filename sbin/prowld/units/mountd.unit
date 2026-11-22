@@ -4,10 +4,11 @@
 # a native unit is skipped.  Enable and disable it with mountd_enable in
 # rc.conf; the other rc.conf variables are honoured as in rc.d/mountd.
 #
-# mountd always detaches from its parent and has no foreground mode.  The shell
-# only does what has to come first: the NFSv4 and ZFS handling of rc.d/mountd.
-# prowld finds the daemon through its pidfile, and "prowlctl reload" sends it
-# SIGHUP, which makes it reread /etc/exports.
+# mountd always detaches from its parent and has no foreground mode.  The NFSv4
+# settings of rc.d/mountd are start_pre commands, and weak_mountd_authentication
+# and zfs_enable add their flags.  prowld finds the daemon through its pidfile,
+# and "prowlctl reload" sends it SIGHUP, which makes it reread /etc/exports.
+# Unlike rc.d/mountd it does not drop -n when nfsv4_server_only is also set.
 
 label = "org.midnightbsd.mountd";
 description = "Service remote NFS mount requests";
@@ -18,6 +19,17 @@ keep_alive = true;
 provides = ["mountd"];
 wants = ["NETWORKING", "rpcbind", "quota", "mountlate"];
 required_files = ["/etc/exports"];
-program = "/bin/sh";
+activates = ["!nfsv4_server_only rpcbind"];
+required_modules = ["nfsd"];
 pid_file = "/var/run/mountd.pid";
-arguments = ["-c", ". /etc/rc.subr\nload_rc_config mountd\nload_rc_config nfsd\nload_rc_config zfs\nload_kld nfsd || exit 1\nif checkyesno nfsv4_server_only; then\n    echo \"NFSv4 only server\"\n    sysctl vfs.nfsd.server_min_nfsvers=4 > /dev/null\n    sysctl vfs.nfsd.server_max_nfsvers=4 > /dev/null\n    mountd_flags=\"$mountd_flags -R\"\nelse\n    /etc/rc.d/rpcbind status > /dev/null 2>&1 || /etc/rc.d/rpcbind onestart || exit 1\n    if checkyesno nfsv4_server_enable; then\n        sysctl vfs.nfsd.server_max_nfsvers=4 > /dev/null\n    else\n        sysctl vfs.nfsd.server_max_nfsvers=3 > /dev/null\n    fi\nfi\nif checkyesno nfs_server_enable || checkyesno nfsv4_server_only; then\n    if checkyesno weak_mountd_authentication; then\n        if checkyesno nfsv4_server_only; then\n            echo \"weak_mountd_authentication incompatible with nfsv4_server_only, ignored\"\n        else\n            mountd_flags=\"$mountd_flags -n\"\n        fi\n    fi\nelif checkyesno mountd_enable && checkyesno weak_mountd_authentication; then\n    mountd_flags=\"-n\"\nfi\nif checkyesno zfs_enable; then\n    mountd_flags=\"$mountd_flags /etc/exports /etc/zfs/exports\"\nfi\nrm -f /var/db/mountdtab\n( umask 022 ; > /var/db/mountdtab ) || exit 1\nexec /usr/sbin/mountd $mountd_flags", "mountd"];
+stdout_path = "/dev/null";
+start_pre = [
+	["?nfsv4_server_only","/sbin/sysctl","vfs.nfsd.server_min_nfsvers=4"],
+	["?nfsv4_server_only","/sbin/sysctl","vfs.nfsd.server_max_nfsvers=4"],
+	["!nfsv4_server_only","?nfsv4_server_enable","/sbin/sysctl","vfs.nfsd.server_max_nfsvers=4"],
+	["!nfsv4_server_only","!nfsv4_server_enable","/sbin/sysctl","vfs.nfsd.server_max_nfsvers=3"],
+	["/bin/rm","-f","/var/db/mountdtab"],
+	["/usr/bin/touch","/var/db/mountdtab"]
+];
+program = "/usr/sbin/mountd";
+arguments = ["@mountd_flags@","@nfsv4_server_only?-R@","@weak_mountd_authentication?-n@","@zfs_enable?/etc/exports /etc/zfs/exports@"];
