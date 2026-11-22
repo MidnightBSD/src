@@ -87,8 +87,9 @@ init (PID 1)
       └── prowlctl handler threads
 ```
 
-prowld can also run as PID 1 (§3.4), selected with the loader variable
-`init_path="/sbin/prowld"`. That is opt-in and init(8) remains the default.
+prowld can also run as PID 1 (§3.4). That is the default: the kernel's
+`init_path` lists `/sbin/prowld` first and falls back to init(8) when it is
+missing. Setting `init_path` in loader.conf selects init(8) again.
 
 **Rationale:** Keeping init as PID 1 minimizes the blast radius of prowld bugs
 during early adoption. Users can fall back to traditional rc.d by editing a
@@ -122,7 +123,7 @@ single line in `/etc/rc` if prowld fails.
 
 ### 3.4 Running as PID 1
 
-With `init_path="/sbin/prowld"` the kernel runs prowld as init. It then does
+By default (`init_path` starts with `/sbin/prowld`) the kernel runs prowld as init. It then does
 what init(8) and `/etc/rc` do, so a system can boot with no init(8) at all.
 It is linked statically (`NO_SHARED=YES`): `/usr` is not mounted when it
 starts, and a reroot must be able to unmount the old root while it runs.

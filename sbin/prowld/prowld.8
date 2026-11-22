@@ -742,12 +742,19 @@ rather than returning from
 since PID 1 must never exit.
 .Sh RUNNING AS INIT
 .Nm
-can replace
-.Xr init 8 .
-Select it with the loader variable
+replaces
+.Xr init 8
+by default: the kernel tries
+.Pa /sbin/prowld
+first and falls back to
+.Pa /sbin/init
+if it is not there.
+To run
+.Xr init 8
+instead, set the loader variable
 .Va init_path ,
 for example
-.Dl init_path="/sbin/prowld"
+.Dl init_path="/sbin/init:/sbin/oinit:/sbin/init.bak:/rescue/init"
 in
 .Pa /boot/loader.conf .
 As process ID 1,
