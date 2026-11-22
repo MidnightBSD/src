@@ -35,7 +35,6 @@ UNITS=		units/aged.unit \
 		units/auditdistd.unit \
 		units/automountd.unit \
 		units/autounmountd.unit \
-		units/blacklistd.unit \
 		units/blocklistd.unit \
 		units/bootparamd.unit \
 		units/bsnmpd.unit \
