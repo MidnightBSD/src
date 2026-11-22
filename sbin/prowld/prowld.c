@@ -50,6 +50,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <ucl.h>
@@ -938,12 +939,90 @@ main(int argc, char *argv[])
 	return (0);
 }
 
+/*
+ * Until syslogd is running there is nowhere for syslog(3) to send a message,
+ * so what prowld logs while the system comes up is lost.  Keep it, and send
+ * it on once /var/run/log exists.  What does not fit is dropped and counted.
+ */
+#define EARLY_LOG_SIZE	65536
+#define EARLY_LOG_LINE	256
+static char	early_log[EARLY_LOG_SIZE];
+static size_t	early_len;
+static int	early_dropped;
+static bool	early_done;
+
+static void
+early_log_add(int priority, const char *msg)
+{
+	char line[EARLY_LOG_LINE];
+	struct tm tm;
+	time_t now = time(NULL);
+	size_t n;
+	int len;
+
+	if (localtime_r(&now, &tm) == NULL)
+		return;
+	len = snprintf(line, sizeof(line), "%d %02d:%02d:%02d] %s",
+	    LOG_PRI(priority), tm.tm_hour, tm.tm_min, tm.tm_sec, msg);
+	if (len < 0)
+		return;
+	n = (size_t)len < sizeof(line) ? (size_t)len : sizeof(line) - 1;
+	/* Past three quarters full keep only the notable messages */
+	if (early_len + n + 1 > sizeof(early_log) ||
+	    (priority > LOG_NOTICE &&
+	    early_len > sizeof(early_log) / 4 * 3)) {
+		early_dropped++;
+		return;
+	}
+	memcpy(early_log + early_len, line, n);
+	early_len += n;
+	early_log[early_len++] = '\n';
+}
+
+/* Send the saved messages to syslogd, if it is there now */
+static void
+early_log_flush(void)
+{
+	char *line, *next, *end;
+	long pri;
+
+	if (access("/var/run/log", F_OK) == -1)
+		return;
+	early_done = true;
+	for (line = early_log; line < early_log + early_len; line = next) {
+		end = memchr(line, '\n', (size_t)(early_log + early_len - line));
+		if (end == NULL)
+			break;
+		*end = '\0';
+		next = end + 1;
+		pri = strtol(line, &end, 10);
+		if (end == line || *end != ' ' || pri < 0 || pri > LOG_DEBUG)
+			continue;
+		syslog((int)pri, "[early boot %s", end + 1);
+	}
+	if (early_dropped > 0)
+		syslog(LOG_WARNING, "%d early boot messages were dropped",
+		    early_dropped);
+	early_len = 0;
+}
+
 /* Logging wrapper that goes to syslog and optionally stderr */
 void
 prowl_log(int priority, const char *fmt, ...)
 {
+	char msg[EARLY_LOG_LINE];
 	va_list ap;
 	int saved_errno = errno;
+
+	if (!early_done)
+		early_log_flush();
+	if (!early_done) {
+		va_start(ap, fmt);
+		(void)vsnprintf(msg, sizeof(msg), fmt, ap);
+		va_end(ap);
+		early_log_add(priority, msg);
+		errno = saved_errno;
+	}
 
 	va_start(ap, fmt);
 	vsyslog(priority, fmt, ap);
