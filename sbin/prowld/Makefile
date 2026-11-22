@@ -104,5 +104,7 @@ UNITS=		units/aged.unit \
 		units/ypserv.unit \
 		units/ypxfrd.unit \
 		units/zfsd.unit
+UNITSDIR=	/etc/prowld/units.d
+UNITSMODE=	444
 
 .include <bsd.prog.mk>
