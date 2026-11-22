@@ -1099,12 +1099,20 @@ Use
 .Cm status
 to inspect the last exit code.
 .Pp
-Cycle detection runs at load time.
-A job involved in a dependency cycle is placed in the
-.Cm failed
-state and logged at
-.Dv LOG_ERR .
-The system continues booting without the affected services.
+Dependency loops are looked for at load time.
+When jobs wait for each other, as a script from a port can do with
+.Dq REQUIRE
+and
+.Dq BEFORE ,
+.Nm
+ignores one of the waits and logs the loop at
+.Dv LOG_WARNING ,
+the way
+.Xr rcorder 8
+does.
+It prefers to ignore a wait that exists only because of another job's
+.Cm before .
+No job is failed because of a loop.
 .Sh EXIT STATUS
 .Ex -std
 .Sh SEE ALSO

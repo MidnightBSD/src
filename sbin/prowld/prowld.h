@@ -243,6 +243,7 @@ typedef struct dep_entry {
 	char	name[PROWL_LABEL_MAX];
 	bool	hard;		/* true = requires, false = wants */
 	bool	activate;	/* start the provider if it is disabled */
+	bool	derived;	/* added for another job's "before" */
 	char	cond[PROWL_COND_LEN];	/* only when this holds, or "" */
 } dep_entry_t;
 
@@ -362,6 +363,10 @@ struct job {
 	int		dag_indegree;
 	bool		dag_visited;
 	bool		dag_in_stack;
+	char		dag_ignored[8][PROWL_LABEL_MAX]; /* waits dropped */
+	int		dag_ignored_count;
+	job_t		*dag_parent;	/* job that led the search here */
+	int		dag_parent_idx;	/* its deps[] entry for this job */
 
 	/* Timer tracking */
 	bool		throttle_timer_active;

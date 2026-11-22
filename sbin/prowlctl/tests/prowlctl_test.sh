@@ -805,6 +805,52 @@ templates_cleanup()
 	stop_prowld
 }
 
+atf_test_case dependency_loop cleanup
+dependency_loop_head()
+{
+	atf_set "descr" "A dependency loop does not fail the jobs in it"
+	atf_set "require.user" "root"
+}
+dependency_loop_body()
+{
+	dir="$(pwd)"
+	mkdir -p units
+	# dl1 waits for dl2, and says it must come before dl2: a loop.  The
+	# wait that only comes from "before" goes, so dl2 still runs first.
+	cat >units/dl1.unit <<EOF
+{"label": "org.test.dl1", "rc_name": "dl1", "type": "oneshot",
+ "program": "/bin/sh", "arguments": ["-c", "echo dl1 >> ${dir}/log"],
+ "wants": ["dl2"], "before": ["dl2"], "run_at_load": true}
+EOF
+	cat >units/dl2.unit <<EOF
+{"label": "org.test.dl2", "rc_name": "dl2", "type": "oneshot",
+ "program": "/bin/sh", "arguments": ["-c", "echo dl2 >> ${dir}/log"],
+ "run_at_load": true}
+EOF
+	# dl3 waits for dl1, and dl4 and dl5 wait for each other.
+	cat >units/dl3.unit <<EOF
+{"label": "org.test.dl3", "rc_name": "dl3", "type": "oneshot",
+ "program": "/usr/bin/true", "wants": ["dl1"], "run_at_load": true}
+EOF
+	cat >units/dl4.unit <<EOF
+{"label": "org.test.dl4", "rc_name": "dl4", "type": "oneshot",
+ "program": "/usr/bin/true", "wants": ["dl5"], "run_at_load": true}
+EOF
+	cat >units/dl5.unit <<EOF
+{"label": "org.test.dl5", "rc_name": "dl5", "type": "oneshot",
+ "program": "/usr/bin/true", "wants": ["dl4"], "run_at_load": true}
+EOF
+	start_prowld
+	for n in 1 2 3 4 5; do
+		wait_state org.test.dl$n completed
+	done
+	atf_check -o inline:"dl2\ndl1\n" cat log
+}
+dependency_loop_cleanup()
+{
+	stop_prowld
+}
+
 atf_test_case oneshot_lists cleanup
 oneshot_lists_head()
 {
@@ -874,6 +920,7 @@ oneshot_lists_cleanup()
 
 atf_init_test_cases()
 {
+	atf_add_test_case dependency_loop
 	atf_add_test_case oneshot_lists
 	atf_add_test_case conditions
 	atf_add_test_case activates

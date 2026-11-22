@@ -387,9 +387,10 @@ prowld builds a directed acyclic graph (DAG) from all loaded unit files plus
 rc-shim jobs. Each node is a job; edges represent `after` relationships
 (derived from `requires`, `wants`, `after`, and the inverse of `before`).
 
-Cycle detection is performed at load time. A cycle is a fatal configuration
-error for the services involved; the system continues booting without them
-and logs the error.
+Loop detection is performed at load time. When jobs wait for each other,
+prowld logs the loop and ignores one of the waits, as rcorder(8) does,
+preferring a wait that exists only because of another job's `before`. No job
+is failed because of a loop.
 
 ### 5.3 Topological Scheduling
 

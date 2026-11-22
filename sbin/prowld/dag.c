@@ -54,7 +54,7 @@
  * the job back), unless an equivalent entry already exists.
  */
 static void
-dag_add_after_dep(job_t *job, const char *name)
+dag_add_after_dep(job_t *job, const char *name, bool derived)
 {
 	int i;
 
@@ -65,9 +65,15 @@ dag_add_after_dep(job_t *job, const char *name)
 		if (strcmp(job->deps[i].name, name) == 0)
 			return;
 	}
+	/* A wait that was dropped to break a loop stays dropped. */
+	for (i = 0; i < job->dag_ignored_count; i++) {
+		if (strcmp(job->dag_ignored[i], name) == 0)
+			return;
+	}
 
 	strlcpy(job->deps[job->deps_count].name, name, PROWL_LABEL_MAX);
 	job->deps[job->deps_count].hard = false;
+	job->deps[job->deps_count].derived = derived;
 	job->deps_count++;
 }
 
@@ -86,38 +92,105 @@ dag_resolve_before(job_t *job)
 			other = job_find_by_provides(job->before[i]);
 		if (other != NULL)
 			dag_add_after_dep(other, job->provides[0][0] != '\0' ?
-			    job->provides[0] : job->rc_name);
+			    job->provides[0] : job->rc_name, true);
 	}
 }
 
 /*
- * Cycle detection via DFS.  Returns true if a cycle was found.
- * Sets dag_visited and dag_in_stack on visited nodes.
+ * The job a dependency entry of job waits for, or NULL when it waits for
+ * nothing: no provider, or a condition that does not hold.
+ */
+static job_t *
+dag_dep_target(const job_t *job, const dep_entry_t *de)
+{
+	job_t *dep;
+
+	if (de->cond[0] != '\0' && !prowl_cond_holds(job->rc_name, de->cond))
+		return (NULL);
+	dep = job_find_by_provides(de->name);
+	if (dep == NULL)
+		dep = job_find_by_label(de->name);
+	return (dep);
+}
+
+/*
+ * job waits for target through deps[idx], and target (through a chain of
+ * jobs that led the search to job) waits for job: a dependency loop.  Break
+ * it the way rcorder(8) does, by ignoring one wait, and keep every job in
+ * it.  Prefer a wait that exists only because another job says "before":
+ * that is the job that does not fit with the rest.
+ */
+static void
+dag_break_loop(job_t *job, int idx, job_t *target)
+{
+	char path[512];
+	job_t *chain[64], *victim = job, *n;
+	int nchain = 0, vidx = idx, i;
+
+	/* A job waits for its dag_parent's successor: walk up to target. */
+	for (n = job; n != NULL && nchain < 64; n = n->dag_parent) {
+		chain[nchain++] = n;
+		if (n == target)
+			break;
+	}
+	/* The back edge wins when it is the odd one out. */
+	for (i = 0; i < nchain - 1 && !job->deps[idx].derived; i++) {
+		job_t *p = chain[i]->dag_parent;
+
+		if (p->deps[chain[i]->dag_parent_idx].derived) {
+			victim = p;
+			vidx = chain[i]->dag_parent_idx;
+			break;
+		}
+	}
+
+	/* "target waits for ... waits for job waits for target" */
+	path[0] = '\0';
+	for (i = nchain - 1; i >= 0; i--) {
+		strlcat(path, chain[i]->label, sizeof(path));
+		strlcat(path, " -> ", sizeof(path));
+	}
+	strlcat(path, target->label, sizeof(path));
+	prowl_log(LOG_WARNING, "dag: dependency loop %s; ignoring that %s "
+	    "waits for %s", path, victim->label, victim->deps[vidx].name);
+
+	if (victim->dag_ignored_count < 8)
+		strlcpy(victim->dag_ignored[victim->dag_ignored_count++],
+		    victim->deps[vidx].name, PROWL_LABEL_MAX);
+	memmove(&victim->deps[vidx], &victim->deps[vidx + 1],
+	    (size_t)(victim->deps_count - vidx - 1) * sizeof(dep_entry_t));
+	victim->deps_count--;
+	memset(&victim->deps[victim->deps_count], 0, sizeof(dep_entry_t));
+}
+
+/*
+ * Depth-first search for a dependency loop.  Breaks the first loop found
+ * and returns true, so that the caller starts over; false if there is none
+ * below job.
  */
 static bool
-dag_dfs(job_t *job)
+dag_dfs(job_t *job, job_t *parent, int parent_idx)
 {
 	int i;
 
-	if (job->dag_in_stack)
-		return (true);
-	if (job->dag_visited)
-		return (false);
-
 	job->dag_visited = true;
 	job->dag_in_stack = true;
+	job->dag_parent = parent;
+	job->dag_parent_idx = parent_idx;
 
 	for (i = 0; i < job->deps_count; i++) {
-		job_t *dep = job_find_by_provides(job->deps[i].name);
-		if (dep == NULL)
-			dep = job_find_by_label(job->deps[i].name);
+		job_t *dep = dag_dep_target(job, &job->deps[i]);
+
 		if (dep == NULL)
 			continue;
-		if (dag_dfs(dep)) {
-			prowl_log(LOG_ERR, "dag: cycle detected involving "
-			    "%s -> %s", job->label, dep->label);
+		if (dep->dag_in_stack) {
+			dag_break_loop(job, i, dep);
 			return (true);
 		}
+		if (dep->dag_visited)
+			continue;
+		if (dag_dfs(dep, job, i))
+			return (true);
 	}
 
 	job->dag_in_stack = false;
@@ -137,40 +210,41 @@ dag_build(void)
 	job_t *job;
 	int cycles = 0;
 
-	/* Reset DAG state */
-	TAILQ_FOREACH(job, &g_jobs, entries) {
-		job->dag_visited = false;
-		job->dag_in_stack = false;
-		job->dag_indegree = 0;
-	}
-
 	/* Resolve explicit "after" fields into hard deps */
 	TAILQ_FOREACH(job, &g_jobs, entries) {
 		for (int i = 0; i < job->after_count; i++)
-			dag_add_after_dep(job, job->after[i]);
+			dag_add_after_dep(job, job->after[i], false);
 	}
 
 	/* Resolve "before" fields */
 	TAILQ_FOREACH(job, &g_jobs, entries)
 		dag_resolve_before(job);
 
-	/* Cycle detection */
-	TAILQ_FOREACH(job, &g_jobs, entries) {
-		if (!job->dag_visited) {
-			if (dag_dfs(job)) {
-				/*
-				 * Mark the involved job as failed so it is
-				 * excluded from scheduling.  Boot continues.
-				 */
-				job_set_state(job, JOB_STATE_FAILED);
-				cycles++;
+	/*
+	 * Loops.  Every pass that finds one ignores one wait, so this ends.
+	 * The jobs in a loop are not failed: rc(8) scripts from ports are
+	 * sometimes written so that they cannot be ordered, and rcorder(8)
+	 * starts them all anyway.
+	 */
+	for (;;) {
+		bool found = false;
+
+		TAILQ_FOREACH(job, &g_jobs, entries) {
+			job->dag_visited = false;
+			job->dag_in_stack = false;
+			job->dag_indegree = 0;
+			job->dag_parent = NULL;
+		}
+		TAILQ_FOREACH(job, &g_jobs, entries) {
+			if (!job->dag_visited && dag_dfs(job, NULL, 0)) {
+				found = true;
+				break;
 			}
 		}
+		if (!found)
+			break;
+		cycles++;
 	}
-
-	if (cycles > 0)
-		prowl_log(LOG_ERR, "dag: %d cycle(s) detected; affected "
-		    "services will not start", cycles);
 
 	/* Apply disabled/masked states */
 	TAILQ_FOREACH(job, &g_jobs, entries) {
