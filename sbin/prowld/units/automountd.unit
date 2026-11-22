@@ -10,7 +10,6 @@
 label = "org.midnightbsd.automountd";
 description = "Daemon handling autofs mount requests";
 type = "daemon";
-rc_name = "automountd";
 run_at_load = true;
 keep_alive = true;
 nojail = true;

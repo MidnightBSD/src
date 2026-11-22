@@ -68,7 +68,6 @@ UNITS=		units/aged.unit \
 		units/mdnsd.unit \
 		units/mdnsresponder.unit \
 		units/mountd.unit \
-		units/moused.unit \
 		units/msgs.unit \
 		units/natd.unit \
 		units/newsyslog.unit \

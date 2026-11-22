@@ -11,7 +11,6 @@
 label = "org.midnightbsd.ypbind";
 description = "NIS domain binding daemon";
 type = "daemon";
-rc_name = "ypbind";
 run_at_load = true;
 keep_alive = true;
 rc_name = "nis_client";

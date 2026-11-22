@@ -12,7 +12,6 @@
 label = "org.midnightbsd.ftpproxy@%i";
 description = "Internet File Transfer Protocol proxy daemon";
 type = "daemon";
-rc_name = "ftpproxy";
 run_at_load = true;
 keep_alive = true;
 instances_var = "ftpproxy_instances";

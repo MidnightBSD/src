@@ -10,7 +10,6 @@
 label = "org.midnightbsd.autounmountd";
 description = "Daemon unmounting automounted filesystems";
 type = "daemon";
-rc_name = "autounmountd";
 run_at_load = true;
 keep_alive = true;
 nojail = true;

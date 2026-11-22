@@ -12,7 +12,6 @@
 label = "org.midnightbsd.pflog@%i";
 description = "Packet filter logging daemon";
 type = "daemon";
-rc_name = "pflog";
 run_at_load = true;
 keep_alive = true;
 instances_var = "pflog_instances";

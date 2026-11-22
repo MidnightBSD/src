@@ -10,7 +10,6 @@
 label = "org.midnightbsd.ypserv";
 description = "NIS database server";
 type = "daemon";
-rc_name = "ypserv";
 run_at_load = true;
 keep_alive = true;
 rc_name = "nis_server";
