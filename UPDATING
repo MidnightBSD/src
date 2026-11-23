@@ -1,5 +1,36 @@
 Updating Information for MidnightBSD users.
 
+20261123:
+	prowld(8), prowlctl(8) and prowl-generator are updated.  prowld is
+	still optional on this branch: init(8) remains the default, and
+	prowld becomes process 1 only if init_path="/sbin/prowld" is set in
+	/boot/loader.conf.  Rebuild and install world; the kernel is
+	unchanged.  Restart prowld, or reboot, to run the new daemon.
+
+	prowld now stores system masks in /etc/prowld/masks.d.  On systems
+	with a separate /var, copy existing mask symlinks from
+	/var/db/prowld/masked.d to the new directory before the next reboot.
+
+	prowld now refuses units with unresolved service credentials, and it
+	accepts unit files, drop-ins, rc.d scripts and rc.conf inputs only
+	when they are root-owned regular files in directories that group and
+	others cannot write.  It skips symbolic links.  Administrator
+	drop-ins apply after packaged policy, and a native service that
+	prowld rejects also blocks its rc.d fallback.  Check the ownership and
+	modes of your unit files, drop-ins and rc.d scripts.
+
+	prowld services read EOF on standard input by default.  rc.d scripts
+	marked "KEYWORD: interactive" (geli, zfskeys and firstboot) and units
+	with interactive = true read the console while prowld, as PID 1,
+	boots the system.  As PID 1, prowld raises kern.securelevel from 0 to
+	1 before starting console logins, as init(8) does, after the first
+	retry of any failed boot service (at most 30 seconds).
+
+	prowld rejects malformed chroot, umask and socket settings, and
+	prowlctl reports failed enable and disable writes.  IPFilter start
+	and reload stage rules before replacing the active set.  The unix
+	sockets of a unit are removed when prowld closes them.
+
 20261117:
 	tmpfs: clear setgid on files created by nonmembers of the group
 	(CVE-2026-127749, FreeBSD-SA-26:94.tmpfs).  A user could create a
