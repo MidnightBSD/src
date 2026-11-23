@@ -1148,6 +1148,10 @@ supervisor_start(job_t *job)
 	if (job->masked || job->state == JOB_STATE_STOPPING)
 		return (-1);
 
+	/* Leave even an explicit start queued until PID 1 finishes boot. */
+	if (job->is_getty && !g_multi_user)
+		return (0);
+
 	if (job->state == JOB_STATE_RUNNING ||
 	    job->state == JOB_STATE_STARTING)
 		return (0);

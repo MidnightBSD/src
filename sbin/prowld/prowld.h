@@ -296,6 +296,7 @@ struct job {
 
 	/* Lifecycle */
 	bool		run_at_load;
+	bool		is_getty;	/* generated from /etc/ttys by PID 1 */
 	keep_alive_t	keep_alive;
 	int		throttle_interval;
 	int		exit_timeout;
@@ -459,6 +460,7 @@ extern volatile bool	 g_shutdown;
 extern volatile bool	 g_reload;
 extern int		 g_current_starts;
 extern bool		 g_is_init;		/* running as PID 1 */
+extern bool		 g_multi_user;		/* PID 1 finished boot startup */
 extern bool		 g_jailed;		/* running inside a jail */
 extern bool		 g_reaper;		/* orphaned descendants are ours */
 extern bool		 g_rundown;		/* rc.shutdown is running */
@@ -534,6 +536,7 @@ void	pid1_mount_devfs(bool);
 void	pid1_open_console(void);
 void	pid1_shutdown(int) __dead2;
 void	pid1_single_user(void) __dead2;
+void	pid1_raise_securelevel(void);
 int	pid1_load_ttys(void);
 int	boot_run_rundown(const char *);
 void	pid1_init_exec(void);

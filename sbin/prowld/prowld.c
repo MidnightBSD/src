@@ -80,6 +80,7 @@ bool			 g_fastboot = false;	/* no "autoboot": skip fsck */
 char			 g_unit_override[PROWL_PATH_MAX]; /* -u unit dir */
 static bool		 g_reroot = false;	/* PID 1: reroot requested */
 bool			 g_boot_mode = false;	/* we run rc.d */
+bool			 g_multi_user = false;	/* release /etc/ttys gettys */
 
 /* Runtime path globals — defaults match compile-time macros */
 char	g_run_dir[PROWL_PATH_MAX]      = PROWLD_RUN_DIR;
@@ -707,9 +708,7 @@ main_loop(void)
 	int nev, i;
 	struct timespec timeout;
 
-	/* Start initial ready jobs */
 	dag_schedule_ready();
-
 	while (!g_shutdown) {
 		if (g_reload)
 			reload_config();
@@ -769,10 +768,21 @@ main_loop(void)
 		}
 
 		ipc_expire_clients();
-
-		/* After processing events, promote any newly-ready jobs */
 		dag_schedule_ready();
 		check_runtime();
+
+		/*
+		 * LOGIN can precede securelevel and other late rc.d scripts.
+		 * Once the scheduler has drained the ready boot work, apply
+		 * init's securelevel policy before allowing any getty to run.
+		 */
+		if (g_is_init && !g_multi_user && !g_shutdown &&
+		    !g_rundown && g_current_starts == 0) {
+			if (!g_jailed)
+				pid1_raise_securelevel();
+			g_multi_user = true;
+			dag_schedule_ready();
+		}
 	}
 }
 

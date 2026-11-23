@@ -685,6 +685,21 @@ pid1_reroot_cleanup(void)
 		prowl_log(LOG_WARNING, "cannot unmount %s: %m", PID1_REROOT);
 }
 
+/* Match init(8)'s transition after rc completes, including a headless boot. */
+void
+pid1_raise_securelevel(void)
+{
+	int mib[2] = { CTL_KERN, KERN_SECURELVL };
+	int level, newlevel = 1;
+	size_t len = sizeof(level);
+
+	if (sysctl(mib, 2, &level, &len, NULL, 0) == -1)
+		prowl_log(LOG_ERR, "cannot read kern.securelevel: %m");
+	else if (level == 0 &&
+	    sysctl(mib, 2, NULL, NULL, &newlevel, sizeof(newlevel)) == -1)
+		prowl_log(LOG_ERR, "cannot raise kern.securelevel to 1: %m");
+}
+
 #define GETTY_PREFIX	"org.midnightbsd.getty."
 
 static job_t *
@@ -802,6 +817,7 @@ pid1_add_getty(const struct ttyent *typ)
 	job->deps_count = 1;
 
 	/* Respawn after every exit, as init(8) does. */
+	job->is_getty = true;
 	job->keep_alive.always = true;
 	job->throttle_interval = 1;
 	job->enabled = true;
