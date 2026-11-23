@@ -768,6 +768,164 @@ forking_cleanup()
 	pkill -KILL -f "sleep (300|400)" 2>/dev/null || true
 }
 
+atf_test_case forking_launch_identity cleanup
+forking_launch_identity_head()
+{
+	atf_set descr "Concurrent double-forked daemons with the same name are tracked separately"
+	atf_set require.user root
+	atf_set timeout 60
+}
+forking_launch_identity_body()
+{
+	dir=$(pwd)
+	mkdir units
+	cp /bin/sh fork-worker
+	cat >worker.sh <<'EOF'
+echo "$$" >"$1/$2.pid"
+for i in $(jot 60); do
+	[ ! -e "$1/done" ] || exit 0
+	sleep 1
+done
+EOF
+	cat >launch.sh <<'EOF'
+( "$1/fork-worker" "$1/worker.sh" "$1" "$2" & ) &
+wait "$!" || exit 1
+# Keep both launchers alive until both workers have started.
+for i in $(jot 100); do
+	[ -s "$1/first.pid" ] && [ -s "$1/second.pid" ] && exit 0
+	sleep 0.1
+done
+exit 1
+EOF
+	for name in first second; do
+		cat >"units/$name.unit" <<EOF
+{"label":"org.test.$name","type":"daemon","program":"/bin/sh",
+ "arguments":["$dir/launch.sh","$dir","$name"],
+ "pid_name":"fork-worker","run_at_load":true}
+EOF
+	done
+	start_prowld
+	for name in first second; do
+		wait_state "org.test.$name" running
+		atf_check_equal "$(cat "$name.pid")" "$(job_pid "org.test.$name")"
+	done
+	atf_check -o ignore ${CTL} stop org.test.first
+	wait_state org.test.first stopped
+	atf_check -o ignore kill -0 "$(cat second.pid)"
+	atf_check_equal "$(cat second.pid)" "$(job_pid org.test.second)"
+	atf_check -o ignore ${CTL} stop org.test.second
+	wait_state org.test.second stopped
+}
+forking_launch_identity_cleanup()
+{
+	touch done
+	stop_prowld
+}
+
+atf_test_case forking_pidfile cleanup
+forking_pidfile_head()
+{
+	atf_set descr "Pidfile adoption requires a regular file and a member of the job's own launch"
+	atf_set require.user root
+	atf_set require.progs "mkfifo timeout"
+	atf_set timeout 60
+}
+forking_pidfile_body()
+{
+	dir=$(pwd)
+	mkdir units
+	cat >units/peer.unit <<'EOF'
+{"label":"org.test.peer","type":"daemon","program":"/bin/sleep",
+ "arguments":["60"],"run_at_load":true}
+EOF
+	cat >units/fifo.unit <<EOF
+{"label":"org.test.fifo","type":"daemon","program":"/usr/bin/mkfifo",
+ "arguments":["$dir/service.fifo"],"pid_file":"$dir/service.fifo"}
+EOF
+	cat >launcher.sh <<'EOF'
+sleep 60 &
+echo "$!" >"$1/worker.pid"
+cp "$1/peer.pid" "$1/service.pid"
+EOF
+	cat >units/foreign.unit <<EOF
+{"label":"org.test.foreign","type":"daemon","program":"/bin/sh",
+ "arguments":["$dir/launcher.sh","$dir"],"pid_file":"$dir/service.pid"}
+EOF
+	start_prowld
+	wait_state org.test.peer running
+	peer=$(job_pid org.test.peer)
+	echo "$peer" >peer.pid
+	atf_check -o ignore ${CTL} start org.test.fifo
+	for i in $(jot 50); do
+		[ -p service.fifo ] && break
+		sleep 0.1
+	done
+	[ -p service.fifo ] || atf_fail "pidfile fixture was not created"
+	atf_check -o match:'State: running' timeout 5 ${CTL} status org.test.peer
+	atf_check -o ignore timeout 5 ${CTL} start org.test.foreign
+	wait_state org.test.fifo failed
+	wait_state org.test.foreign failed
+	atf_check_equal "$peer" "$(cat service.pid)"
+	atf_check_equal "-1" "$(job_pid org.test.foreign)"
+	atf_check -s not-exit:0 -e ignore kill -0 "$(cat worker.pid)"
+
+	# Stop after the new launcher has written the foreign pidfile.
+	rm service.pid
+	atf_check -o ignore ${CTL} start org.test.foreign
+	for i in $(jot 50); do
+		[ -s service.pid ] && [ "$(job_pid org.test.foreign)" = -1 ] && break
+		sleep 0.1
+	done
+	atf_check_equal "-1" "$(job_pid org.test.foreign)"
+	atf_check -o ignore timeout 5 ${CTL} stop org.test.foreign
+	wait_state org.test.foreign stopped
+	atf_check -s not-exit:0 -e ignore kill -0 "$(cat worker.pid)"
+	atf_check -o match:'State: running' ${CTL} status org.test.peer
+	atf_check_equal "$peer" "$(job_pid org.test.peer)"
+	atf_check -o ignore kill -0 "$peer"
+}
+forking_pidfile_cleanup()
+{
+	stop_prowld
+}
+
+atf_test_case shim_pidfile_status cleanup
+shim_pidfile_status_head()
+{
+	atf_set descr "rc-shim status reads only regular pidfiles"
+	atf_set require.user root
+	atf_set require.progs "chroot mkfifo timeout"
+}
+shim_pidfile_status_body()
+{
+	mkdir -p root/etc/rc.d root/run
+	cp "${PROWLD}" root/prowld
+	cat >root/etc/rc.d/pidprobe <<'EOF'
+#!/bin/sh
+# PROVIDE: pidprobe
+name=pidprobe
+rcvar=pidprobe_enable
+pidfile=/run/pidprobe.pid
+EOF
+	chmod 755 root/etc/rc.d/pidprobe
+	mkfifo root/run/pidprobe.pid
+	chroot root /prowld -d -s /run >prowld.log 2>&1 &
+	echo $! >prowld.pid
+	for i in $(jot 50); do
+		[ -S root/run/prowld.sock ] && break
+		sleep 0.2
+	done
+	atf_check -o match:'PID: -1$' timeout 5 "${PROWLCTL}" -s root/run status pidprobe
+	rm root/run/pidprobe.pid
+	self=$$
+	printf '%s\ncommand arguments\n' "$self" >root/run/pidprobe.pid
+	atf_check -o match:"PID: ${self}$" "${PROWLCTL}" -s root/run status pidprobe
+}
+shim_pidfile_status_cleanup()
+{
+	stop_prowld
+}
+
 atf_test_case pre_post cleanup
 pre_post_head()
 {
@@ -1448,6 +1606,9 @@ atf_init_test_cases()
 	atf_add_test_case activates
 	atf_add_test_case pre_post
 	atf_add_test_case forking
+	atf_add_test_case forking_launch_identity
+	atf_add_test_case forking_pidfile
+	atf_add_test_case shim_pidfile_status
 	atf_add_test_case expansion
 	atf_add_test_case actions
 	atf_add_test_case oneshot_stop
