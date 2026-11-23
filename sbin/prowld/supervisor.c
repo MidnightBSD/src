@@ -33,6 +33,7 @@
 
 #include <sys/param.h>
 #include <sys/event.h>
+#include <sys/procctl.h>
 #include <sys/resource.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -52,6 +53,7 @@
 #include <libutil.h>
 #include <limits.h>
 #include <paths.h>
+#include <poll.h>
 #include <pwd.h>
 #include <signal.h>
 #include <stdint.h>
@@ -66,9 +68,7 @@
 
 #include "prowld.h"
 
-static void	supervisor_adopt(job_t *);
-static pid_t	find_daemon_pid(job_t *);
-static pid_t	pid_from_name(job_t *, bool);
+static pid_t	fork_launcher(job_t *);
 static bool	not_exec_yet(pid_t);
 
 static bool g_dnssd_available = true;
@@ -1198,22 +1198,13 @@ supervisor_start(job_t *job)
 		}
 	}
 
-	/*
-	 * A forking daemon: forget a pidfile left by an earlier run, so
-	 * only the new daemon's is believed.
-	 */
-	job->launcher = false;
-	job->adopting = false;
-	job->adopt_tries = 0;
-	if (job->pid_file[0] != '\0' || job->pid_name[0] != '\0') {
-		job->launcher = true;
-		if (job->pid_file[0] != '\0')
-			(void)unlink(job->pid_file);
-		else
-			(void)pid_from_name(job, true);
-	}
+	/* A pidfile is a hint; the private reaper verifies the launch. */
+	job->adopted = false;
+	job->launch_ready = false;
+	job->launch_stop_signal = 0;
+	job->launcher = job->pid_file[0] != '\0' || job->pid_name[0] != '\0';
 
-	pid = fork();
+	pid = job->launcher ? fork_launcher(job) : fork();
 	if (pid == -1) {
 		prowl_log(LOG_ERR, "fork %s: %m", job->label);
 		notify_socket_close(job);
@@ -1605,29 +1596,6 @@ supervisor_stop(job_t *job, bool force)
 	    (job->type == JOB_TYPE_RCSHIM || job->stop_argc > 0))
 		return (supervisor_rc_stop(job));
 
-	/*
-	 * Still looking for the forked daemon: take it if it is there now,
-	 * otherwise there is nothing to stop.
-	 */
-	if (job->adopting) {
-		struct kevent kev;
-		pid_t dpid = find_daemon_pid(job);
-
-		EV_SET(&kev, timer_ident(job, TIMER_THROTTLE), EVFILT_TIMER,
-		    EV_DELETE, 0, 0, NULL);
-		(void)kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL);
-		job->throttle_timer_active = false;
-		job->adopting = false;
-		if (dpid > 0) {
-			job->pid = dpid;
-			watch_child(dpid, job);
-		} else {
-			release_start_slot(job);
-			job_set_state(job, JOB_STATE_STOPPED);
-			return (0);
-		}
-	}
-
 	/* Stopping a job that is waiting to be restarted cancels the restart */
 	if (job->pid <= 0 && job->restart_hold) {
 		struct kevent kev;
@@ -1659,10 +1627,16 @@ supervisor_stop(job_t *job, bool force)
 	job_set_state(job, JOB_STATE_STOPPING);
 	supervisor_mdns_deregister(job);
 
-	if (force) {
-		kill(job->pid, SIGKILL);
+	if (job->launch_fd >= 0) {
+		/* Keep the read side for a handoff already in flight. */
+		job->launch_stop_signal = force ? SIGKILL :
+		    (job->stop_signal > 0 ? job->stop_signal : SIGTERM);
+		(void)shutdown(job->launch_fd, SHUT_WR);
+		arm_stop_timer(job);
+	} else if (force) {
+		supervisor_signal(job, SIGKILL);
 	} else {
-		kill(job->pid, job->stop_signal > 0 ? job->stop_signal :
+		supervisor_signal(job, job->stop_signal > 0 ? job->stop_signal :
 		    SIGTERM);
 		arm_stop_timer(job);
 	}
@@ -1796,11 +1770,62 @@ supervisor_socket_activate(job_t *job)
 	    job->label, (int)pid);
 }
 
+/*
+ * kinfo_proc reports start time relative to the wall clock.  Subtract the
+ * kernel's boot time so setting the clock cannot invalidate an adopted PID.
+ * Repeat the snapshot if the clock stepped while reading the process.
+ */
+static bool
+child_start_time(pid_t pid, struct timeval *start)
+{
+	int mib[] = { CTL_KERN, KERN_BOOTTIME };
+	struct timeval before, after;
+	struct kinfo_proc *kp;
+	size_t len;
+
+	for (int i = 0; i < 2; i++) {
+		len = sizeof(before);
+		if (sysctl(mib, nitems(mib), &before, &len, NULL, 0) == -1)
+			return (false);
+		kp = kinfo_getproc(pid);
+		if (kp == NULL)
+			return (false);
+		if (kp->ki_ppid != getpid() || kp->ki_stat == SZOMB ||
+		    (kp->ki_flag & (P_WEXIT | P_TRACED)) != 0) {
+			free(kp);
+			errno = ESRCH;
+			return (false);
+		}
+		*start = kp->ki_start;
+		free(kp);
+		if (sysctl(mib, nitems(mib), &after, &len, NULL, 0) == -1)
+			return (false);
+		if (timercmp(&before, &after, ==)) {
+			timersub(start, &before, start);
+			return (true);
+		}
+	}
+	errno = EAGAIN;
+	return (false);
+}
+
 int
 supervisor_signal(job_t *job, int sig)
 {
-	if (job->pid <= 0)
+	struct timeval start;
+
+	if (job->pid <= 0) {
+		errno = ESRCH;
 		return (-1);
+	}
+	if (job->adopted) {
+		if (!child_start_time(job->pid, &start))
+			return (-1);
+		if (timercmp(&start, &job->adopted_start, !=)) {
+			errno = ESRCH;
+			return (-1);
+		}
+	}
 	return (kill(job->pid, sig));
 }
 
@@ -1969,23 +1994,9 @@ supervisor_handle_throttle(job_t *job)
 	if (job->state != JOB_STATE_STARTING)
 		return;
 
-	/* Waiting for the forked daemon to show up */
-	if (job->adopting) {
-		supervisor_adopt(job);
-		return;
-	}
-
 	/* The launcher itself is not a daemon that is up */
 	if (job->launcher)
 		return;
-
-	/* A forked daemon that is gone before we saw it start */
-	if (job->pid > 0 && (job->pid_file[0] != '\0' ||
-	    job->pid_name[0] != '\0') &&
-	    kill(job->pid, 0) == -1 && errno == ESRCH) {
-		supervisor_reap(job->pid, 1 << 8);
-		return;
-	}
 
 	/* Still running its start_pre commands: not up yet */
 	if (job->cmd_count[PROWL_CMD_PRE] > 0 && job->pid > 0 &&
@@ -1994,7 +2005,7 @@ supervisor_handle_throttle(job_t *job)
 		return;
 	}
 
-	if (job->pid > 0 && kill(job->pid, 0) == 0) {
+	if (job->pid > 0 && supervisor_signal(job, 0) == 0) {
 		job_set_state(job, JOB_STATE_RUNNING);
 		supervisor_mdns_register(job);
 		release_start_slot(job);
@@ -2041,7 +2052,7 @@ supervisor_handle_stop_timeout(job_t *job, uintptr_t generation)
 		prowl_log(LOG_WARNING,
 		    "job %s (pid %d) timed out; sending SIGKILL",
 		    job->label, (int)job->pid);
-		kill(job->pid, SIGKILL);
+		supervisor_signal(job, SIGKILL);
 	}
 }
 
@@ -2062,8 +2073,11 @@ supervisor_handle_notify_timeout(job_t *job)
 
 	notify_socket_close(job);
 
-	if (job->pid > 0)
-		kill(job->pid, SIGKILL);
+	if (job->launch_fd >= 0) {
+		job->launch_stop_signal = SIGKILL;
+		(void)shutdown(job->launch_fd, SHUT_WR);
+	} else if (job->pid > 0)
+		(void)supervisor_signal(job, SIGKILL);
 }
 
 /*
@@ -2247,9 +2261,11 @@ supervisor_handle_notify(job_t *job)
 			const char *key = p;
 			const char *val = eq + 1;
 
-			if (strcmp(key, "READY") == 0 &&
-			    strcmp(val, "1") == 0) {
-				if (job->state == JOB_STATE_STARTING) {
+			if (strcmp(key, "READY") == 0 && strcmp(val, "1") == 0) {
+				if (job->launcher && job->state == JOB_STATE_STARTING) {
+					job->launch_ready = true;
+					cancel_notify_timeout_timer(job);
+				} else if (job->state == JOB_STATE_STARTING) {
 					cancel_notify_timeout_timer(job);
 					job_set_state(job, JOB_STATE_RUNNING);
 					supervisor_mdns_register(job);
@@ -2263,7 +2279,8 @@ supervisor_handle_notify(job_t *job)
 			} else if (strcmp(key, "STATUS") == 0) {
 				strlcpy(job->status_msg, val,
 				    sizeof(job->status_msg));
-			} else if (strcmp(key, "MAINPID") == 0) {
+			} else if (!job->launcher && !job->adopted &&
+			    strcmp(key, "MAINPID") == 0) {
 				pid_t new_pid = (pid_t)strtol(val, NULL, 10);
 				if (new_pid > 0 && new_pid != job->pid &&
 				    mainpid_valid(job, new_pid)) {
@@ -2388,30 +2405,62 @@ job_restart_or_fail(job_t *job, int status)
 }
 
 /*
- * Read a process id from a pidfile.  Returns -1 when the file does not hold
- * the id of a live process yet.
+ * libutil writes the decimal PID without a newline.  Other writers such
+ * as sendmail include metadata after the first line.
  */
 static pid_t
 pid_from_file(const char *path)
 {
-	char buf[32], *end;
+	struct stat sb;
+	char buf[32], *p, *end;
+	size_t len;
 	ssize_t n;
 	long v;
-	int fd;
+	int fd, pathfd;
 
-	fd = open(path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+	/* Inspect the vnode without invoking a FIFO or device open routine. */
+	pathfd = open(path, O_PATH | O_NOFOLLOW | O_CLOEXEC);
+	if (pathfd == -1)
+		return (-1);
+	fd = -1;
+	if (fstat(pathfd, &sb) == 0 && S_ISREG(sb.st_mode))
+		fd = openat(pathfd, "", O_EMPTY_PATH | O_RDONLY | O_NONBLOCK |
+		    O_CLOEXEC);
+	close(pathfd);
 	if (fd == -1)
 		return (-1);
-	n = read(fd, buf, sizeof(buf) - 1);
+	len = 0;
+	while (len < sizeof(buf)) {
+		n = read(fd, buf + len, sizeof(buf) - len);
+		if (n <= 0) {
+			if (n == -1 && errno == EINTR)
+				continue;
+			if (n == -1)
+				len = 0;
+			break;
+		}
+		end = memchr(buf + len, '\n', (size_t)n);
+		if (end != NULL) {
+			len = (size_t)(end - buf);
+			break;
+		}
+		len += (size_t)n;
+	}
 	(void)close(fd);
-	if (n <= 0)
+	if (len == 0 || len == sizeof(buf) || memchr(buf, '\0', len) != NULL)
 		return (-1);
-	buf[n] = '\0';
+	buf[len] = '\0';
 
+	p = buf;
+	while (isspace((unsigned char)*p))
+		p++;
+	if (!isdigit((unsigned char)*p))
+		return (-1);
 	errno = 0;
-	v = strtol(buf, &end, 10);
-	if (end == buf || errno != 0 || v <= 1 || v > INT_MAX ||
-	    (*end != '\0' && !isspace((unsigned char)*end)))
+	v = strtol(p, &end, 10);
+	while (isspace((unsigned char)*end))
+		end++;
+	if (errno != 0 || v <= 1 || v > INT_MAX || *end != '\0')
 		return (-1);
 	if (kill((pid_t)v, 0) == -1 && errno != EPERM)
 		return (-1);
@@ -2430,99 +2479,158 @@ supervisor_shim_pid(const job_t *job)
 	return (pid_from_file(job->shim_pidfile));
 }
 
-/*
- * Find the oldest process called job->pid_name that was left to us: a child
- * of ours, or of init when we are not a reaper.  Returns -1 if there is
- * none.  Processes noted before the start (skip_pids) are leftovers, such as
- * the workers of a master that died, and are not considered.  With note set
- * nothing is returned: the matching processes are remembered instead.
- */
-static pid_t
-pid_from_name(job_t *job, bool note)
+struct launch_result {
+	pid_t pid;
+	struct timeval start;
+};
+
+/* Only this launch can leave children with the private reaper. */
+static bool
+find_daemon(const job_t *job, struct launch_result *result)
 {
 	struct kinfo_proc *kp;
-	pid_t self, parent, best;
-	struct timeval bt;
-	int i, j, cnt;
+	pid_t pid, self;
+	int i, count;
 
-	self = getpid();
-	parent = g_reaper ? self : 1;
-	best = -1;
-	bt.tv_sec = bt.tv_usec = 0;
-	if (note)
-		job->skip_count = 0;
-
-	kp = kinfo_getallproc(&cnt);
+	if (job->pid_file[0] != '\0') {
+		pid = pid_from_file(job->pid_file);
+		if (pid < 0)
+			return (false);
+		kp = kinfo_getproc(pid);
+		count = 1;
+	} else
+		kp = kinfo_getallproc(&count);
 	if (kp == NULL)
-		return (-1);
-	for (i = 0; i < cnt; i++) {
-		if (kp[i].ki_pid == self || kp[i].ki_ppid != parent ||
-		    kp[i].ki_stat == SZOMB ||
-		    strcmp(kp[i].ki_comm, job->pid_name) != 0)
+		return (false);
+
+	result->pid = 0;
+	self = getpid();
+	for (i = 0; i < count; i++) {
+		if (kp[i].ki_ppid != self || kp[i].ki_stat == SZOMB ||
+		    (kp[i].ki_flag & (P_WEXIT | P_TRACED)) != 0 ||
+		    (job->pid_file[0] == '\0' &&
+		    strcmp(kp[i].ki_comm, job->pid_name) != 0))
 			continue;
-		if (note) {
-			if (job->skip_count < PROWL_SKIP_MAX) {
-				job->skip_pids[job->skip_count++] =
-				    kp[i].ki_pid;
-			}
-			continue;
-		}
-		for (j = 0; j < job->skip_count; j++) {
-			if (job->skip_pids[j] == kp[i].ki_pid)
-				break;
-		}
-		if (j < job->skip_count)
-			continue;
-		if (best == -1 || timercmp(&kp[i].ki_start, &bt, <)) {
-			best = kp[i].ki_pid;
-			bt = kp[i].ki_start;
+		if (result->pid == 0 ||
+		    timercmp(&kp[i].ki_start, &result->start, <)) {
+			result->pid = kp[i].ki_pid;
+			result->start = kp[i].ki_start;
 		}
 	}
 	free(kp);
-	return (best);
-}
-
-static pid_t
-find_daemon_pid(job_t *job)
-{
-	if (job->pid_file[0] != '\0')
-		return (pid_from_file(job->pid_file));
-	return (pid_from_name(job, false));
+	return (result->pid > 0 &&
+	    child_start_time(result->pid, &result->start));
 }
 
 /*
- * The process that forks the daemon has exited cleanly: find the daemon and
- * supervise that instead.  It may not have written its pidfile yet, so look
- * again every PROWL_ADOPT_MS until PROWL_ADOPT_TRIES are used up.
+ * Put a temporary reaper between prowld and the command.  A daemon can
+ * setsid, change credentials, or fork twice and still belongs to this launch.
+ * Only the trusted reaper holds the reporting socket.  On cancellation or
+ * failure it cleans up its own descendants before exiting.
  */
-static void
-supervisor_adopt(job_t *job)
+static pid_t
+fork_launcher(job_t *job)
 {
-	pid_t pid;
+	struct launch_result result = { 0 };
+	struct procctl_reaper_kill rk = { .rk_sig = SIGKILL };
+	struct pollfd control;
+	int pair[2], status, tries, fd, error, n;
+	pid_t reaper, child, waited;
 
-	pid = find_daemon_pid(job);
-	if (pid > 0) {
-		job->adopting = false;
-		job->pid = pid;
-		watch_child(pid, job);
-		arm_throttle_timer(job, PROWL_READY_DELAY);
-		prowl_log(LOG_INFO, "job %s daemon is pid %d", job->label,
-		    (int)pid);
-		return;
+	if (!g_reaper) {
+		errno = EOPNOTSUPP;
+		return (-1);
+	}
+	if (socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0, pair) == -1)
+		return (-1);
+	reaper = fork();
+	if (reaper != 0) {
+		error = errno;
+		close(pair[1]);
+		if (reaper > 0)
+			job->launch_fd = pair[0];
+		else {
+			close(pair[0]);
+			errno = error;
+		}
+		return (reaper);
 	}
 
-	if (++job->adopt_tries >= PROWL_ADOPT_TRIES) {
-		job->adopting = false;
-		prowl_log(LOG_ERR, "job %s: the daemon did not appear",
-		    job->label);
-		release_start_slot(job);
-		job->exited_at = time(NULL);
-		job_restart_or_fail(job, 1 << 8);
-		return;
+	close(pair[0]);
+	if (procctl(P_PID, getpid(), PROC_REAP_ACQUIRE, NULL) == -1) {
+		prowl_log(LOG_ERR, "cannot acquire reaper for %s: %m", job->label);
+		_exit(1);
 	}
+	child = fork();
+	if (child == 0) {
+		close(pair[1]);
+		return (0);
+	}
+	if (child == -1) {
+		prowl_log(LOG_ERR, "cannot fork launcher for %s: %m", job->label);
+		_exit(1);
+	}
+	/* Keep only the control socket and the supervisor's standard streams. */
+	error = 1;
+	fd = STDERR_FILENO + 1;
+	if (dup2(pair[1], fd) == -1)
+		goto cancel;
+	closefrom(fd + 1);
+	control.fd = fd;
+	control.events = POLLIN;
+	setproctitle("adopting %s", job->label);
+	tries = 0;
+	for (;;) {
+		if (child > 0) {
+			waited = waitpid(child, &status, WNOHANG);
+			if (waited == -1 && errno != EINTR)
+				goto cancel;
+			if (waited == child) {
+				if (!WIFEXITED(status))
+					goto cancel;
+				if (WEXITSTATUS(status) != 0) {
+					error = WEXITSTATUS(status);
+					goto cancel;
+				}
+				child = -1;
+			}
+		}
+		if (child < 0) {
+			if (find_daemon(job, &result)) {
+				if (send(fd, &result, sizeof(result), MSG_NOSIGNAL) ==
+				    (ssize_t)sizeof(result))
+					_exit(0);
+				goto cancel;
+			}
+			if (++tries >= PROWL_ADOPT_TRIES)
+				goto cancel;
+		}
+		/* Shutdown of the parent's write side cancels a pending launch. */
+		n = poll(&control, 1, PROWL_ADOPT_MS);
+		if (n > 0 || (n == -1 && errno != EINTR))
+			goto cancel;
+	}
+cancel:
+	if (procctl(P_PID, getpid(), PROC_REAP_KILL, &rk) == -1 &&
+	    errno != ESRCH)
+		prowl_log(LOG_ERR, "cannot clean up launch of %s: %m", job->label);
+	_exit(error);
+}
 
-	job->adopting = true;
-	arm_throttle_timer_ms(job, PROWL_ADOPT_MS);
+static bool
+adopt_daemon(job_t *job, const struct launch_result *result)
+{
+	struct timeval start;
+
+	if (result->pid <= 1 || !child_start_time(result->pid, &start) ||
+	    timercmp(&result->start, &start, !=))
+		return (false);
+	job->pid = result->pid;
+	job->adopted = true;
+	job->adopted_start = result->start;
+	watch_child(job->pid, job);
+	prowl_log(LOG_INFO, "job %s daemon is pid %d", job->label, (int)job->pid);
+	return (true);
 }
 
 /*
@@ -2533,7 +2641,8 @@ supervisor_reap(pid_t pid, int status)
 {
 	job_t *job;
 	struct kevent kev;
-	bool was_launcher;
+	bool was_launcher, handoff;
+	struct launch_result result;
 
 	if (ipc_sysrc_reap(pid, status) || action_reap(pid, status))
 		return;
@@ -2568,7 +2677,27 @@ supervisor_reap(pid_t pid, int status)
 	}
 
 	was_launcher = job->launcher;
+	handoff = false;
+	if (job->launch_fd >= 0) {
+		handoff = WIFEXITED(status) && WEXITSTATUS(status) == 0 &&
+		    recv(job->launch_fd, &result, sizeof(result), MSG_DONTWAIT) ==
+		    (ssize_t)sizeof(result);
+		close(job->launch_fd);
+		job->launch_fd = -1;
+	}
 	job->launcher = false;
+	job->adopted = false;
+	/* A successful helper exit transfers the running job and its timers. */
+	if (handoff && adopt_daemon(job, &result)) {
+		if (job->launch_stop_signal != 0 || job->masked || g_shutdown) {
+			(void)supervisor_signal(job, job->launch_stop_signal != 0 ?
+			    job->launch_stop_signal : SIGTERM);
+			if (job->state == JOB_STATE_STOPPING)
+				arm_stop_timer(job);
+		} else if (job->notify_fd < 0 || job->launch_ready)
+			arm_throttle_timer(job, PROWL_READY_DELAY);
+		return;
+	}
 	job->last_exit_status = status;
 	job->exited_at = time(NULL);
 	job->pid = -1;
@@ -2593,15 +2722,11 @@ supervisor_reap(pid_t pid, int status)
 		prowl_log(LOG_NOTICE, "job %s killed by signal %d",
 		    job->label, WTERMSIG(status));
 
-	/*
-	 * The process that forks a daemon is done: the daemon is what we
-	 * supervise from here on.
-	 */
-	if (was_launcher && !job->masked && !job->rc_stopping &&
-	    job->state == JOB_STATE_STARTING &&
-	    WIFEXITED(status) && WEXITSTATUS(status) == 0) {
-		supervisor_adopt(job);
-		return;
+	if (was_launcher && job->state == JOB_STATE_STARTING) {
+		prowl_log(LOG_ERR, "job %s: could not adopt daemon", job->label);
+		if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+			status = 1 << 8;
+		job->last_exit_status = status;
 	}
 	release_start_slot(job);
 
@@ -2719,7 +2844,7 @@ supervisor_shutdown_all(void)
 			break;
 
 		TAILQ_FOREACH(job, &g_jobs, entries) {
-			if ((job->shutdown_wait ||
+			if ((job->launch_fd >= 0 || job->shutdown_wait ||
 			    job->cmd_count[PROWL_CMD_POST] > 0) &&
 			    job->state == JOB_STATE_STOPPING) {
 				any_pending = true;
@@ -2739,7 +2864,7 @@ supervisor_shutdown_all(void)
 	/* Force-kill remaining processes */
 	TAILQ_FOREACH(job, &g_jobs, entries) {
 		if (job->pid > 0)
-			kill(job->pid, SIGKILL);
+			supervisor_signal(job, SIGKILL);
 	}
 
 	/*
@@ -2754,7 +2879,15 @@ supervisor_shutdown_all(void)
 		for (tries = 0; tries < 50; tries++) {
 			struct timespec ts = { 0, 20000000L };
 
-			if (waitpid(job->pid, &st, WNOHANG) != 0)
+			pid_t waited = waitpid(job->pid, &st, WNOHANG);
+			if (waited > 0 && job->launch_fd >= 0) {
+				supervisor_reap(waited, st);
+				if (job->adopted) {
+					(void)supervisor_signal(job, SIGKILL);
+					continue;
+				}
+			}
+			if (waited != 0)
 				break;
 			nanosleep(&ts, NULL);
 		}

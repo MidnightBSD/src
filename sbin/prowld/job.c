@@ -60,6 +60,7 @@ job_alloc(void)
 	job->exit_timeout = DEFAULT_EXIT_TIMEOUT;
 	job->pid = -1;
 	job->notify_fd = -1;
+	job->launch_fd = -1;
 	job->enabled = true;
 
 	for (int i = 0; i < PROWL_SOCKETS_MAX; i++) {
@@ -99,6 +100,8 @@ job_free(job_t *job)
 	for (i = 0; i < job->mdns.txt_count; i++)
 		free(job->mdns.txt_record[i]);
 
+	if (job->launch_fd >= 0)
+		close(job->launch_fd);
 	free(job);
 }
 

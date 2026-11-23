@@ -403,7 +403,8 @@ job_to_json(const job_t *job, char *buf, size_t bufsz)
 	    edesc,
 	    job_type_str(job->type),
 	    job_state_str(job_reported_state(job)),
-	    (int)(job->pid > 0 ? job->pid : supervisor_shim_pid(job)),
+	    (int)(job->pid > 0 && !job->launcher ?
+	    job->pid : supervisor_shim_pid(job)),
 	    ercname,
 	    job->enabled ? "true" : "false",
 	    job->restart_count,
@@ -855,8 +856,10 @@ cmd_reload(int fd, const char *id, const ucl_object_t *req)
 		return;
 	}
 
-	supervisor_signal(job, SIGHUP);
-	ipc_send_ok(fd, id, NULL);
+	if (supervisor_signal(job, SIGHUP) == -1)
+		ipc_send_error(fd, id, "could not signal job");
+	else
+		ipc_send_ok(fd, id, NULL);
 }
 
 static void

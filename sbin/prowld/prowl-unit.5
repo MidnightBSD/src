@@ -306,13 +306,14 @@ starts is then only a launcher: when it exits with status 0,
 looks for the daemon and supervises that instead, so that stopping, reloading
 and restarting act on the daemon.
 .Va pid_file
-is the path of the file the daemon writes its process id to; it is removed
-before each start.
+names a regular file containing the daemon PID on its first line.
+The service manages any existing pidfile when it starts.
 .Va pid_name
-is the name of the process, for a daemon that writes no pidfile: the oldest
-process with that name that was left to
-.Xr prowld 8
-is taken.
+selects the oldest matching process left by this launch.
+A temporary process reaper identifies the daemon across forks and changes of
+session or user ID.
+Until adoption succeeds, status reports no daemon PID.
+If the launch fails or is cancelled, the reaper cleans up its descendants.
 The daemon is looked for every 200 milliseconds for up to 10 seconds; if it
 does not appear the job is treated as having failed.
 Only one of the two may be given.

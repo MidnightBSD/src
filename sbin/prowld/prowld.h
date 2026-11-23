@@ -31,6 +31,7 @@
 
 #include <sys/types.h>
 #include <sys/queue.h>
+#include <sys/time.h>
 #include <sys/resource.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -141,7 +142,6 @@ typedef struct prowl_cmd {
 #define PROWL_ADOPT_TRIES	50	/* looks for a forked daemon */
 #define PROWL_ADOPT_MS		200	/* between those looks */
 #define PROWL_PIDNAME_LEN	32	/* process name of a forked daemon */
-#define PROWL_SKIP_MAX		16	/* same-named processes ignored */
 #define DEFAULT_EXIT_TIMEOUT	20	/* seconds */
 
 /* IPC */
@@ -320,8 +320,9 @@ struct job {
 	char		pid_file[PROWL_PATH_MAX];
 	char		pid_name[PROWL_PIDNAME_LEN];
 	int		stop_signal;
-	pid_t		skip_pids[PROWL_SKIP_MAX];	/* there before start */
-	int		skip_count;
+	int		launch_stop_signal;
+	int		launch_fd;	/* private reaper result socket */
+	struct timeval	adopted_start;	/* birth time of supervised daemon */
 
 	/* Files that must be readable before the job is started */
 	char		required_files[PROWL_REQFILES_MAX][PROWL_PATH_MAX];
@@ -383,8 +384,8 @@ struct job {
 	bool		throttle_timer_active;
 	bool		restart_hold;	/* waiting out a restart back-off */
 	bool		launcher;	/* pid forks the daemon */
-	bool		adopting;	/* looking for the forked daemon */
-	int		adopt_tries;
+	bool		launch_ready;	/* READY arrived before adoption */
+	bool		adopted;	/* pid identifies a forked daemon */
 	bool		rc_stopping;	/* rc-shim running its "stop" */
 	bool		stop_after_start; /* run stop when a masked wrapper exits */
 	bool		restart_after_stop;	/* restart: start once stopped */
