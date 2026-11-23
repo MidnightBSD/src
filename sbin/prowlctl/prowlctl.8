@@ -170,6 +170,11 @@ in
 via
 .Xr sysrc 8 .
 For unit jobs that do not have an rc_name the job's label is used.
+The daemon processes enable and disable writes in order.
+If
+.Xr sysrc 8
+fails, the command reports an error and the job retains its previous
+enable setting in memory.
 .It Cm disable Ar label
 Mark a job to not start at boot by setting
 .Va \*(Lt rc_name \*(Gt _enable=NO

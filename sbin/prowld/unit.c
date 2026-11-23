@@ -31,10 +31,12 @@
  */
 
 #include <sys/param.h>
+#include <sys/acl.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/un.h>
+#include <arpa/inet.h>
 #include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
@@ -325,8 +327,8 @@ parse_mdns(const ucl_object_t *obj, mdns_config_t *mdns)
 }
 
 static bool
-parse_identity(const ucl_object_t *root, const char *key, char *name,
-    size_t namesz, const char *path)
+parse_optional_string(const ucl_object_t *root, const char *key, char *dest,
+    size_t destsz, const char *path)
 {
 	const ucl_object_t *obj;
 	const char *value;
@@ -337,12 +339,79 @@ parse_identity(const ucl_object_t *root, const char *key, char *name,
 		return (true);
 	if (obj->next != NULL ||
 	    !ucl_object_tolstring_safe(obj, &value, &len) || len == 0 ||
-	    len >= namesz || memchr(value, '\0', len) != NULL) {
+	    len >= destsz || memchr(value, '\0', len) != NULL) {
 		prowl_log(LOG_ERR, "unit %s: invalid %s", path, key);
 		return (false);
 	}
-	memcpy(name, value, len);
-	name[len] = '\0';
+	memcpy(dest, value, len);
+	dest[len] = '\0';
+	return (true);
+}
+
+static bool
+parse_umask(const ucl_object_t *root, job_t *job)
+{
+	const ucl_object_t *obj;
+	const char *value;
+	size_t len, i;
+	unsigned int bits;
+
+	obj = ucl_object_lookup(root, "umask");
+	if (obj == NULL)
+		return (true);
+	if (obj->next != NULL ||
+	    !ucl_object_tolstring_safe(obj, &value, &len) || len == 0)
+		return (false);
+
+	bits = 0;
+	for (i = 0; i < len; i++) {
+		if (value[i] < '0' || value[i] > '7')
+			return (false);
+		bits = (bits << 3) | (value[i] - '0');
+		if (bits > 0777)
+			return (false);
+	}
+	job->umask_val = (mode_t)bits;
+	job->umask_set = true;
+	return (true);
+}
+
+static bool
+parse_socket_address(const ucl_object_t *obj, prowl_socket_t *sock,
+    const char *path)
+{
+	const ucl_object_t *port;
+	struct in_addr addr;
+	struct in6_addr addr6;
+	int64_t value;
+
+	if (!parse_optional_string(obj, "path", sock->path,
+	    sizeof(((struct sockaddr_un *)0)->sun_path), path) ||
+	    !parse_optional_string(obj, "host", sock->host, sizeof(sock->host),
+	    path))
+		return (false);
+
+	port = ucl_object_lookup(obj, "port");
+	if (sock->path[0] != '\0') {
+		if (port != NULL || sock->host[0] != '\0')
+			return (false);
+		sock->family = AF_UNIX;
+		return (true);
+	}
+	if (port == NULL || port->next != NULL ||
+	    ucl_object_type(port) != UCL_INT)
+		return (false);
+	value = ucl_object_toint(port);
+	if (value < 0 || value > UINT16_MAX)
+		return (false);
+
+	sock->port = (int)value;
+	if (sock->host[0] == '\0' || inet_pton(AF_INET, sock->host, &addr) == 1)
+		sock->family = AF_INET;
+	else if (inet_pton(AF_INET6, sock->host, &addr6) == 1)
+		sock->family = AF_INET6;
+	else
+		return (false);
 	return (true);
 }
 
@@ -355,9 +424,9 @@ parse_socket_access(const ucl_object_t *obj, prowl_socket_t *sock,
 	struct group *gr;
 	unsigned long bits;
 
-	if (!parse_identity(obj, "owner", owner, sizeof(owner), path) ||
-	    !parse_identity(obj, "group", group, sizeof(group), path) ||
-	    !parse_identity(obj, "mode", mode, sizeof(mode), path))
+	if (!parse_optional_string(obj, "owner", owner, sizeof(owner), path) ||
+	    !parse_optional_string(obj, "group", group, sizeof(group), path) ||
+	    !parse_optional_string(obj, "mode", mode, sizeof(mode), path))
 		return (false);
 	if (sock->family != AF_UNIX && (*owner || *group || *mode))
 		return (false);
@@ -419,8 +488,10 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 		return (NULL);
 	}
 
-	if (!parse_identity(root, "user", job->user, sizeof(job->user), path) ||
-	    !parse_identity(root, "group", job->group, sizeof(job->group), path)) {
+	if (!parse_optional_string(root, "user", job->user, sizeof(job->user),
+	    path) ||
+	    !parse_optional_string(root, "group", job->group, sizeof(job->group),
+	    path)) {
 		job_free(job);
 		return (NULL);
 	}
@@ -697,17 +768,17 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 		    sizeof(job->working_directory));
 
 	/* root_directory */
-	obj = ucl_object_lookup(root, "root_directory");
-	if (obj != NULL && ucl_object_type(obj) == UCL_STRING)
-		strlcpy(job->root_directory, ucl_object_tostring(obj),
-		    sizeof(job->root_directory));
+	if (!parse_optional_string(root, "root_directory", job->root_directory,
+	    sizeof(job->root_directory), path)) {
+		job_free(job);
+		return (NULL);
+	}
 
 	/* umask */
-	obj = ucl_object_lookup(root, "umask");
-	if (obj != NULL && ucl_object_type(obj) == UCL_STRING) {
-		job->umask_val = (mode_t)strtol(ucl_object_tostring(obj),
-		    NULL, 8);
-		job->umask_set = true;
+	if (!parse_umask(root, job)) {
+		prowl_log(LOG_ERR, "unit %s: invalid umask", path);
+		job_free(job);
+		return (NULL);
 	}
 
 	/* run_at_load */
@@ -944,23 +1015,37 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 	 *   }
 	 */
 	obj = ucl_object_lookup(root, "sockets");
-	if (obj != NULL && ucl_object_type(obj) == UCL_OBJECT) {
+	if (obj != NULL) {
 		const ucl_object_t *sobj;
-		ucl_object_iter_t sit = NULL;
+		ucl_object_iter_t sit;
 
-		while ((sobj = ucl_object_iterate(obj, &sit, true)) != NULL) {
+		if (obj->next != NULL || ucl_object_type(obj) != UCL_OBJECT) {
+			prowl_log(LOG_ERR, "unit %s: invalid sockets", path);
+			job_free(job);
+			return (NULL);
+		}
+		sit = ucl_object_iterate_new(obj);
+		if (sit == NULL) {
+			job_free(job);
+			return (NULL);
+		}
+
+		while ((sobj = ucl_object_iterate_safe(sit, true)) != NULL) {
 			const char *sname;
 			const ucl_object_t *f;
 			prowl_socket_t *sock;
 
 			if (job->sockets_count >= PROWL_SOCKETS_MAX) {
-				prowl_log(LOG_WARNING,
-				    "unit %s: too many sockets (max %d), "
-				    "ignoring remaining", path, PROWL_SOCKETS_MAX);
+				prowl_log(LOG_ERR, "unit %s: too many sockets "
+				    "(max %d)", path, PROWL_SOCKETS_MAX);
 				break;
 			}
-			if (ucl_object_type(sobj) != UCL_OBJECT)
-				continue;
+			if (sobj->next != NULL ||
+			    ucl_object_type(sobj) != UCL_OBJECT) {
+				prowl_log(LOG_ERR, "unit %s: invalid socket "
+				    "description", path);
+				break;
+			}
 
 			sname = ucl_object_key(sobj);
 			sock = &job->sockets[job->sockets_count];
@@ -969,7 +1054,6 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 
 			/* Defaults */
 			sock->socktype = SOCK_STREAM;
-			sock->family   = AF_UNSPEC;
 			sock->backlog  = 0;	/* SOMAXCONN */
 			sock->owner = (uid_t)-1;
 			sock->group = (gid_t)-1;
@@ -985,32 +1069,10 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 				/* else: stream (default) */
 			}
 
-			/* path → AF_UNIX */
-			f = ucl_object_lookup(sobj, "path");
-			if (f != NULL && ucl_object_type(f) == UCL_STRING) {
-				strlcpy(sock->path, ucl_object_tostring(f),
-				    sizeof(sock->path));
-				sock->family = AF_UNIX;
-			}
-
-			/* port → AF_INET or AF_INET6 */
-			f = ucl_object_lookup(sobj, "port");
-			if (f != NULL) {
-				sock->port = (int)ucl_object_toint(f);
-				if (sock->family == AF_UNSPEC)
-					sock->family = AF_INET;
-			}
-
-			/* host → refines family */
-			f = ucl_object_lookup(sobj, "host");
-			if (f != NULL && ucl_object_type(f) == UCL_STRING) {
-				strlcpy(sock->host, ucl_object_tostring(f),
-				    sizeof(sock->host));
-				/* Auto-detect IPv6 if host contains ':' */
-				if (strchr(sock->host, ':') != NULL)
-					sock->family = AF_INET6;
-				else if (sock->family == AF_UNSPEC)
-					sock->family = AF_INET;
+			if (!parse_socket_address(sobj, sock, path)) {
+				prowl_log(LOG_ERR, "unit %s: invalid address "
+				    "for socket %s", path, sname);
+				break;
 			}
 
 			/* backlog */
@@ -1018,21 +1080,17 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 			if (f != NULL)
 				sock->backlog = (int)ucl_object_toint(f);
 
-			/* Require a usable address */
-			if (sock->family == AF_UNSPEC) {
-				prowl_log(LOG_WARNING,
-				    "unit %s: socket '%s' has no path or port, "
-				    "skipping", path, sname);
-				continue;
-			}
-
 			if (!parse_socket_access(sobj, sock, path)) {
 				prowl_log(LOG_ERR, "%s: invalid access settings "
 				    "for socket %s", job->label, sname);
-				job_free(job);
-				return (NULL);
+				break;
 			}
 			job->sockets_count++;
+		}
+		ucl_object_iterate_free(sit);
+		if (obj->len != (unsigned int)job->sockets_count) {
+			job_free(job);
+			return (NULL);
 		}
 	}
 
@@ -1069,8 +1127,111 @@ instance_valid(const char *inst)
 }
 
 /*
+ * NFSv4 ACLs can grant mutation rights that are absent from st_mode.
+ * Check grants in order. An earlier deny for everyone or the same
+ * principal masks a grant; membership in unrelated groups is optional.
+ */
+static int
+trusted_acl_check(acl_t acl, const struct stat *sb, bool sticky)
+{
+	struct {
+		acl_tag_t tag;
+		uid_t id;
+		acl_perm_t perms;
+	} denies[ACL_MAX_ENTRIES];
+	acl_entry_t ace;
+	acl_entry_type_t type;
+	acl_flagset_t flags;
+	acl_permset_t perms;
+	acl_perm_t mutation, rights;
+	acl_tag_t tag;
+	uid_t id, *qualifier;
+	size_t i, ndenies;
+	int entry;
+
+	mutation = ACL_WRITE_ACL | ACL_WRITE_OWNER | ACL_WRITE_ATTRIBUTES |
+	    ACL_WRITE_NAMED_ATTRS | ACL_DELETE;
+	if (S_ISDIR(sb->st_mode))
+		mutation |= ACL_DELETE_CHILD;
+	if (!sticky)
+		mutation |= ACL_WRITE_DATA | ACL_APPEND_DATA;
+
+	ndenies = 0;
+	for (entry = acl_get_entry(acl, ACL_FIRST_ENTRY, &ace); entry == 1;
+	    entry = acl_get_entry(acl, ACL_NEXT_ENTRY, &ace)) {
+		if (acl_get_entry_type_np(ace, &type) == -1 ||
+		    acl_get_flagset_np(ace, &flags) == -1 ||
+		    acl_get_permset(ace, &perms) == -1 ||
+		    acl_get_tag_type(ace, &tag) == -1)
+			return (errno);
+		if ((type != ACL_ENTRY_TYPE_ALLOW && type != ACL_ENTRY_TYPE_DENY) ||
+		    acl_get_flag_np(flags, ACL_ENTRY_INHERIT_ONLY) == 1)
+			continue;
+		rights = (acl_perm_t)*perms & mutation;
+		if (rights == 0 || tag == ACL_USER_OBJ)
+			continue;
+		id = 0;
+		if (tag == ACL_GROUP_OBJ) {
+			tag = ACL_GROUP;
+			id = sb->st_gid;
+		} else if (tag == ACL_USER || tag == ACL_GROUP) {
+			qualifier = acl_get_qualifier(ace);
+			if (qualifier == NULL)
+				return (errno);
+			id = *qualifier;
+			acl_free(qualifier);
+			if (tag == ACL_USER && id == 0)
+				continue;
+		} else if (tag != ACL_EVERYONE)
+			return (EINVAL);
+
+		if (type == ACL_ENTRY_TYPE_DENY) {
+			if (ndenies == nitems(denies))
+				return (EINVAL);
+			denies[ndenies].tag = tag;
+			denies[ndenies].id = id;
+			denies[ndenies++].perms = rights;
+			continue;
+		}
+		for (i = 0; i < ndenies; i++)
+			if (denies[i].tag == ACL_EVERYONE ||
+			    (denies[i].tag == tag && denies[i].id == id))
+				rights &= ~denies[i].perms;
+		if (rights != 0)
+			return (EPERM);
+	}
+	return (entry == -1 ? errno : 0);
+}
+
+static int
+trusted_check_acl_fd(int fd, const struct stat *sb, bool sticky)
+{
+	acl_t acl;
+	long supported;
+	int error;
+
+	errno = 0;
+	supported = fpathconf(fd, _PC_ACL_NFS4);
+	if (supported == 0)
+		return (0);
+	if (supported == -1) {
+		if (errno == EINVAL || errno == EOPNOTSUPP)
+			return (0);
+		if (errno != 0)
+			return (errno);
+		/* An indeterminate limit does not establish that ACLs are absent. */
+	}
+	acl = acl_get_fd_np(fd, ACL_TYPE_NFS4);
+	if (acl == NULL)
+		return (errno);
+	error = trusted_acl_check(acl, sb, sticky);
+	acl_free(acl);
+	return (error);
+}
+
+/*
  * A root-owned sticky ancestor (such as /tmp) protects root-owned
- * entries from replacement. Every component is checked before use.
+ * entries from replacement when deletion is not explicitly granted.
  */
 static int
 trusted_check_fd(int fd, bool directory, bool ancestor, bool executable)
@@ -1091,7 +1252,8 @@ trusted_check_fd(int fd, bool directory, bool ancestor, bool executable)
 	else if (executable &&
 	    (sb.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) == 0)
 		error = ENOEXEC;
-	else
+	else if ((error = trusted_check_acl_fd(fd, &sb,
+	    ancestor && (sb.st_mode & S_ISVTX) != 0)) == 0)
 		return (fd);
 	close(fd);
 	errno = error;
@@ -1220,7 +1382,7 @@ add_unit_fd(struct ucl_parser *parser, int fd, const char *path,
 		return (false);
 	}
 	n = pread(fd, in, (size_t)sb.st_size, 0);
-	if (n < 0 || n != sb.st_size) {
+	if (n < 0 || n != sb.st_size || memchr(in, '\0', (size_t)n) != NULL) {
 		free(in);
 		free(out);
 		return (false);

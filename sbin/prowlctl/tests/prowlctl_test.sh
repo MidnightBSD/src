@@ -522,6 +522,73 @@ mask_activation_cleanup()
 	stop_prowld
 }
 
+atf_test_case persist_enabled cleanup
+persist_enabled_head()
+{
+	atf_set descr "Enable and disable acknowledge completed sysrc writes in order"
+	atf_set require.user root
+	atf_set require.progs "chroot /rescue/sh"
+}
+persist_enabled_body()
+{
+	mkdir -p root/bin root/etc root/usr/sbin root/units root/run
+	cp "${PROWLD}" root/prowld
+	cp /rescue/sh root/bin/sh
+	cat >root/units/service.unit <<'EOF'
+{"label":"test.persist","type":"oneshot","program":"/bin/sh","run_at_load":false}
+EOF
+	chroot root /prowld -d -s /run -u /units >prowld.log 2>&1 &
+	echo $! >prowld.pid
+	for i in $(jot 100); do
+		[ -S root/run/prowld.sock ] && break
+		sleep 0.05
+	done
+	client="${PROWLCTL} -s root/run"
+	atf_check -s not-exit:0 -e match:sysrc ${client} enable test.persist
+	atf_check -o match:'Enabled: false' ${client} status test.persist
+
+	cat >root/usr/sbin/sysrc <<'EOF'
+#!/bin/sh
+[ "$1" = "--" ] && shift
+[ ! -e /reject ] || exit 1
+if [ -e /signal ]; then kill -TERM $$; fi
+if [ "$1" = persist_enable=YES ] && [ -p /gate ]; then
+	: >/waiting
+	read -r ready </gate || exit 1
+fi
+printf '%s\n' "$1" >>/writes && printf '%s\n' "$1" >/etc/rc.conf
+EOF
+	chmod 755 root/usr/sbin/sysrc
+	mkfifo root/gate
+	${client} enable test.persist >enable.out &
+	enabling=$!
+	for i in $(jot 100); do
+		[ -e root/waiting ] && break
+		sleep 0.05
+	done
+	[ -e root/waiting ] || atf_fail "sysrc did not start"
+	atf_check -o match:'Enabled: false' timeout 5 ${client} status test.persist
+	${client} disable test.persist >disable.out &
+	disabling=$!
+	echo ready >root/gate
+	wait "$enabling" && wait "$disabling" || atf_fail "queued write failed"
+	atf_check -o inline:'persist_enable=YES\npersist_enable=NO\n' cat root/writes
+	atf_check -o match:'Enabled: false' ${client} status test.persist
+	rm root/gate
+	atf_check -o ignore ${client} enable test.persist
+	: >root/reject
+	atf_check -s not-exit:0 -e match:sysrc ${client} disable test.persist
+	rm root/reject
+	: >root/signal
+	atf_check -s not-exit:0 -e match:sysrc ${client} disable test.persist
+	atf_check -o match:'Enabled: true' ${client} status test.persist
+	atf_check -o inline:'persist_enable=YES\n' cat root/etc/rc.conf
+}
+persist_enabled_cleanup()
+{
+	stop_prowld
+}
+
 atf_test_case masked_timer cleanup
 masked_timer_head()
 {
@@ -1268,12 +1335,110 @@ unix_socket_access_cleanup()
 	stop_prowld
 }
 
+atf_test_case unit_explicit_settings cleanup
+unit_explicit_settings_head()
+{
+	atf_set descr "Reject malformed chroot, umask, and socket addresses"
+	atf_set require.user root
+}
+unit_explicit_settings_body()
+{
+	mkdir units
+	while IFS='|' read -r name fields; do
+		cat >"units/$name.unit" <<EOF
+{"label":"org.test.settings_$name","program":"/usr/bin/true",$fields}
+EOF
+		printf '%s\n' "$name" >>rejected
+	done <<'EOF'
+root_empty|"root_directory":""
+root_type|"root_directory":false
+root_nul|"root_directory":"/\u0000ignored"
+root_duplicate|"root_directory":"/","root_directory":"/var"
+mask_empty|"umask":""
+mask_type|"umask":22
+mask_prefix|"umask":"0022junk"
+mask_space|"umask":" 0022"
+mask_signed|"umask":"-1"
+mask_range|"umask":"1000"
+mask_nul|"umask":"0022\u0000"
+mask_duplicate|"umask":"0077","umask":"0000"
+host_empty|"sockets":{"main":{"port":0,"host":""}}
+host_type|"sockets":{"main":{"port":0,"host":false}}
+host_invalid|"sockets":{"main":{"port":0,"host":"localhost"}}
+host_nul|"sockets":{"main":{"port":0,"host":"127.0.0.1\u0000ignored"}}
+host_duplicate|"sockets":{"main":{"port":0,"host":"127.0.0.1","host":"0.0.0.0"}}
+host_no_port|"sockets":{"main":{"host":"127.0.0.1"}}
+port_type|"sockets":{"main":{"port":"0"}}
+port_fraction|"sockets":{"main":{"port":0.5}}
+port_negative|"sockets":{"main":{"port":-1}}
+port_range|"sockets":{"main":{"port":65536}}
+port_wide|"sockets":{"main":{"port":4294967296}}
+port_duplicate|"sockets":{"main":{"port":0,"port":1}}
+path_empty|"sockets":{"main":{"path":""}}
+path_type|"sockets":{"main":{"path":false,"port":0}}
+path_nul|"sockets":{"main":{"path":"endpoint\u0000ignored"}}
+path_duplicate|"sockets":{"main":{"path":"endpoint","path":"other"}}
+path_conflict|"sockets":{"main":{"path":"endpoint","port":0}}
+socket_duplicate|"sockets":{"main":{"port":0},"main":{"port":-1}}
+sockets_duplicate|"sockets":{"main":{"port":0}},"sockets":{"main":{"port":-1}}
+EOF
+	long_root=$(printf '%01024d' 0)
+	long_socket=$(printf '%0104d' 0)
+	cat >units/root_long.unit <<EOF
+{"label":"org.test.settings_root_long","program":"/usr/bin/true",
+ "root_directory":"$long_root"}
+EOF
+	cat >units/path_long.unit <<EOF
+{"label":"org.test.settings_path_long","program":"/usr/bin/true",
+ "sockets":{"main":{"path":"$long_socket"}}}
+EOF
+	printf '%s\n' root_long path_long >>rejected
+
+	for name in dropin_bad dropin_valid; do
+		cat >"units/$name.unit" <<EOF
+label = "org.test.settings_$name";
+program = "/usr/bin/true";
+EOF
+		mkdir "units/org.test.settings_$name.d"
+	done
+	echo 'sockets { main { port = 0; host = false; } }' \
+	    >units/org.test.settings_dropin_bad.d/socket.unit
+	echo 'root_directory = "/"; user = "nobody"; umask = "0000";' \
+	    >units/org.test.settings_dropin_valid.d/security.unit
+	echo dropin_bad >>rejected
+
+	cat >units/ipv6_valid.unit <<'EOF'
+{"label":"org.test.settings_ipv6_valid","program":"/usr/bin/true",
+ "sockets":{"loopback":{"port":0,"host":"::1"}}}
+EOF
+	cat >units/socket_valid.unit <<'EOF'
+{"label":"org.test.settings_socket_valid","program":"/usr/bin/true",
+ "run_at_load":true,"sockets":{"unix":{"path":"settings.sock"},
+ "loopback":{"port":0,"host":"127.0.0.1"},"wildcard":{"port":0}}}
+EOF
+	start_prowld
+	while read -r name; do
+		atf_check -s exit:1 -o ignore -e match:'job not found' \
+		    ${CTL} status "org.test.settings_$name"
+	done <rejected
+	atf_check -o ignore ${CTL} status org.test.settings_dropin_valid
+	atf_check -o ignore ${CTL} status org.test.settings_ipv6_valid
+	wait_state org.test.settings_socket_valid running
+	[ -S settings.sock ] || atf_fail "missing valid activation socket"
+}
+unit_explicit_settings_cleanup()
+{
+	stop_prowld
+}
+
 atf_init_test_cases()
 {
 	atf_add_test_case action_deadline
 	atf_add_test_case mask_activation
+	atf_add_test_case persist_enabled
 	atf_add_test_case masked_timer
 	atf_add_test_case unix_socket_access
+	atf_add_test_case unit_explicit_settings
 	atf_add_test_case credentials
 	atf_add_test_case dependency_loop
 	atf_add_test_case oneshot_lists

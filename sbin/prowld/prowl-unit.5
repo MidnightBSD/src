@@ -158,6 +158,8 @@ into before execution.
 Directory to
 .Xr chroot 2
 into.
+The path must be a nonempty string shorter than 1024 bytes and contain
+no NUL byte.
 Requires
 .Va user
 to be set for security.
@@ -172,6 +174,9 @@ supplementary groups.
 .Pq string
 Octal umask (e.g.,
 .Dq 0022 ) .
+The string must contain only octal digits and represent a value from
+0 through 0777.
+The default is 0022.
 .It Va standard_in_path
 .Pq string
 File to open as the job's standard input.
@@ -502,19 +507,37 @@ wildcard.
 .Ss Socket Activation
 The
 .Va sockets
-field is an object mapping logical names to socket descriptions.
-Keys in each description:
+field is an object mapping up to eight logical names to socket descriptions.
+Each description can specify
 .Va type
-(stream, dgram, seqpacket),
-.Va family
-(inet, inet6, unix),
-.Va path
-(AF_UNIX only),
-.Va port
-(inet only),
-.Va host
-(bind address),
+(stream, dgram, seqpacket) and
 .Va backlog .
+.Pp
+Specify either
+.Va path
+for a Unix socket or
+.Va port
+for an Internet socket.
+A Unix socket path must be a nonempty string of at most 103 bytes and
+contain no NUL byte.
+The port must be an integer from 0 through 65535.
+Port 0 requests an ephemeral port.
+An Internet socket can specify
+.Va host
+as a numeric IPv4 or IPv6 address, which selects the address family.
+Omit
+.Va host
+to bind the IPv4 wildcard address.
+.Pp
+Invalid or repeated values for
+.Va root_directory ,
+.Va umask ,
+or a socket's
+.Va path ,
+.Va port ,
+or
+.Va host
+cause the unit to be rejected.
 .Pp
 For Unix sockets,
 .Va mode
