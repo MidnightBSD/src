@@ -48,6 +48,7 @@
 #include <netinet/in.h>
 
 #include <errno.h>
+#include <fcntl.h>
 #include <libgen.h>
 #include <stdio.h>
 #include <string.h>
@@ -55,6 +56,61 @@
 #include <unistd.h>
 
 #include "prowld.h"
+
+/* Remember the socket file we created, so only that file is removed. */
+static void
+socket_note_bound(prowl_socket_t *sock)
+{
+	struct stat sb;
+
+	sock->bound = false;
+	if (lstat(sock->path, &sb) == 0 && S_ISSOCK(sb.st_mode)) {
+		sock->bound_dev = sb.st_dev;
+		sock->bound_ino = sb.st_ino;
+		sock->bound = true;
+	}
+}
+
+/*
+ * Remove the socket file we bound, unless the name has been replaced.
+ * Like creation, removal needs a trusted parent directory.
+ */
+static void
+socket_unlink_path(prowl_socket_t *sock)
+{
+	struct stat sb;
+	char dir[PROWL_PATH_MAX];
+	const char *base;
+	char *slash;
+	int dfd;
+
+	if (!sock->bound)
+		return;
+	sock->bound = false;
+	if (strlcpy(dir, sock->path, sizeof(dir)) >= sizeof(dir))
+		return;
+	slash = strrchr(dir, '/');
+	if (slash == NULL) {
+		/* Relative to the working directory, as bind() resolved it. */
+		base = sock->path;
+		strlcpy(dir, ".", sizeof(dir));
+	} else if (slash[1] == '\0')
+		return;
+	else {
+		base = slash + 1;
+		*slash = '\0';
+		if (slash == dir)
+			strlcpy(dir, "/", sizeof(dir));
+	}
+	dfd = trusted_open_dir(dir);
+	if (dfd == -1)
+		return;
+	if (fstatat(dfd, base, &sb, AT_SYMLINK_NOFOLLOW) == 0 &&
+	    S_ISSOCK(sb.st_mode) && sb.st_dev == sock->bound_dev &&
+	    sb.st_ino == sock->bound_ino)
+		(void)unlinkat(dfd, base, 0);
+	close(dfd);
+}
 
 /*
  * Changing or removing a pathname is safe only under a trusted parent.
@@ -145,6 +201,8 @@ socket_bind_one(prowl_socket_t *sock)
 	switch (sock->family) {
 	case AF_UNIX:
 		rc = bind_unix_socket(fd, sock);
+		if (rc == 0)
+			socket_note_bound(sock);
 		break;
 
 	case AF_INET:
@@ -275,6 +333,8 @@ socket_bind_all(job_t *job)
 				socket_kqueue_del(&job->sockets[i]);
 				close(job->sockets[i].fd);
 				job->sockets[i].fd = -1;
+				if (job->sockets[i].family == AF_UNIX)
+					socket_unlink_path(&job->sockets[i]);
 			}
 			return (-1);
 		}
@@ -334,7 +394,8 @@ socket_rearm(job_t *job)
 
 /*
  * Deregister and close all sockets for a job.
- * Called when the job is permanently stopped or freed.
+ * Called when the job is permanently stopped or freed. A Unix socket file
+ * that we created goes with it.
  */
 void
 socket_close_all(job_t *job)
@@ -351,6 +412,7 @@ socket_close_all(job_t *job)
 			close(s->fd);
 			s->fd = -1;
 		}
-
+		if (s->family == AF_UNIX)
+			socket_unlink_path(s);
 	}
 }

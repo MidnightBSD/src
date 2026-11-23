@@ -460,13 +460,18 @@ rcshim_exec(char *const *argv, char *const *envp)
 	return (execve(argv[0], argv, envp));
 }
 
+static int
+rcshim_script_entry(const struct dirent *de)
+{
+	return (de->d_name[0] != '.');
+}
+
 int
 rcshim_scan_dir(const char *dirpath)
 {
-	DIR *dir;
-	struct dirent *de;
+	struct dirent **names;
 	char path[PROWL_PATH_MAX];
-	int dfd, loaded = 0;
+	int dfd, count, i, loaded = 0;
 
 	dfd = trusted_open_dir(dirpath);
 	if (dfd == -1) {
@@ -475,31 +480,31 @@ rcshim_scan_dir(const char *dirpath)
 			    dirpath);
 		return (0);
 	}
-	dir = fdopendir(dfd);
-	if (dir == NULL) {
+	/* Sorted, so the order of equal-priority shims does not vary. */
+	count = fdscandir(dfd, &names, rcshim_script_entry, alphasort);
+	if (count == -1) {
 		prowl_log(LOG_WARNING, "rcshim_scan_dir %s: %m", dirpath);
 		close(dfd);
 		return (0);
 	}
 
-	while ((de = readdir(dir)) != NULL) {
+	for (i = 0; i < count; i++) {
+		const char *name = names[i]->d_name;
 		job_t *job;
 		int fd;
 
-		if (de->d_name[0] == '.')
-			continue;
-		if (snprintf(path, sizeof(path), "%s/%s", dirpath, de->d_name) >=
+		if (snprintf(path, sizeof(path), "%s/%s", dirpath, name) >=
 		    (int)sizeof(path))
 			continue;
 
-		fd = trusted_open_file_at(dfd, de->d_name, true);
+		fd = trusted_open_file_at(dfd, name, true);
 		if (fd == -1) {
 			if (errno != ENOENT && errno != ENOEXEC &&
 			    errno != EFTYPE && errno != ELOOP)
 				prowl_log(LOG_WARNING, "rcshim: %s: %m", path);
 			continue;
 		}
-		job = rcshim_parse_script(fd, path, de->d_name);
+		job = rcshim_parse_script(fd, path, name);
 		if (job != NULL) {
 			TAILQ_INSERT_TAIL(&g_jobs, job, entries);
 			prowl_log(LOG_DEBUG, "rcshim loaded %s from %s",
@@ -507,8 +512,10 @@ rcshim_scan_dir(const char *dirpath)
 			loaded++;
 		}
 	}
-
-	closedir(dir);
+	for (i = 0; i < count; i++)
+		free(names[i]);
+	free(names);
+	close(dfd);
 
 	if (loaded > 0)
 		prowl_log(LOG_NOTICE, "loaded %d rc-shim(s) from %s",
