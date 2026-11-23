@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users.
 
+20261123:
+	prowld now applies administrator drop-ins after packaged policy. If it
+	rejects a known native service, it also blocks the matching rc.d
+	fallback. For native rc.conf lookups, use root-owned regular files in
+	trusted directories. prowld skips symbolic links and files writable by
+	group or others.
+
 20261122:
 	prowld services now receive EOF on standard input by default. A failed
 	standard-stream redirect prevents the command from running. IPFilter
