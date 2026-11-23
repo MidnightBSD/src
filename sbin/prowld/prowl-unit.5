@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd April 19, 2026
+.Dd November 22, 2026
 .Dt PROWL-UNIT 5
 .Os
 .Sh NAME
@@ -153,6 +153,61 @@ User and group names to drop privileges to.
 .Pq string
 Octal umask (e.g.,
 .Dq 0022 ) .
+.It Va standard_in_path
+.Pq string
+File to open as the job's standard input.
+The default is
+.Pa /dev/null .
+.It Va standard_out_path
+.Pq string
+File to append the job's standard output to.
+It is created with mode 0644 if it does not exist.
+.It Va standard_error_path
+.Pq string
+File to append the job's standard error to, created the same way.
+It may name the same file as
+.Va standard_out_path .
+.Pp
+Without
+.Va standard_out_path
+or
+.Va standard_error_path
+the job shares the standard output or standard error of
+.Xr prowld 8 .
+The files are opened after
+.Va root_directory ,
+.Va user
+and
+.Va group
+take effect, so a path is looked up inside the
+.Xr chroot 2
+and must be writable by
+.Va user .
+A file that cannot be opened is skipped and the job still starts.
+They are also opened for
+.Va start_pre ,
+.Va start_post ,
+.Va stop_pre ,
+.Va stop_post ,
+.Va stop_arguments
+and the action commands, so the output of
+.Cm prowlctl check
+or
+.Cm reload
+goes to the file as well.
+.Pp
+To have
+.Cm prowlctl logs
+show a job's output, point both at
+.Pa /var/log/prowld/jobs/ Ns Ar label Ns Pa .log ,
+where
+.Ar label
+is the job's full
+.Va label .
+.Xr prowld 8
+does not rotate these files; add an entry to
+.Xr newsyslog.conf 5
+if the job writes much.
 .El
 .Ss Lifecycle
 .Bl -tag -width "throttle_interval"

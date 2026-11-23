@@ -1040,6 +1040,43 @@ do_graph(int argc, char *argv[])
 
 #define LOGS_TAIL_DEFAULT	50
 
+/*
+ * Turn a name as given to "logs" (full label, short name, rc.d name, or
+ * template instance) into the job's full label by asking prowld, the way
+ * the other commands resolve their target.  If prowld does not know the
+ * name, or will not answer, the name is used as given so that the log of
+ * a job that has since been removed can still be read.
+ */
+static void
+logs_resolve_label(const char *name, char *label, size_t labelsz)
+{
+	char req[REQ_MAX];
+	char status[32];
+	char full[256];
+	const char *result;
+	char *resp;
+
+	strlcpy(label, name, labelsz);
+
+	snprintf(req, sizeof(req),
+	    "{\"verb\":\"status\",\"target\":\"%s\"}", name);
+	if (send_request(g_sock, req) == -1)
+		return;
+
+	resp = recv_response(g_sock);
+	if (resp == NULL)
+		return;
+
+	if (json_get_str(resp, "status", status, sizeof(status)) != NULL &&
+	    strcmp(status, "ok") == 0 &&
+	    (result = strstr(resp, "\"result\":")) != NULL &&
+	    json_get_str(result, "label", full, sizeof(full)) != NULL &&
+	    validate_label_input(full))
+		strlcpy(label, full, labelsz);
+
+	free(resp);
+}
+
 static int
 do_logs(int argc, char *argv[])
 {
@@ -1063,7 +1100,7 @@ do_logs(int argc, char *argv[])
 		return (EXIT_NOT_FOUND);
 	}
 
-	strlcpy(label, argv[0], sizeof(label));
+	logs_resolve_label(argv[0], label, sizeof(label));
 
 	for (i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "--follow") == 0)
