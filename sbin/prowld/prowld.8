@@ -852,7 +852,14 @@ runs a keep-alive job
 .Pq Dq org.midnightbsd.getty. Ns Ar tty
 that starts the line's getty with the line's terminal type, once the
 .Dv LOGIN
-rc.d milestone is reached.
+rc.d milestone is reached and the boot scheduler has finished starting
+the available jobs.
+At that point, even on a host without gettys, PID 1 raises
+.Va kern.securelevel
+from 0 to 1 as
+.Xr init 8
+does.
+It preserves all other levels.
 Lines marked
 .Dq onifexists
 or

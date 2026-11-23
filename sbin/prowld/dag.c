@@ -333,12 +333,14 @@ dag_schedule_ready(void)
 {
 	job_t *job;
 	int limit = max_concurrent();
-	bool rerun = false;
+	bool rerun;
 
 	/* Nothing new starts while the system is going down. */
 	if (g_shutdown || g_rundown)
 		return;
 
+again:
+	rerun = false;
 	TAILQ_FOREACH(job, &g_jobs, entries) {
 		if (g_current_starts >= limit)
 			break;
@@ -385,13 +387,14 @@ dag_schedule_ready(void)
 				dag_schedule_ready();
 			} else {
 				job_set_state(job, JOB_STATE_FAILED);
+				rerun = true;
 			}
-		} else {
-			(void)supervisor_start(job);
-		}
+		} else if (supervisor_start(job) == -1 &&
+		    job->state == JOB_STATE_FAILED)
+			rerun = true;
 	}
 
-	/* A service that was activated may be startable now */
+	/* Activation or a synchronous failure may have unblocked earlier jobs. */
 	if (rerun)
-		dag_schedule_ready();
+		goto again;
 }
