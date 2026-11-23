@@ -40,10 +40,12 @@ and accepts UCL or JSON syntax.
 .Pp
 The file is typically located at
 .Pa /etc/prowld/prowld.conf .
-It must be owned by root and must not be world-writable;
-otherwise
+It must be a regular file owned by root, with neither group nor other
+write permission, in a trusted directory chain.
+See
 .Xr prowld 8
-will ignore it and log a warning.
+for path requirements.
+An unsafe file is ignored and a warning is logged.
 .Sh SCHEMA
 The following keys are recognised at the top level of the configuration:
 .Bl -tag -width "max_concurrent_starts"

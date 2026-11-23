@@ -266,7 +266,20 @@ ensure_dirs(void)
 	}
 
 	/* Subdirectories — failures are logged but not fatal */
-	(void)secure_mkdir(g_notify_dir,    0700); /* root-only: sd_notify */
+	if (secure_mkdir(g_notify_dir, 0711) == 0) {
+		int fd = trusted_open_dir(g_notify_dir);
+
+		if (fd == -1)
+			prowl_log(LOG_ERR, "unsafe notify directory %s: %m",
+			    g_notify_dir);
+		else {
+			/* Permit traversal but not listing or modification. */
+			if (fchmod(fd, 0711) == -1)
+				prowl_log(LOG_ERR, "chmod notify directory %s: %m",
+				    g_notify_dir);
+			close(fd);
+		}
+	}
 	(void)secure_mkdir(g_db_dir,        0755); /* world-readable */
 	(void)secure_mkdir(g_mask_dir,      0700); /* root-only: masks */
 	(void)secure_mkdir(g_log_dir,       0750); /* daemon logs */
@@ -333,39 +346,32 @@ load_config(void)
 	struct ucl_parser *parser;
 	ucl_object_t *root;
 	const ucl_object_t *obj;
-	struct stat sb;
+	bool ok;
+	int fd;
 
 	/* Apply defaults first; debug is not reset here — it is set by
 	 * the command-line -d flag in main() and must not be overridden. */
 	g_config.max_concurrent_starts = DEFAULT_MAX_STARTS;
 	g_config.shutdown_timeout      = DEFAULT_SHUTDOWN_TMO;
 
-	if (stat(PROWLD_CONF_PATH, &sb) == -1) {
+	fd = trusted_open_file(PROWLD_CONF_PATH, false);
+	if (fd == -1) {
 		if (errno != ENOENT)
-			prowl_log(LOG_WARNING, "load_config stat %s: %m",
+			prowl_log(LOG_WARNING, "load_config %s: %m",
 			    PROWLD_CONF_PATH);
-		return;
-	}
-
-	/* Reject config files not owned by root or world-writable. */
-	if (sb.st_uid != 0) {
-		prowl_log(LOG_WARNING,
-		    "%s: not owned by root, using defaults", PROWLD_CONF_PATH);
-		return;
-	}
-	if (sb.st_mode & S_IWOTH) {
-		prowl_log(LOG_WARNING,
-		    "%s: world-writable, using defaults", PROWLD_CONF_PATH);
 		return;
 	}
 
 	parser = ucl_parser_new(UCL_PARSER_NO_FILEVARS);
 	if (parser == NULL) {
 		prowl_log(LOG_ERR, "load_config: ucl_parser_new failed");
+		close(fd);
 		return;
 	}
 
-	if (!ucl_parser_add_file(parser, PROWLD_CONF_PATH)) {
+	ok = trusted_ucl_add_fd(parser, fd, PROWLD_CONF_PATH);
+	close(fd);
+	if (!ok) {
 		prowl_log(LOG_ERR, "load_config %s: %.128s",
 		    PROWLD_CONF_PATH, ucl_parser_get_error(parser));
 		ucl_parser_free(parser);
@@ -757,6 +763,8 @@ main_loop(void)
 				break;
 			}
 		}
+
+		ipc_expire_clients();
 
 		/* After processing events, promote any newly-ready jobs */
 		dag_schedule_ready();

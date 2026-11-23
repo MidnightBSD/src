@@ -39,6 +39,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/ucred.h>
 #include <sys/un.h>
 #include <sys/wait.h>
 
@@ -63,6 +64,12 @@ int ipc_listen_fd = -1;
 /* Cached wheel group GID for IPC authorization */
 static gid_t g_wheel_gid = 0;
 
+/* Reserve slots for root and bound work per listen event. */
+#define IPC_ROOT_RESERVE	4
+#define IPC_UID_MAX		4
+#define IPC_ACCEPT_BATCH	16
+#define IPC_FRAME_TIMEOUT	30
+
 /* Per-client state */
 static ipc_client_t g_clients[IPC_MAX_CLIENTS];
 
@@ -86,32 +93,35 @@ json_escape_str(const char *src, char *dst, size_t dstsz)
 	const unsigned char *p = (const unsigned char *)src;
 	size_t i = 0;
 
+	if (dstsz == 0)
+		return (-1);
+	dst[0] = '\0';
 	while (*p != '\0') {
 		unsigned char c = *p++;
 
 		if (c == '"' || c == '\\') {
 			if (i + 2 >= dstsz)
-				return (-1);
+				goto truncated;
 			dst[i++] = '\\';
 			dst[i++] = (char)c;
 		} else if (c == '\n') {
 			if (i + 2 >= dstsz)
-				return (-1);
+				goto truncated;
 			dst[i++] = '\\';
 			dst[i++] = 'n';
 		} else if (c == '\r') {
 			if (i + 2 >= dstsz)
-				return (-1);
+				goto truncated;
 			dst[i++] = '\\';
 			dst[i++] = 'r';
 		} else if (c == '\t') {
 			if (i + 2 >= dstsz)
-				return (-1);
+				goto truncated;
 			dst[i++] = '\\';
 			dst[i++] = 't';
 		} else if (c < 0x20) {
 			if (i + 6 >= dstsz)
-				return (-1);
+				goto truncated;
 			dst[i++] = '\\';
 			dst[i++] = 'u';
 			dst[i++] = '0';
@@ -120,12 +130,15 @@ json_escape_str(const char *src, char *dst, size_t dstsz)
 			dst[i++] = hex[c & 0xf];
 		} else {
 			if (i + 1 >= dstsz)
-				return (-1);
+				goto truncated;
 			dst[i++] = (char)c;
 		}
 	}
 	dst[i] = '\0';
 	return ((int)i);
+truncated:
+	dst[i] = '\0';
+	return (-1);
 }
 
 /* Upper bound on queued output per client; slower readers lose messages. */
@@ -273,7 +286,10 @@ ipc_send_ok(int fd, const char *id, const char *result_json)
 	size_t cap;
 	int n;
 
-	json_escape_str(id != NULL ? id : "", eid, sizeof(eid));
+	if (json_escape_str(id != NULL ? id : "", eid, sizeof(eid)) == -1) {
+		ipc_send_error(fd, "", "request id too large");
+		return;
+	}
 
 	/* Room for the envelope plus the result; results can be large. */
 	cap = strlen(eid) + 64 +
@@ -307,7 +323,8 @@ ipc_send_error(int fd, const char *id, const char *message)
 	char eid[256];
 	int n;
 
-	json_escape_str(id != NULL ? id : "", eid, sizeof(eid));
+	if (json_escape_str(id != NULL ? id : "", eid, sizeof(eid)) == -1)
+		eid[0] = '\0';
 
 	n = snprintf(buf, sizeof(buf),
 	    "{\"id\":\"%s\",\"status\":\"error\",\"message\":\"%s\"}",
@@ -447,6 +464,7 @@ resolve_target(const ucl_object_t *req, int fd, const char *id)
 {
 	const ucl_object_t *tgt;
 	const char *label;
+	ipc_client_t *client;
 	job_t *job;
 
 	tgt = ucl_object_lookup(req, "target");
@@ -464,8 +482,10 @@ resolve_target(const ucl_object_t *req, int fd, const char *id)
 	if (job == NULL)
 		job = job_find_by_rcname(label);
 
-	/* "unit@instance" of a template that was not listed in rc.conf */
-	if (job == NULL && strchr(label, '@') != NULL) {
+	/* Only root may instantiate a template as a side effect of lookup. */
+	client = ipc_get_client(fd);
+	if (job == NULL && strchr(label, '@') != NULL && client != NULL &&
+	    client->peer_uid == 0) {
 		job = unit_instantiate(label);
 		if (job != NULL)
 			dag_build();
@@ -1058,7 +1078,7 @@ ipc_peer_is_root(const ipc_client_t *client)
 static bool
 ipc_peer_can_query(const ipc_client_t *client)
 {
-	return (client->peer_uid == 0 || client->peer_gid == g_wheel_gid);
+	return (client->peer_uid == 0 || client->peer_wheel);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1073,8 +1093,10 @@ ipc_dispatch_message(int fd, const char *json, size_t len)
 	const ucl_object_t *obj;
 	const char *verb = NULL;
 	const char *id = "";
+	char escaped_id[256];
 
-	parser = ucl_parser_new(UCL_PARSER_NO_FILEVARS);
+	parser = ucl_parser_new(UCL_PARSER_NO_FILEVARS |
+	    UCL_PARSER_DISABLE_MACRO);
 	if (parser == NULL)
 		return;
 
@@ -1102,6 +1124,11 @@ ipc_dispatch_message(int fd, const char *json, size_t len)
 	obj = ucl_object_lookup(root, "id");
 	if (obj != NULL && ucl_object_type(obj) == UCL_STRING)
 		id = ucl_object_tostring(obj);
+	if (json_escape_str(id, escaped_id, sizeof(escaped_id)) == -1) {
+		ipc_send_error(fd, "", "request id too large");
+		ucl_object_unref(root);
+		return;
+	}
 
 	obj = ucl_object_lookup(root, "verb");
 	if (obj != NULL && ucl_object_type(obj) == UCL_STRING)
@@ -1294,57 +1321,91 @@ ipc_shutdown(void)
 void
 ipc_accept(void)
 {
-	struct sockaddr_un sun;
-	socklen_t sunlen = sizeof(sun);
+	struct xucred cred;
+	struct timespec now;
 	struct kevent kev;
-	int cfd, i;
+	socklen_t credlen;
+	int batch, cfd, i, slot, nonroot, sameuid;
+	bool wheel;
 
-	cfd = accept4(ipc_listen_fd, (struct sockaddr *)&sun, &sunlen,
-	    SOCK_NONBLOCK | SOCK_CLOEXEC);
-	if (cfd == -1) {
-		if (errno != EAGAIN && errno != EWOULDBLOCK)
-			prowl_log(LOG_WARNING, "ipc accept: %m");
-		return;
-	}
-
-	for (i = 0; i < IPC_MAX_CLIENTS; i++) {
-		if (!g_clients[i].active)
-			break;
-	}
-
-	if (i == IPC_MAX_CLIENTS) {
-		prowl_log(LOG_WARNING, "ipc: client limit reached");
-		close(cfd);
-		return;
-	}
-
-	{
-		uid_t puid;
-		gid_t pgid;
-		if (getpeereid(cfd, &puid, &pgid) == -1) {
-			prowl_log(LOG_WARNING, "ipc_accept getpeereid: %m");
-			close(cfd);
+	for (batch = 0; batch < IPC_ACCEPT_BATCH; batch++) {
+		cfd = accept4(ipc_listen_fd, NULL, NULL,
+		    SOCK_NONBLOCK | SOCK_CLOEXEC);
+		if (cfd == -1) {
+			if (errno != EAGAIN && errno != EWOULDBLOCK &&
+			    errno != EINTR)
+				prowl_log(LOG_WARNING, "ipc accept: %m");
 			return;
 		}
-		g_clients[i].peer_uid = puid;
-		g_clients[i].peer_gid = pgid;
+
+		credlen = sizeof(cred);
+		if (getsockopt(cfd, SOL_LOCAL, LOCAL_PEERCRED, &cred,
+		    &credlen) == -1 || credlen != sizeof(cred) ||
+		    cred.cr_version != XUCRED_VERSION || cred.cr_ngroups < 0 ||
+		    cred.cr_ngroups > XU_NGROUPS ||
+		    clock_gettime(CLOCK_MONOTONIC, &now) == -1) {
+			close(cfd);
+			continue;
+		}
+		wheel = false;
+		for (i = 0; i < cred.cr_ngroups; i++) {
+			if (cred.cr_groups[i] == g_wheel_gid)
+				wheel = true;
+		}
+		if (cred.cr_uid != 0 && !wheel) {
+			close(cfd);
+			continue;
+		}
+
+		slot = -1;
+		nonroot = sameuid = 0;
+		for (i = 0; i < IPC_MAX_CLIENTS; i++) {
+			if (!g_clients[i].active) {
+				if (slot == -1)
+					slot = i;
+				continue;
+			}
+			if (g_clients[i].peer_uid != 0)
+				nonroot++;
+			if (g_clients[i].peer_uid == cred.cr_uid)
+				sameuid++;
+		}
+		if (slot == -1 || (cred.cr_uid != 0 &&
+		    (nonroot >= IPC_MAX_CLIENTS - IPC_ROOT_RESERVE ||
+		    sameuid >= IPC_UID_MAX))) {
+			close(cfd);
+			continue;
+		}
+
+		memset(&g_clients[slot], 0, sizeof(g_clients[slot]));
+		g_clients[slot].fd = cfd;
+		g_clients[slot].peer_uid = cred.cr_uid;
+		g_clients[slot].peer_wheel = wheel;
+		g_clients[slot].frame_started = now.tv_sec;
+		EV_SET(&kev, (uintptr_t)cfd, EVFILT_READ, EV_ADD, 0, 0, NULL);
+		if (kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL) == -1) {
+			prowl_log(LOG_WARNING, "ipc_accept kevent: %m");
+			close(cfd);
+			continue;
+		}
+		g_clients[slot].active = true;
 	}
+}
 
-	g_clients[i].fd = cfd;
-	g_clients[i].buf_used = 0;
-	g_clients[i].is_subscriber = false;
-	g_clients[i].event_filter[0] = '\0';
-	g_clients[i].out = NULL;
-	g_clients[i].out_len = 0;
-	g_clients[i].out_off = 0;
-	g_clients[i].want_write = false;
-	g_clients[i].active = true;
+/* Idle established clients remain connected; incomplete requests do not. */
+void
+ipc_expire_clients(void)
+{
+	struct timespec now;
+	int i;
 
-	EV_SET(&kev, (uintptr_t)cfd, EVFILT_READ, EV_ADD, 0, 0, NULL);
-	if (kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL) == -1) {
-		prowl_log(LOG_WARNING, "ipc_accept kevent: %m");
-		close(cfd);
+	if (clock_gettime(CLOCK_MONOTONIC, &now) == -1)
 		return;
+	for (i = 0; i < IPC_MAX_CLIENTS; i++) {
+		if (g_clients[i].active &&
+		    (!g_clients[i].completed_request || g_clients[i].buf_used != 0) &&
+		    now.tv_sec - g_clients[i].frame_started >= IPC_FRAME_TIMEOUT)
+			ipc_close_client(g_clients[i].fd);
 	}
 }
 
@@ -1407,6 +1468,15 @@ ipc_read_client(int fd)
 		return;
 	}
 
+	if (client->completed_request && client->buf_used == 0) {
+		struct timespec now;
+
+		if (clock_gettime(CLOCK_MONOTONIC, &now) == -1) {
+			ipc_close_client(fd);
+			return;
+		}
+		client->frame_started = now.tv_sec;
+	}
 	client->buf_used += (size_t)n;
 
 	for (;;) {
@@ -1431,6 +1501,7 @@ ipc_read_client(int fd)
 			break;
 
 		ipc_dispatch_message(fd, client->buf + 4, (size_t)msglen);
+		client->completed_request = true;
 
 		if (client->buf_used > total) {
 			memmove(client->buf, client->buf + total,

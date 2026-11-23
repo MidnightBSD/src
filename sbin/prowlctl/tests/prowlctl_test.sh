@@ -918,8 +918,158 @@ oneshot_lists_cleanup()
 	stop_prowld
 }
 
+atf_test_case credentials cleanup
+credentials_head()
+{
+	atf_set descr "Configured job credentials are applied or execution is refused"
+	atf_set require.user root
+	atf_set require.progs "chroot jot pwd_mkdb"
+}
+credentials_body()
+{
+	[ -x "${PROWLD}" ] || atf_skip "${PROWLD} is not installed"
+	[ -x "${PROWLCTL}" ] || atf_skip "${PROWLCTL} is not installed"
+
+	# Use a private account database so that group membership does not
+	# depend on the test host and no host accounts need to be changed.
+	mkdir -p root/etc root/lib root/libexec root/usr/bin root/units
+	cp "${PROWLD}" root/prowld
+	cp /usr/bin/id root/usr/bin/
+	cp /libexec/ld-elf.so.1 root/libexec/
+	cp /lib/libc.so.7 root/lib/
+	cat >root/etc/master.passwd <<EOF
+root:*:0:0::0:0:root:/:/bin/sh
+service:*:101:101::0:0:service:/:/bin/sh
+many:*:102:101::0:0:many:/:/bin/sh
+EOF
+	atf_check -o ignore pwd_mkdb -d root/etc root/etc/master.passwd
+	cat >root/etc/nsswitch.conf <<EOF
+passwd: files
+group: files
+EOF
+	cat >root/etc/group <<EOF
+wheel:*:0:
+service:*:101:
+EOF
+	for gid in $(jot 32 200); do
+		echo "extra${gid}:*:${gid}:many" >>root/etc/group
+	done
+	: >root/valid.out
+	chown 101:101 root/valid.out
+
+	for entry in 'missing_user "user": "absent"' \
+	    'missing_group "group": "absent"' 'many "user": "many"' \
+	    'group_only "group": "service"' 'valid "user": "service"'; do
+		name=${entry%% *}
+		identity=${entry#* }
+		cat >"root/units/${name}.unit" <<EOF
+{"label": "org.test.${name}", "type": "oneshot",
+ "program": "/usr/bin/id", "arguments": ["-G"],
+ "standard_out_path": "/${name}.out", "check_arguments": ["-u"],
+ "run_at_load": true, ${identity}}
+EOF
+	done
+
+	long_name=$(printf '%064d' 0)
+	for field in user group; do
+		for bad in empty number long nul duplicate; do
+			case ${bad} in
+			empty)	value='""' ;;
+			number)	value=0 ;;
+			long)	value="\"${long_name}\"" ;;
+			nul)	value='"root\u0000service"' ;;
+			duplicate) value="\"root\", \"${field}\": \"service\"" ;;
+			esac
+			name="${field}_${bad}"
+			cat >"root/units/${name}.unit" <<EOF
+{"label": "org.test.${name}", "type": "oneshot",
+ "program": "/usr/bin/id", "standard_out_path": "/${name}.out",
+ "run_at_load": true, "${field}": ${value}}
+EOF
+		done
+	done
+
+	# Seed a supplementary group that neither valid unit should inherit.
+	chroot -G 999 root /prowld -d -s run -u units >prowld.log 2>&1 &
+	echo $! >prowld.pid
+	for i in $(jot 50); do
+		[ -S root/run/prowld.sock ] && break
+		sleep 0.2
+	done
+	[ -S root/run/prowld.sock ] || atf_fail "prowld did not create its socket"
+	ctl_path="${PROWLCTL} -s root/run"
+
+	for field in user group; do
+		for bad in empty number long nul duplicate; do
+			name="${field}_${bad}"
+			atf_check -s not-exit:0 -o ignore -e ignore \
+			    ${ctl_path} status "org.test.${name}"
+			[ ! -e "root/${name}.out" ] || atf_fail "${name} was executed"
+		done
+	done
+	for name in missing_user missing_group many; do
+		atf_check -o match:'State: failed' ${ctl_path} status "org.test.${name}"
+		atf_check -s not-exit:0 -o ignore -e ignore \
+		    ${ctl_path} check "org.test.${name}"
+		[ ! -e "root/${name}.out" ] || atf_fail "${name} was executed"
+	done
+	for name in group_only valid; do
+		for i in $(jot 50); do
+			${ctl_path} status "org.test.${name}" |
+			    grep -q 'State: completed' && break
+			sleep 0.2
+		done
+		atf_check -o match:'State: completed' ${ctl_path} status "org.test.${name}"
+		atf_check -o inline:'101\n' cat "root/${name}.out"
+	done
+	atf_check -o inline:'0\n' ${ctl_path} check org.test.group_only
+	atf_check -o inline:'101\n' ${ctl_path} check org.test.valid
+}
+credentials_cleanup()
+{
+	stop_prowld
+}
+
+atf_test_case unix_socket_access cleanup
+unix_socket_access_head()
+{
+	atf_set descr "Unix socket activation preserves files and sets requested access"
+	atf_set require.user root
+}
+unix_socket_access_body()
+{
+	mkdir units
+	echo keep >occupied
+	ln -s occupied linked
+	for label in occupied linked restricted legacy; do
+		access=
+		if [ "$label" = restricted ]; then
+			access=', "mode": "0660", "owner": "root", "group": "wheel"'
+		fi
+		cat >"units/$label.unit" <<EOF
+{"label":"org.test.$label","run_at_load":true,"program":"/usr/bin/true",
+ "sockets":{"main":{"path":"$label"$access}}}
+EOF
+	done
+	start_prowld
+	wait_state org.test.occupied failed
+	wait_state org.test.linked failed
+	atf_check -o inline:'keep\n' cat occupied
+	atf_check -o inline:'occupied\n' readlink linked
+	wait_state org.test.restricted running
+	wait_state org.test.legacy running
+	[ -S legacy ] || atf_fail "missing legacy socket"
+	atf_check -o inline:'660 0 0\n' stat -f '%Lp %u %g' restricted
+}
+unix_socket_access_cleanup()
+{
+	stop_prowld
+}
+
 atf_init_test_cases()
 {
+	atf_add_test_case unix_socket_access
+	atf_add_test_case credentials
 	atf_add_test_case dependency_loop
 	atf_add_test_case oneshot_lists
 	atf_add_test_case conditions

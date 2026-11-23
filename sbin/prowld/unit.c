@@ -30,6 +30,7 @@
  * Unit file loading and parsing (UCL/JSON via libucl).
  */
 
+#include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -39,7 +40,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <grp.h>
-#include <libgen.h>
 #include <netinet/in.h>
 #include <pwd.h>
 #include <signal.h>
@@ -324,6 +324,65 @@ parse_mdns(const ucl_object_t *obj, mdns_config_t *mdns)
 	}
 }
 
+static bool
+parse_identity(const ucl_object_t *root, const char *key, char *name,
+    size_t namesz, const char *path)
+{
+	const ucl_object_t *obj;
+	const char *value;
+	size_t len;
+
+	obj = ucl_object_lookup(root, key);
+	if (obj == NULL)
+		return (true);
+	if (obj->next != NULL ||
+	    !ucl_object_tolstring_safe(obj, &value, &len) || len == 0 ||
+	    len >= namesz || memchr(value, '\0', len) != NULL) {
+		prowl_log(LOG_ERR, "unit %s: invalid %s", path, key);
+		return (false);
+	}
+	memcpy(name, value, len);
+	name[len] = '\0';
+	return (true);
+}
+
+static bool
+parse_socket_access(const ucl_object_t *obj, prowl_socket_t *sock,
+    const char *path)
+{
+	char owner[MAXLOGNAME] = "", group[PROWL_LABEL_MAX] = "", mode[5] = "";
+	struct passwd *pw;
+	struct group *gr;
+	unsigned long bits;
+
+	if (!parse_identity(obj, "owner", owner, sizeof(owner), path) ||
+	    !parse_identity(obj, "group", group, sizeof(group), path) ||
+	    !parse_identity(obj, "mode", mode, sizeof(mode), path))
+		return (false);
+	if (sock->family != AF_UNIX && (*owner || *group || *mode))
+		return (false);
+	if (*mode) {
+		bits = strtoul(mode, NULL, 8);
+		if (mode[strspn(mode, "01234567")] != '\0' || bits > 0777)
+			return (false);
+		sock->mode = (mode_t)bits;
+		sock->mode_set = true;
+	}
+	if (*owner) {
+		pw = getpwnam(owner);
+		if (pw == NULL || pw->pw_uid == (uid_t)-1)
+			return (false);
+		sock->owner = pw->pw_uid;
+	}
+	if (*group) {
+		gr = getgrnam(group);
+		if (gr == NULL || gr->gr_gid == (gid_t)-1)
+			return (false);
+		sock->group = gr->gr_gid;
+	}
+	return (true);
+}
+
 /*
  * Parse a single unit file into a new job_t.
  * Returns NULL on error.
@@ -356,6 +415,12 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 	if (!label_valid(job->label)) {
 		prowl_log(LOG_ERR, "unit %s: invalid label '%s', skipping",
 		    path, job->label);
+		job_free(job);
+		return (NULL);
+	}
+
+	if (!parse_identity(root, "user", job->user, sizeof(job->user), path) ||
+	    !parse_identity(root, "group", job->group, sizeof(job->group), path)) {
 		job_free(job);
 		return (NULL);
 	}
@@ -637,18 +702,6 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 		strlcpy(job->root_directory, ucl_object_tostring(obj),
 		    sizeof(job->root_directory));
 
-	/* user */
-	obj = ucl_object_lookup(root, "user");
-	if (obj != NULL && ucl_object_type(obj) == UCL_STRING)
-		strlcpy(job->user, ucl_object_tostring(obj),
-		    sizeof(job->user));
-
-	/* group */
-	obj = ucl_object_lookup(root, "group");
-	if (obj != NULL && ucl_object_type(obj) == UCL_STRING)
-		strlcpy(job->group, ucl_object_tostring(obj),
-		    sizeof(job->group));
-
 	/* umask */
 	obj = ucl_object_lookup(root, "umask");
 	if (obj != NULL && ucl_object_type(obj) == UCL_STRING) {
@@ -918,6 +971,8 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 			sock->socktype = SOCK_STREAM;
 			sock->family   = AF_UNSPEC;
 			sock->backlog  = 0;	/* SOMAXCONN */
+			sock->owner = (uid_t)-1;
+			sock->group = (gid_t)-1;
 
 			/* type: "stream" (default), "dgram", "seqpacket" */
 			f = ucl_object_lookup(sobj, "type");
@@ -971,6 +1026,12 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 				continue;
 			}
 
+			if (!parse_socket_access(sobj, sock, path)) {
+				prowl_log(LOG_ERR, "%s: invalid access settings "
+				    "for socket %s", job->label, sname);
+				job_free(job);
+				return (NULL);
+			}
 			job->sockets_count++;
 		}
 	}
@@ -1008,11 +1069,134 @@ instance_valid(const char *inst)
 }
 
 /*
- * Add the unit file at path to the parser.  For a template instance every
+ * A root-owned sticky ancestor (such as /tmp) protects root-owned
+ * entries from replacement. Every component is checked before use.
+ */
+static int
+trusted_check_fd(int fd, bool directory, bool ancestor, bool executable)
+{
+	struct stat sb;
+	int error;
+
+	if (fd == -1)
+		return (-1);
+	if (fstat(fd, &sb) == -1)
+		error = errno;
+	else if (directory ? !S_ISDIR(sb.st_mode) : !S_ISREG(sb.st_mode))
+		error = EFTYPE;
+	else if (sb.st_uid != 0 ||
+	    ((sb.st_mode & (S_IWGRP | S_IWOTH)) != 0 &&
+	    !(ancestor && (sb.st_mode & S_ISVTX) != 0)))
+		error = EPERM;
+	else if (executable &&
+	    (sb.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) == 0)
+		error = ENOEXEC;
+	else
+		return (fd);
+	close(fd);
+	errno = error;
+	return (-1);
+}
+
+int
+trusted_open_dir(const char *path)
+{
+	char full[PROWL_PATH_MAX], cwd[PROWL_PATH_MAX];
+	char *rest, *name;
+	int error, fd, nextfd, n;
+
+	if (path[0] == '/') {
+		n = snprintf(full, sizeof(full), "%s", path);
+	} else {
+		if (getcwd(cwd, sizeof(cwd)) == NULL)
+			return (-1);
+		n = snprintf(full, sizeof(full), "%s/%s", cwd, path);
+	}
+	if (n < 0 || (size_t)n >= sizeof(full)) {
+		errno = ENAMETOOLONG;
+		return (-1);
+	}
+
+	rest = full;
+	while (*rest == '/')
+		rest++;
+	fd = trusted_check_fd(open("/", O_RDONLY | O_DIRECTORY | O_CLOEXEC),
+	    true, *rest != '\0', false);
+	while (fd != -1 && *rest != '\0') {
+		name = strsep(&rest, "/");
+		if (rest == NULL)
+			rest = name + strlen(name);
+		while (*rest == '/')
+			rest++;
+		nextfd = openat(fd, name,
+		    O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+		error = errno;
+		close(fd);
+		errno = error;
+		fd = trusted_check_fd(nextfd, true, *rest != '\0', false);
+	}
+	return (fd);
+}
+
+int
+trusted_open_file_at(int dirfd, const char *name, bool executable)
+{
+	if (strchr(name, '/') != NULL) {
+		errno = EINVAL;
+		return (-1);
+	}
+	return (trusted_check_fd(openat(dirfd, name,
+	    O_RDONLY | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK), false, false,
+	    executable));
+}
+
+int
+trusted_open_file(const char *path, bool executable)
+{
+	char parent[PROWL_PATH_MAX];
+	const char *name;
+	int dirfd, fd, error;
+	size_t len;
+
+	name = strrchr(path, '/');
+	if (name == NULL) {
+		dirfd = trusted_open_dir(".");
+		name = path;
+	} else {
+		len = name == path ? 1 : (size_t)(name - path);
+		if (len >= sizeof(parent)) {
+			errno = ENAMETOOLONG;
+			return (-1);
+		}
+		memcpy(parent, path, len);
+		parent[len] = '\0';
+		dirfd = trusted_open_dir(parent);
+		name++;
+	}
+	if (dirfd == -1)
+		return (-1);
+	fd = trusted_open_file_at(dirfd, name, executable);
+	error = errno;
+	close(dirfd);
+	errno = error;
+	return (fd);
+}
+
+bool
+trusted_ucl_add_fd(struct ucl_parser *parser, int fd, const char *path)
+{
+	/* Preserve FILENAME and CURDIR for ordinary UCL files. */
+	return (ucl_parser_set_filevars(parser, path, true) &&
+	    ucl_parser_add_fd(parser, fd));
+}
+
+/*
+ * Add the opened unit file to the parser.  For a template instance every
  * "%i" in the file is replaced by the instance name and "%%" by "%".
  */
 static bool
-add_unit_file(struct ucl_parser *parser, const char *path, const char *inst)
+add_unit_fd(struct ucl_parser *parser, int fd, const char *path,
+    const char *inst)
 {
 	struct stat sb;
 	char *in, *out, *o;
@@ -1020,30 +1204,22 @@ add_unit_file(struct ucl_parser *parser, const char *path, const char *inst)
 	size_t ilen;
 	ssize_t n;
 	bool ok;
-	int fd;
 
 	if (inst == NULL)
-		return (ucl_parser_add_file(parser, path));
+		return (trusted_ucl_add_fd(parser, fd, path));
 
-	fd = open(path, O_RDONLY | O_NOFOLLOW);
-	if (fd == -1)
+	if (fstat(fd, &sb) == -1 || sb.st_size < 0 ||
+	    sb.st_size > UNIT_FILE_MAX)
 		return (false);
-	if (fstat(fd, &sb) == -1 || !S_ISREG(sb.st_mode) ||
-	    sb.st_size > UNIT_FILE_MAX) {
-		close(fd);
-		return (false);
-	}
 	ilen = strlen(inst);
 	in = malloc((size_t)sb.st_size + 1);
 	out = malloc((size_t)sb.st_size * (ilen > 1 ? ilen : 1) + 1);
 	if (in == NULL || out == NULL) {
 		free(in);
 		free(out);
-		close(fd);
 		return (false);
 	}
-	n = read(fd, in, (size_t)sb.st_size);
-	close(fd);
+	n = pread(fd, in, (size_t)sb.st_size, 0);
 	if (n < 0 || n != sb.st_size) {
 		free(in);
 		free(out);
@@ -1071,43 +1247,146 @@ add_unit_file(struct ucl_parser *parser, const char *path, const char *inst)
 	return (ok);
 }
 
+static job_t *
+unit_apply_dropins(job_t *job, int basefd, const char *path, const char *inst)
+{
+	struct ucl_parser *parser = NULL;
+	ucl_object_t *root;
+	struct dirent *de;
+	DIR *dir;
+	job_t *replacement;
+	char dropin_dir[PROWL_PATH_MAX], dropin_path[PROWL_PATH_MAX];
+	const char *base, *parent;
+	size_t len, parent_len;
+	int dfd, fd, n;
+	bool ok;
+
+	parent = path;
+	base = strrchr(path, '/');
+	if (base == NULL) {
+		base = path;
+		parent = ".";
+		parent_len = 1;
+	} else {
+		parent_len = base == path ? 1 : (size_t)(base - path);
+		base++;
+	}
+	if (inst != NULL)
+		n = snprintf(dropin_dir, sizeof(dropin_dir), "%.*s/%.*s.d",
+		    (int)parent_len, parent, (int)(strlen(base) - 5), base);
+	else
+		n = snprintf(dropin_dir, sizeof(dropin_dir), "%.*s/%s.d",
+		    (int)parent_len, parent, job->label);
+	if (n < 0 || (size_t)n >= sizeof(dropin_dir)) {
+		prowl_log(LOG_WARNING, "drop-in directory for %s: path too long",
+		    path);
+		goto fail;
+	}
+
+	dfd = trusted_open_dir(dropin_dir);
+	if (dfd == -1) {
+		if (errno == ENOENT)
+			return (job);
+		prowl_log(LOG_WARNING, "drop-in directory %s: %m",
+		    dropin_dir);
+		goto fail;
+	}
+	dir = fdopendir(dfd);
+	if (dir == NULL) {
+		prowl_log(LOG_WARNING, "drop-in directory %s: %m", dropin_dir);
+		close(dfd);
+		goto fail;
+	}
+
+	for (;;) {
+		errno = 0;
+		de = readdir(dir);
+		if (de == NULL) {
+			if (errno == 0)
+				break;
+			prowl_log(LOG_WARNING, "read drop-in directory %s: %m",
+			    dropin_dir);
+			goto fail_scan;
+		}
+		len = strlen(de->d_name);
+
+		if (len < 5 || strcmp(de->d_name + len - 5, ".unit") != 0)
+			continue;
+		n = snprintf(dropin_path, sizeof(dropin_path), "%s/%s",
+		    dropin_dir, de->d_name);
+		if (n < 0 || (size_t)n >= sizeof(dropin_path)) {
+			prowl_log(LOG_WARNING, "drop-in %s/%s: path too long",
+			    dropin_dir, de->d_name);
+			goto fail_scan;
+		}
+		fd = trusted_open_file_at(dfd, de->d_name, false);
+		if (fd == -1) {
+			prowl_log(LOG_WARNING, "drop-in %s: %m", dropin_path);
+			goto fail_scan;
+		}
+		if (parser == NULL) {
+			parser = ucl_parser_new(UCL_PARSER_NO_FILEVARS);
+			if (parser == NULL ||
+			    !add_unit_fd(parser, basefd, path, inst)) {
+				close(fd);
+				prowl_log(LOG_WARNING,
+				    "drop-in re-parse %s failed", path);
+				goto fail_scan;
+			}
+		}
+		ok = add_unit_fd(parser, fd, dropin_path, inst);
+		close(fd);
+		if (!ok) {
+			prowl_log(LOG_WARNING, "drop-in %s: %.128s",
+			    dropin_path, ucl_parser_get_error(parser));
+			goto fail_scan;
+		}
+		prowl_log(LOG_DEBUG, "applied drop-in %s", dropin_path);
+	}
+	closedir(dir);
+	if (parser == NULL)
+		return (job);
+	root = ucl_parser_get_object(parser);
+	ucl_parser_free(parser);
+	if (root == NULL)
+		goto fail;
+	replacement = unit_parse_obj(root, path);
+	ucl_object_unref(root);
+	job_free(job);
+	return (replacement);
+
+fail_scan:
+	closedir(dir);
+	if (parser != NULL)
+		ucl_parser_free(parser);
+fail:
+	job_free(job);
+	return (NULL);
+}
+
 static int
 unit_load_file_inst(const char *path, const char *inst)
 {
 	struct ucl_parser *parser;
 	ucl_object_t *root;
-	struct stat sb;
 	job_t *job;
-	int ret = 0;
+	int fd;
 
-	/* Reject unit files not owned by root or writable by others */
-	if (lstat(path, &sb) == -1) {
-		prowl_log(LOG_WARNING, "unit_load_file %s: lstat: %m", path);
-		return (-1);
-	}
-	if (!S_ISREG(sb.st_mode)) {
-		prowl_log(LOG_WARNING,
-		    "unit_load_file %s: not a regular file, skipping", path);
-		return (-1);
-	}
-	if (sb.st_uid != 0) {
-		prowl_log(LOG_WARNING,
-		    "unit_load_file %s: not owned by root, skipping", path);
-		return (-1);
-	}
-	if (sb.st_mode & S_IWOTH) {
-		prowl_log(LOG_WARNING,
-		    "unit_load_file %s: world-writable, skipping", path);
+	fd = trusted_open_file(path, false);
+	if (fd == -1) {
+		if (errno != ENOENT)
+			prowl_log(LOG_WARNING, "unit_load_file %s: %m", path);
 		return (-1);
 	}
 
 	parser = ucl_parser_new(UCL_PARSER_NO_FILEVARS);
 	if (parser == NULL) {
 		prowl_log(LOG_ERR, "ucl_parser_new failed");
+		close(fd);
 		return (-1);
 	}
 
-	if (!add_unit_file(parser, path, inst)) {
+	if (!add_unit_fd(parser, fd, path, inst)) {
 		/*
 		 * Log only a bounded prefix of the parser error.  UCL error
 		 * strings can include surrounding token text from the file,
@@ -1116,169 +1395,32 @@ unit_load_file_inst(const char *path, const char *inst)
 		prowl_log(LOG_ERR, "unit_load_file %s: %.128s", path,
 		    ucl_parser_get_error(parser));
 		ucl_parser_free(parser);
+		close(fd);
 		return (-1);
 	}
 
 	root = ucl_parser_get_object(parser);
 	ucl_parser_free(parser);
-
 	if (root == NULL) {
 		prowl_log(LOG_ERR, "unit_load_file %s: empty document", path);
+		close(fd);
 		return (-1);
 	}
 
 	job = unit_parse_obj(root, path);
+	ucl_object_unref(root);
 	if (job == NULL) {
-		ucl_object_unref(root);
+		close(fd);
 		return (-1);
 	}
 
-	/*
-	 * Drop-in override support (§6.1): check for a <label>.d/ directory
-	 * and merge any .unit files found there.
-	 */
-	char dropin_dir[PROWL_PATH_MAX];
-	char *parent = strdup(path);
-	char *dname = dirname(parent);
-	if (inst != NULL) {
-		char *base = strdup(path);
-		char *bname = basename(base);
-		size_t blen = strlen(bname);
-
-		/* A template's drop-ins live in <name>@.d */
-		if (blen > 5)
-			blen -= 5;
-		snprintf(dropin_dir, sizeof(dropin_dir), "%s/%.*s.d", dname,
-		    (int)blen, bname);
-		free(base);
-	} else
-		snprintf(dropin_dir, sizeof(dropin_dir), "%s/%s.d", dname,
-		    job->label);
-	free(parent);
-
-	{
-		int dfd;
-		struct stat dsb;
-		DIR *ddir;
-
-		/*
-		 * Open the drop-in directory with O_NOFOLLOW|O_DIRECTORY to
-		 * prevent symlink attacks between the lstat check and opendir.
-		 * fstat on the resulting fd gives the definitive security check.
-		 */
-		dfd = open(dropin_dir, O_RDONLY | O_DIRECTORY | O_NOFOLLOW);
-		if (dfd >= 0) {
-			if (fstat(dfd, &dsb) == -1) {
-				close(dfd);
-				goto skip_dropins;
-			}
-			if (dsb.st_uid != 0) {
-				prowl_log(LOG_WARNING,
-				    "drop-in %s not owned by root, skipping",
-				    dropin_dir);
-				close(dfd);
-				goto skip_dropins;
-			}
-			if (dsb.st_mode & S_IWOTH) {
-				prowl_log(LOG_WARNING,
-				    "drop-in %s is world-writable, skipping",
-				    dropin_dir);
-				close(dfd);
-				goto skip_dropins;
-			}
-
-			ddir = fdopendir(dfd);
-			if (ddir != NULL) {
-				struct dirent *de;
-				bool has_dropins = false;
-
-				prowl_log(LOG_DEBUG, "checking for drop-ins in %s",
-				    dropin_dir);
-
-				while ((de = readdir(ddir)) != NULL) {
-					size_t nlen = strlen(de->d_name);
-					if (nlen < 5 ||
-					    strcmp(de->d_name + nlen - 5,
-					    ".unit") != 0)
-						continue;
-					/* Reject names containing '/' */
-					if (strchr(de->d_name, '/') != NULL)
-						continue;
-					has_dropins = true;
-					break;
-				}
-				rewinddir(ddir);
-
-				if (has_dropins) {
-					ucl_object_unref(root);
-					parser = ucl_parser_new(
-					    UCL_PARSER_NO_FILEVARS);
-					if (!add_unit_file(parser, path,
-					    inst)) {
-						prowl_log(LOG_WARNING,
-						    "drop-in re-parse %s: %.128s",
-						    path,
-						    ucl_parser_get_error(parser));
-						ucl_parser_free(parser);
-						closedir(ddir);
-						goto skip_dropins;
-					}
-
-					while ((de = readdir(ddir)) != NULL) {
-						size_t nlen;
-						char dpath[PROWL_PATH_MAX];
-
-						nlen = strlen(de->d_name);
-						if (nlen < 5 ||
-						    strcmp(de->d_name + nlen - 5,
-						    ".unit") != 0)
-							continue;
-						if (strchr(de->d_name, '/') !=
-						    NULL)
-							continue;
-
-						snprintf(dpath, sizeof(dpath),
-						    "%s/%s", dropin_dir,
-						    de->d_name);
-
-						if (!add_unit_file(parser,
-						    dpath, inst)) {
-							prowl_log(LOG_WARNING,
-							    "drop-in %s: %.128s",
-							    dpath,
-							    ucl_parser_get_error(
-							    parser));
-							continue;
-						}
-						prowl_log(LOG_DEBUG,
-						    "applied drop-in %s", dpath);
-					}
-
-					root = ucl_parser_get_object(parser);
-					ucl_parser_free(parser);
-
-					if (root != NULL) {
-						job_t *newjob = unit_parse_obj(
-						    root, path);
-						if (newjob != NULL) {
-							job_free(job);
-							job = newjob;
-						}
-					}
-				}
-				closedir(ddir);
-			} else {
-				close(dfd);
-			}
-		}
-	}
-
-skip_dropins:
-	ucl_object_unref(root);
+	job = unit_apply_dropins(job, fd, path, inst);
+	close(fd);
+	if (job == NULL)
+		return (-1);
 	TAILQ_INSERT_TAIL(&g_jobs, job, entries);
 	prowl_log(LOG_DEBUG, "loaded unit %s from %s", job->label, path);
-
-	return (ret);
+	return (0);
 }
 
 static bool
@@ -1302,17 +1444,29 @@ unit_load_template(const char *path)
 	const ucl_object_t *obj;
 	char list[1024], *p, *tok;
 	const char *def = NULL;
-	int n = 0;
+	int fd, n = 0;
+	bool ok;
 
-	parser = ucl_parser_new(UCL_PARSER_NO_FILEVARS);
-	if (parser == NULL)
+	fd = trusted_open_file(path, false);
+	if (fd == -1) {
+		if (errno != ENOENT)
+			prowl_log(LOG_WARNING, "unit_load_template %s: %m", path);
 		return (-1);
-	if (!ucl_parser_add_file(parser, path)) {
-		prowl_log(LOG_ERR, "unit_load_file %s: %.128s", path,
+	}
+	parser = ucl_parser_new(UCL_PARSER_NO_FILEVARS);
+	if (parser == NULL) {
+		close(fd);
+		return (-1);
+	}
+	ok = add_unit_fd(parser, fd, path, NULL);
+	close(fd);
+	if (!ok) {
+		prowl_log(LOG_ERR, "unit_load_template %s: %.128s", path,
 		    ucl_parser_get_error(parser));
 		ucl_parser_free(parser);
 		return (-1);
 	}
+
 	root = ucl_parser_get_object(parser);
 	ucl_parser_free(parser);
 	if (root == NULL)
@@ -1395,8 +1549,8 @@ unit_instantiate(const char *label)
 		dirs[4] = NULL;
 	}
 	for (i = 0; dirs[i] != NULL; i++) {
-		snprintf(path, sizeof(path), "%s/%s@.unit", dirs[i], stem);
-		if (access(path, R_OK) != 0)
+		if (snprintf(path, sizeof(path), "%s/%s@.unit", dirs[i], stem) >=
+		    (int)sizeof(path))
 			continue;
 		if (unit_load_file_inst(path, at + 1) == 0) {
 			job_t *job = job_find_instance(label);
@@ -1417,13 +1571,20 @@ unit_load_dir(const char *dirpath)
 	DIR *dir;
 	struct dirent *de;
 	char path[PROWL_PATH_MAX];
-	int loaded = 0;
+	int fd, loaded = 0;
 
-	dir = opendir(dirpath);
-	if (dir == NULL) {
+	fd = trusted_open_dir(dirpath);
+	if (fd == -1) {
 		if (errno != ENOENT)
 			prowl_log(LOG_WARNING, "unit_load_dir %s: %m",
 			    dirpath);
+		return (0);
+	}
+
+	dir = fdopendir(fd);
+	if (dir == NULL) {
+		prowl_log(LOG_WARNING, "unit_load_dir %s: %m", dirpath);
+		close(fd);
 		return (0);
 	}
 
@@ -1435,7 +1596,9 @@ unit_load_dir(const char *dirpath)
 		    strcmp(de->d_name + namelen - 5, ".unit") != 0)
 			continue;
 
-		snprintf(path, sizeof(path), "%s/%s", dirpath, de->d_name);
+		if (snprintf(path, sizeof(path), "%s/%s", dirpath, de->d_name) >=
+		    (int)sizeof(path))
+			continue;
 
 		if (unit_load_file(path) == 0)
 			loaded++;
