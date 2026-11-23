@@ -498,6 +498,7 @@ EOF
 	atf_check -o ignore ${CTL} mask org.test.stubborn
 	atf_check -o ignore ${CTL} mask org.test.listener
 	[ -L run/db/masked.d/org.test.listener ] || atf_fail "missing private mask"
+	[ ! -e listener.sock ] || atf_fail "masked listener left its socket file"
 	atf_check -s not-exit:0 -o ignore -e ignore ${CTL} start org.test.listener
 	: >empty
 	atf_check -s not-exit:0 -o ignore -e ignore nc -w 1 -U listener.sock <empty
