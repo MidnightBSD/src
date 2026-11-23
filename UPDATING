@@ -7,6 +7,13 @@ Updating Information for MidnightBSD users.
 	trusted directories. prowld skips symbolic links and files writable by
 	group or others.
 
+	prowld, as PID 1, gives rc.d scripts marked "KEYWORD: interactive"
+	(geli, zfskeys and firstboot) and units with interactive = true the
+	console on standard input until it goes multi-user, so passphrase and
+	first-boot prompts work.  Other services still read /dev/null.  PID 1
+	also waits for the first retry of a boot service that failed (at most
+	30 seconds) before it raises kern.securelevel and starts gettys.
+
 20261122:
 	prowld services now receive EOF on standard input by default. A failed
 	standard-stream redirect prevents the command from running. IPFilter
