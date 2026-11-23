@@ -212,7 +212,7 @@ pidfile_path(const char *raw, const char *name, char *out, size_t outsz)
  * this PROVIDE.
  */
 static job_t *
-rcshim_parse_script(const char *path, const char *scriptname)
+rcshim_parse_script(int fd, const char *path, const char *scriptname)
 {
 	FILE *fp;
 	char line[1024];
@@ -231,19 +231,11 @@ rcshim_parse_script(const char *path, const char *scriptname)
 	char rcvar_name[PROWL_LABEL_MAX];
 	char name_var[PROWL_LABEL_MAX], pidfile_raw[PROWL_PATH_MAX];
 
-	{
-		int rfd = open(path, O_RDONLY | O_NOFOLLOW);
-		if (rfd == -1) {
-			prowl_log(LOG_WARNING, "rcshim: cannot open %s: %m",
-			    path);
-			return (NULL);
-		}
-		fp = fdopen(rfd, "r");
-		if (fp == NULL) {
-			prowl_log(LOG_WARNING, "rcshim: fdopen %s: %m", path);
-			close(rfd);
-			return (NULL);
-		}
+	fp = fdopen(fd, "r");
+	if (fp == NULL) {
+		prowl_log(LOG_WARNING, "rcshim: fdopen %s: %m", path);
+		close(fd);
+		return (NULL);
 	}
 
 	/*
@@ -431,64 +423,65 @@ rcshim_parse_script(const char *path, const char *scriptname)
 	return (job);
 }
 
+/*
+ * Recheck the script and its parents before executing it. The validated
+ * parent chain prevents unprivileged pathname replacement. Keep argv[0]
+ * and kernel interpreter handling for rc scripts that depend on $0.
+ */
+int
+rcshim_exec(char *const *argv, char *const *envp)
+{
+	int fd;
+
+	fd = trusted_open_file(argv[0], true);
+	if (fd == -1) {
+		prowl_log(LOG_WARNING, "rcshim: %s: %m", argv[0]);
+		return (-1);
+	}
+	close(fd);
+	return (execve(argv[0], argv, envp));
+}
+
 int
 rcshim_scan_dir(const char *dirpath)
 {
 	DIR *dir;
 	struct dirent *de;
 	char path[PROWL_PATH_MAX];
-	struct stat sb;
-	int loaded = 0;
+	int dfd, loaded = 0;
 
-	dir = opendir(dirpath);
-	if (dir == NULL) {
+	dfd = trusted_open_dir(dirpath);
+	if (dfd == -1) {
 		if (errno != ENOENT)
 			prowl_log(LOG_WARNING, "rcshim_scan_dir %s: %m",
 			    dirpath);
 		return (0);
 	}
+	dir = fdopendir(dfd);
+	if (dir == NULL) {
+		prowl_log(LOG_WARNING, "rcshim_scan_dir %s: %m", dirpath);
+		close(dfd);
+		return (0);
+	}
 
 	while ((de = readdir(dir)) != NULL) {
+		job_t *job;
+		int fd;
+
 		if (de->d_name[0] == '.')
 			continue;
-
-		snprintf(path, sizeof(path), "%s/%s", dirpath, de->d_name);
-
-		/*
-		 * Use lstat(2) so symlinks are seen as symlinks, not as the
-		 * files they point to.  A symlink is not a regular file and
-		 * will be skipped by the S_ISREG check below.
-		 */
-		if (lstat(path, &sb) == -1)
+		if (snprintf(path, sizeof(path), "%s/%s", dirpath, de->d_name) >=
+		    (int)sizeof(path))
 			continue;
 
-		/* Skip directories, symlinks, and non-regular files */
-		if (!S_ISREG(sb.st_mode))
-			continue;
-
-		/* Only load executable scripts */
-		if ((sb.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) == 0)
-			continue;
-
-		/*
-		 * Apply the same trust checks as unit_load_file(): the script
-		 * must be owned by root and must not be world-writable.
-		 * rc-shims are executed as root, so a non-root-owned or
-		 * world-writable script is an arbitrary-code-execution risk.
-		 */
-		if (sb.st_uid != 0) {
-			prowl_log(LOG_WARNING,
-			    "rcshim: %s not owned by root (uid %u), skipping",
-			    path, (unsigned)sb.st_uid);
+		fd = trusted_open_file_at(dfd, de->d_name, true);
+		if (fd == -1) {
+			if (errno != ENOENT && errno != ENOEXEC &&
+			    errno != EFTYPE && errno != ELOOP)
+				prowl_log(LOG_WARNING, "rcshim: %s: %m", path);
 			continue;
 		}
-		if (sb.st_mode & S_IWOTH) {
-			prowl_log(LOG_WARNING,
-			    "rcshim: %s is world-writable, skipping", path);
-			continue;
-		}
-
-		job_t *job = rcshim_parse_script(path, de->d_name);
+		job = rcshim_parse_script(fd, path, de->d_name);
 		if (job != NULL) {
 			TAILQ_INSERT_TAIL(&g_jobs, job, entries);
 			prowl_log(LOG_DEBUG, "rcshim loaded %s from %s",

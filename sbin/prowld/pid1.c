@@ -67,6 +67,9 @@
 #define PID1_KILL_WAIT	5	/* seconds to wait after SIGKILL */
 #define PID1_RUNDOWN_TMO 120	/* seconds rc.shutdown may take */
 
+/* Loader failure can send us to a recovery shell on the original root. */
+static bool loader_recovery;
+
 static char *const pid1_env[] = {
 	(char *)(uintptr_t)"HOME=/",
 	(char *)(uintptr_t)"PATH=/sbin:/bin:/usr/sbin:/usr/bin",
@@ -306,13 +309,19 @@ static void
 pid1_exec_script(char *const argv[])
 {
 	const char *script = argv[1];
+	struct stat sb;
 
 	if (access(script, X_OK) == 0) {
 		execve(script, argv + 1, pid1_env);
 		prowl_log(LOG_WARNING, "can't directly exec %s: %m", script);
 	} else if (errno != EACCES) {
 		prowl_log(LOG_WARNING, "can't access %s: %m", script);
+		return;
 	}
+	/* A shell started as PID 1 would exit if it cannot read the script. */
+	if (stat(script, &sb) == -1 || !S_ISREG(sb.st_mode) ||
+	    access(script, R_OK) == -1)
+		return;
 	execve(pid1_shell(), argv, pid1_env);
 	prowl_log(LOG_ERR, "can't exec %s for %s: %m", pid1_shell(), script);
 }
@@ -334,7 +343,9 @@ pid1_init_exec(void)
 	argv[2] = NULL;
 	prowl_reset_signals();
 	pid1_exec_script(argv);
-	_exit(0);
+	prowl_log(LOG_ERR, "init_exec failed; entering single-user mode");
+	loader_recovery = true;
+	pid1_single_user();
 }
 
 /*
@@ -384,8 +395,11 @@ pid1_init_chroot(void)
 
 	if (!pid1_kenv("init_chroot", path, sizeof(path)))
 		return;
-	if (chdir(path) != 0 || chroot(".") != 0)
-		prowl_log(LOG_WARNING, "can't chroot to %s: %m", path);
+	if (chroot(path) == -1 || chdir("/") == -1) {
+		prowl_log(LOG_ERR, "can't enter init_chroot %s: %m", path);
+		loader_recovery = true;
+		pid1_single_user();
+	}
 }
 
 /*
@@ -406,6 +420,14 @@ pid1_single_user_auth(void)
 
 	typ = getttynam("console");
 	pp = getpwnam("root");
+	if (loader_recovery && (typ == NULL ||
+	    ((typ->ty_status & TTY_SECURE) == 0 &&
+	    (pp == NULL || pp->pw_uid != 0 || pp->pw_passwd == NULL ||
+	    *pp->pw_passwd == '\0')))) {
+		prowl_log(LOG_ERR, "cannot verify console recovery policy");
+		sleep(5);
+		_exit(0);
+	}
 	if (typ == NULL || (typ->ty_status & TTY_SECURE) != 0 ||
 	    pp == NULL || *pp->pw_passwd == '\0')
 		return;
@@ -449,6 +471,10 @@ pid1_single_user(void)
 			prowl_reset_signals();
 			(void)setsid();
 			fd = open(_PATH_CONSOLE, O_RDWR);
+			if (loader_recovery && fd == -1) {
+				sleep(5);
+				_exit(0);
+			}
 			if (fd != -1) {
 				(void)ioctl(fd, TIOCSCTTY, 0);
 				(void)dup2(fd, 0);

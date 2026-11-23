@@ -111,9 +111,8 @@ is received.
 The file is parsed by
 .Xr libucl 3
 and accepts UCL or JSON syntax.
-The file must be owned by root and must not be world-writable;
-.Nm
-ignores it otherwise.
+The file must meet the trust requirements described in
+.Sx CONFIGURATION TRUST .
 .Pp
 The following keys are recognised:
 .Bl -tag -width "max_concurrent_starts"
@@ -563,6 +562,8 @@ in the child's environment.
 The job signals readiness by sending a datagram containing
 .Dv READY=1
 to that socket.
+The kernel supplies the sending process's effective UID with each datagram.
+It must match the UID assigned to the job's notification socket at launch.
 .Pp
 The following
 .Dv KEY=value
@@ -652,30 +653,31 @@ the native unit wins and the
 script is skipped.
 This allows incremental migration: shipping a native unit file
 automatically retires the rc.d script without any administrator action.
-.Pp
-.Sy Trust requirements for rc.d scripts .
-Because rc.d scripts are executed as root,
+.Sh CONFIGURATION TRUST
 .Nm
-applies the same ownership and writability checks to scanned scripts as
-it does to native unit files and the configuration file.
-A script is silently skipped and a
-.Dv LOG_WARNING
-message is emitted if any of the following conditions are true:
-.Bl -bullet -compact
-.It
-The directory entry is not a regular file
-.Pq symlinks are rejected .
-.It
-The file is not owned by root
-.Pq uid\ 0 .
-.It
-The file has the world-writable bit set.
-.El
-Scripts that are not executable are also skipped, as before.
-Administrators who install rc.d scripts must ensure that the scripts
-and their parent directories
-.Pq Pa /etc/rc.d , Pa /usr/local/etc/rc.d
-are owned by root and not world-writable.
+accepts only regular files owned by root with neither group nor other
+write permission as configuration files, unit files, drop-ins,
+or executable
+.Pa rc.d
+scripts.
+The immediate directory and each ancestor must be owned by root.
+The immediate directory must have neither group nor other write
+permission.
+An ancestor with group or other write permission is allowed only when
+it has the sticky bit set, which protects root-owned entries from
+replacement.
+Symbolic links are rejected in these paths.
+.Pp
+These checks cover files opened by
+.Nm .
+Administrators using UCL includes or load macros must independently
+secure the external inputs and their parent directories.
+.Pp
+Each
+.Pa rc.d
+script must have an execute permission bit set.
+.Nm
+checks its file and directory permissions again before invoking it.
 .Sh READ-ONLY MEDIA
 .Nm
 is designed to operate correctly on read-only installation media
@@ -819,11 +821,17 @@ honours:
 .It Va init_exec
 Run this script in place of init.
 It is expected to end by rebooting.
+If the script cannot be launched, enter single-user recovery.
 .It Va init_script
 Run this script before the boot starts; if it exits non-zero, go to
 single-user mode.
 .It Va init_chroot
 Change root to this directory before starting.
+If this fails, enter single-user recovery.
+Recovery after a loader configuration failure requires an explicitly secure
+console in
+.Xr ttys 5
+or successful root password authentication on a configured console.
 .It Va init_shell
 The shell for single-user mode and for the scripts above
 .Pq default Pa /bin/sh .
@@ -1042,11 +1050,14 @@ is given.
 .It Pa /var/run/prowld/prowld.sock
 Control socket
 .Pq Unix domain, mode 0660, owned root:wheel .
+Four of the 32 connections are reserved for root.
+Each other authorized UID can hold up to four connections.
+The first request and subsequent partial requests have a 30-second deadline.
 .It Pa /var/run/prowld/prowld.pid
 PID file.
 .It Pa /var/run/prowld/notify/
-Per-job sd_notify datagram sockets
-.Pq mode 0700 .
+Root-owned directory with mode 0711.
+Each per-job notification socket has mode 0600 and belongs to its service UID.
 .It Pa /var/run/prowld/generated.d/
 Runtime-generated unit files
 .Pq e.g., from prowl-generator .

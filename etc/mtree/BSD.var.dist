@@ -102,7 +102,7 @@
         prowld
             generated.d
             ..
-            notify      mode=0700
+            notify      mode=0711
             ..
         ..
         wpa_supplicant tags=package=wpa

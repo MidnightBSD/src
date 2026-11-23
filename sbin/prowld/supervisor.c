@@ -441,45 +441,88 @@ notify_socket_open(job_t *job)
 {
 	struct sockaddr_un sun;
 	struct kevent kev;
+	struct stat sb;
 	char path[PROWL_PATH_MAX];
-	int fd;
+	uid_t uid;
+	mode_t oldmask;
+	int dirfd, fd, on, rc, saved_errno;
 
 	if (notify_socket_path(job, path, sizeof(path)) == -1) {
 		prowl_log(LOG_WARNING,
 		    "notify socket path too long for job %s", job->label);
 		return (-1);
 	}
-
-	unlink(path);
-
-	fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_NONBLOCK, 0);
-	if (fd == -1) {
-		prowl_log(LOG_WARNING, "notify_socket_open socket: %m");
+	/* Check every path component before unlinking or creating a socket. */
+	dirfd = trusted_open_dir(g_notify_dir);
+	if (dirfd == -1) {
+		prowl_log(LOG_WARNING, "unsafe notify directory %s: %m",
+		    g_notify_dir);
+		return (-1);
+	}
+	if (fstat(dirfd, &sb) == -1 || (sb.st_mode & 0777) != 0711) {
+		prowl_log(LOG_WARNING, "notify directory %s is not usable",
+		    g_notify_dir);
+		close(dirfd);
+		return (-1);
+	}
+	if (unlinkat(dirfd, job->label, 0) == -1 && errno != ENOENT) {
+		prowl_log(LOG_WARNING, "unlink notify socket %s: %m", path);
+		close(dirfd);
 		return (-1);
 	}
 
+	fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
+	if (fd == -1) {
+		prowl_log(LOG_WARNING, "notify_socket_open socket: %m");
+		close(dirfd);
+		return (-1);
+	}
+	on = 1;
+	if (setsockopt(fd, SOL_LOCAL, LOCAL_CREDS_PERSISTENT, &on,
+	    sizeof(on)) == -1) {
+		prowl_log(LOG_WARNING, "notify credentials: %m");
+		close(fd);
+		close(dirfd);
+		return (-1);
+	}
 	memset(&sun, 0, sizeof(sun));
 	sun.sun_family = AF_UNIX;
 	strlcpy(sun.sun_path, path, sizeof(sun.sun_path));
-
-	if (bind(fd, (struct sockaddr *)&sun, sizeof(sun)) == -1) {
+	oldmask = umask(0177);
+	rc = bind(fd, (struct sockaddr *)&sun, sizeof(sun));
+	saved_errno = errno;
+	(void)umask(oldmask);
+	if (rc == -1) {
+		errno = saved_errno;
 		prowl_log(LOG_WARNING, "notify_socket_open bind %s: %m", path);
 		close(fd);
+		close(dirfd);
 		return (-1);
 	}
+	uid = (job->run_priv_set && job->run_uid != (uid_t)-1) ?
+	    job->run_uid : 0;
+	if (fchownat(dirfd, job->label, uid, (gid_t)-1,
+	    AT_SYMLINK_NOFOLLOW) == -1 ||
+	    fchmodat(dirfd, job->label, 0600, 0) == -1) {
+		prowl_log(LOG_WARNING, "notify socket permissions %s: %m",
+		    path);
+		goto fail;
+	}
 
-	fchmod(fd, 0600);
-
-	/* udata = job pointer so the event loop knows which job to notify */
 	EV_SET(&kev, (uintptr_t)fd, EVFILT_READ, EV_ADD, 0, 0, (void *)job);
 	if (kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL) == -1) {
 		prowl_log(LOG_WARNING, "notify_socket_open kevent: %m");
-		close(fd);
-		unlink(path);
-		return (-1);
+		goto fail;
 	}
-
+	job->notify_uid = uid;
+	close(dirfd);
 	return (fd);
+
+fail:
+	(void)unlinkat(dirfd, job->label, 0);
+	close(dirfd);
+	close(fd);
+	return (-1);
 }
 
 /*
@@ -555,51 +598,61 @@ redirect_fd(int stdfd, const char *path, int flags)
  * getpwnam/getgrnam/getgrouplist are not async-signal-safe; calling them
  * here ensures the child only uses the safe setgroups/setgid/setuid calls.
  */
-static void
+static bool
 resolve_job_privileges(job_t *job)
 {
 	struct passwd *pw;
 	struct group *gr;
+	uid_t uid;
+	gid_t gid, groups[PROWL_GROUPS_MAX];
 	int ngroups;
 
-	job->run_priv_set = false;
-	job->run_uid = (uid_t)-1;
-	job->run_gid = (gid_t)-1;
-	job->run_ngroups = 0;
+	if (job->user[0] == '\0' && job->group[0] == '\0') {
+		job->run_priv_set = false;
+		return (true);
+	}
 
-	if (job->user[0] == '\0' && job->group[0] == '\0')
-		return;
-
+	uid = (uid_t)-1;
+	gid = (gid_t)-1;
+	ngroups = 0;
 	if (job->group[0] != '\0') {
 		gr = getgrnam(job->group);
-		if (gr == NULL) {
-			prowl_log(LOG_WARNING, "job %s: group '%s' not found",
+		if (gr == NULL || gr->gr_gid == (gid_t)-1) {
+			prowl_log(LOG_WARNING, "job %s: cannot resolve group '%s'",
 			    job->label, job->group);
-			return;
+			return (false);
 		}
-		job->run_gid = gr->gr_gid;
+		gid = gr->gr_gid;
 	}
 
 	if (job->user[0] != '\0') {
 		pw = getpwnam(job->user);
-		if (pw == NULL) {
-			prowl_log(LOG_WARNING, "job %s: user '%s' not found",
+		if (pw == NULL || pw->pw_uid == (uid_t)-1 ||
+		    (gid == (gid_t)-1 && pw->pw_gid == (gid_t)-1)) {
+			prowl_log(LOG_WARNING, "job %s: cannot resolve user '%s'",
 			    job->label, job->user);
-			return;
+			return (false);
 		}
-		job->run_uid = pw->pw_uid;
-		if (job->group[0] == '\0')
-			job->run_gid = pw->pw_gid;
-
+		uid = pw->pw_uid;
+		if (gid == (gid_t)-1)
+			gid = pw->pw_gid;
 		ngroups = PROWL_GROUPS_MAX;
-		getgrouplist(pw->pw_name, job->run_gid,
-		    job->run_groups, &ngroups);
-		if (ngroups < 1)
-			ngroups = 1;
-		job->run_ngroups = ngroups;
+		if (getgrouplist(pw->pw_name, gid, groups, &ngroups) != 0 ||
+		    ngroups < 1 || ngroups > PROWL_GROUPS_MAX ||
+		    groups[0] != gid) {
+			prowl_log(LOG_WARNING, "job %s: cannot resolve group "
+			    "list for user '%s' (limit %d)", job->label,
+			    job->user, PROWL_GROUPS_MAX);
+			return (false);
+		}
+		memcpy(job->run_groups, groups, ngroups * sizeof(groups[0]));
 	}
 
+	job->run_uid = uid;
+	job->run_gid = gid;
+	job->run_ngroups = ngroups;
 	job->run_priv_set = true;
+	return (true);
 }
 
 /*
@@ -615,12 +668,10 @@ drop_privileges(const job_t *job)
 	if (!job->run_priv_set)
 		return;
 
-	if (job->run_ngroups > 0) {
-		if (setgroups((size_t)job->run_ngroups,
-		    job->run_groups) == -1) {
-			syslog(LOG_ERR, "prowld: setgroups failed: %m");
-			_exit(1);
-		}
+	if (setgroups(job->run_ngroups,
+	    job->run_ngroups == 0 ? NULL : job->run_groups) == -1) {
+		syslog(LOG_ERR, "prowld: setgroups failed: %m");
+		_exit(1);
 	}
 	if (job->run_gid != (gid_t)-1) {
 		if (setgid(job->run_gid) == -1) {
@@ -910,7 +961,7 @@ child_setup_and_exec(job_t *job)
 			argv[1] = (char *)(uintptr_t)(g_boot_mode ?
 			    "faststart" : "start");
 		argv[2] = NULL;
-		execve(argv[0], argv, envp);
+		rcshim_exec(argv, envp);
 		_exit(127);
 	}
 
@@ -1045,7 +1096,7 @@ child_setup_and_exec(job_t *job)
 }
 
 /*
- * Fork and start a job.  Returns 0 on success, -1 on fork failure.
+ * Fork and start a job.  Returns 0 on success, -1 if the job cannot start.
  */
 int
 supervisor_start(job_t *job)
@@ -1072,12 +1123,15 @@ supervisor_start(job_t *job)
 		}
 	}
 
+	if (!resolve_job_privileges(job)) {
+		job_set_state(job, JOB_STATE_FAILED);
+		return (-1);
+	}
+
 	prowl_log(LOG_NOTICE, "starting %s", job->label);
 	job->started_at = time(NULL);
 	job->restart_hold = false;
 	job_set_state(job, JOB_STATE_STARTING);
-
-	resolve_job_privileges(job);
 
 	/*
 	 * Create the notify socket before fork so it exists when the child
@@ -1089,10 +1143,12 @@ supervisor_start(job_t *job)
 		job->notify_fd = notify_socket_open(job);
 		if (job->notify_fd >= 0)
 			use_notify = true;
-		else
-			prowl_log(LOG_WARNING,
-			    "job %s: notify socket failed, "
-			    "falling back to throttle timer", job->label);
+		else {
+			prowl_log(LOG_WARNING, "job %s: notify socket failed",
+			    job->label);
+			job_set_state(job, JOB_STATE_FAILED);
+			return (-1);
+		}
 	}
 
 	/*
@@ -1173,6 +1229,9 @@ supervisor_rc_stop(job_t *job)
 {
 	pid_t pid;
 
+	if (!resolve_job_privileges(job))
+		return (-1);
+
 	if (job->type == JOB_TYPE_RCSHIM)
 		prowl_log(LOG_NOTICE, "stopping %s via %s stop", job->label,
 		    job->rcshim_path);
@@ -1180,7 +1239,6 @@ supervisor_rc_stop(job_t *job)
 		prowl_log(LOG_NOTICE, "stopping %s via its stop command",
 		    job->label);
 	job->rc_stopping = true;
-	resolve_job_privileges(job);
 
 	pid = fork();
 	if (pid == -1) {
@@ -1233,12 +1291,13 @@ supervisor_run_action(job_t *job, int action, char *out, size_t outsz,
 	    job->action_argc[action] == 0)
 		return (-1);
 
+	if (!resolve_job_privileges(job))
+		return (-1);
+
 	if (pipe(fds) == -1) {
 		prowl_log(LOG_ERR, "pipe %s: %m", job->label);
 		return (-1);
 	}
-	resolve_job_privileges(job);
-
 	pid = fork();
 	if (pid == -1) {
 		prowl_log(LOG_ERR, "fork %s: %m", job->label);
@@ -1327,7 +1386,10 @@ supervisor_run_list(job_t *job, int list)
 	pid_t pid;
 	int i, st;
 
-	resolve_job_privileges(job);
+	if (job->cmd_count[list] == 0)
+		return (true);
+	if (!resolve_job_privileges(job))
+		return (false);
 	for (i = 0; i < job->cmd_count[list]; i++) {
 		c = &job->cmds[list][i];
 		if (!cmd_enabled(job, c))
@@ -1471,11 +1533,15 @@ supervisor_socket_activate(job_t *job)
 {
 	pid_t pid;
 
+	if (!resolve_job_privileges(job)) {
+		/* A pending connection would immediately retrigger a rearm. */
+		job_set_state(job, JOB_STATE_FAILED);
+		return;
+	}
+
 	prowl_log(LOG_NOTICE, "socket-activating %s", job->label);
 	job->started_at = time(NULL);
 	job_set_state(job, JOB_STATE_STARTING);
-
-	resolve_job_privileges(job);
 
 	pid = fork();
 	if (pid == -1) {
@@ -1831,8 +1897,7 @@ mainpid_valid(const job_t *job, pid_t new_pid)
 	 * If the job has no explicit user, prowld keeps root privileges,
 	 * so the child must also be root.
 	 */
-	expected_uid = (job->run_priv_set && job->run_uid != (uid_t)-1)
-	    ? job->run_uid : 0;
+	expected_uid = job->notify_uid;
 	if (kp.ki_uid != expected_uid) {
 		prowl_log(LOG_WARNING,
 		    "job %s: MAINPID=%d rejected: uid %u != expected %u",
@@ -1871,20 +1936,65 @@ mainpid_valid(const job_t *job, pid_t new_pid)
 void
 supervisor_handle_notify(job_t *job)
 {
+	union {
+		struct cmsghdr align;
+		char bytes[CMSG_SPACE(SOCKCRED2SIZE(CMGROUP_MAX)) +
+		    CMSG_SPACE(sizeof(int) * 16)];
+	} control;
+	struct msghdr msg;
+	struct iovec iov;
+	struct cmsghdr *cmsg;
+	struct sockcred2 *cred;
 	char buf[4096];
 	ssize_t n;
 	char *p, *end, *eq, *nl;
+	uid_t expected_uid;
+	bool authenticated, rights;
+	size_t count, i;
+	int received_fd;
 
 	if (job->notify_fd < 0)
 		return;
-
-	n = recv(job->notify_fd, buf, sizeof(buf) - 1, MSG_DONTWAIT);
-	if (n == -1) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
-			return;
+	memset(&msg, 0, sizeof(msg));
+	iov.iov_base = buf;
+	iov.iov_len = sizeof(buf) - 1;
+	msg.msg_iov = &iov;
+	msg.msg_iovlen = 1;
+	msg.msg_control = control.bytes;
+	msg.msg_controllen = sizeof(control.bytes);
+	n = recvmsg(job->notify_fd, &msg, MSG_DONTWAIT | MSG_CMSG_CLOEXEC);
+	if (n == -1)
 		return;
+
+	expected_uid = job->notify_uid;
+	authenticated = false;
+	rights = false;
+	for (cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL;
+	    cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+		if (cmsg->cmsg_len < CMSG_LEN(0) ||
+		    (char *)cmsg + cmsg->cmsg_len >
+		    (char *)msg.msg_control + msg.msg_controllen)
+			break;
+		if (cmsg->cmsg_level != SOL_SOCKET)
+			continue;
+		if (cmsg->cmsg_type == SCM_RIGHTS) {
+			rights = true;
+			count = (cmsg->cmsg_len - CMSG_LEN(0)) / sizeof(int);
+			for (i = 0; i < count; i++) {
+				memcpy(&received_fd, CMSG_DATA(cmsg) +
+				    i * sizeof(int), sizeof(received_fd));
+				close(received_fd);
+			}
+		} else if (cmsg->cmsg_type == SCM_CREDS2 &&
+		    cmsg->cmsg_len >= CMSG_LEN(sizeof(struct sockcred2))) {
+			cred = (struct sockcred2 *)(void *)CMSG_DATA(cmsg);
+			if (cred->sc_version == 0 &&
+			    cred->sc_euid == expected_uid)
+				authenticated = true;
+		}
 	}
-	if (n == 0)
+	if (n == 0 || !authenticated || rights ||
+	    (msg.msg_flags & (MSG_TRUNC | MSG_CTRUNC)) != 0)
 		return;
 	buf[n] = '\0';
 

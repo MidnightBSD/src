@@ -41,6 +41,15 @@ Files must have the
 .Pa .unit
 extension and be located in one of the search directories described in
 .Xr prowld 8 .
+Unit files and drop-in files must be regular files owned by root, with
+neither group nor other write permission, in a trusted directory chain.
+See
+.Xr prowld 8
+for path requirements.
+If a drop-in directory or a
+.Pa .unit
+file in it fails validation, or the merged configuration is invalid,
+the affected unit is rejected.
 .Sh SCHEMA
 The following fields are recognised at the top level of a unit file:
 .Ss Identity
@@ -149,6 +158,10 @@ to be set for security.
 .It Va user , Va group
 .Pq string
 User and group names to drop privileges to.
+A named account or group must resolve before its command can run.
+The service account's group list must fit in 32 entries.
+A unit specifying only a group retains its UID and clears inherited
+supplementary groups.
 .It Va umask
 .Pq string
 Octal umask (e.g.,
@@ -491,6 +504,21 @@ Keys in each description:
 .Va host
 (bind address),
 .Va backlog .
+.Pp
+For Unix sockets,
+.Va mode
+is an octal permission string such as
+.Dq 0660 ,
+.Va owner
+is a user name, and
+.Va group
+is a group name.
+Omitting these fields preserves the ownership and umask used by
+.Xr bind 2 .
+Explicit permissions and replacement of an existing socket require a
+root-owned directory that other users cannot modify.
+An existing regular file or symbolic link at the socket path prevents
+the job from binding.
 .Sh RC.CONF VARIABLES
 .Va program ,
 .Va arguments ,

@@ -190,6 +190,10 @@ struct prowl_socket {
 	int	socktype;                  /* SOCK_STREAM or SOCK_DGRAM */
 	int	family;                    /* AF_UNIX, AF_INET, AF_INET6 */
 	int	backlog;                   /* listen backlog (0 = SOMAXCONN) */
+	uid_t	owner;
+	gid_t	group;
+	mode_t	mode;
+	bool	mode_set;
 	int	fd;                        /* bound fd; -1 = not yet bound */
 	job_t  *job;                       /* owning job (back-pointer) */
 };
@@ -334,6 +338,7 @@ struct job {
 	notify_type_t	notify_type;
 	int		watchdog_sec;
 	int		notify_fd;
+	uid_t		notify_uid;	/* launch identity for this socket */
 
 	/* mDNS Discovery */
 	mdns_config_t	mdns;
@@ -401,8 +406,10 @@ typedef struct ipc_client {
 	char		buf[IPC_MSG_MAX];
 	size_t		buf_used;
 	bool		active;
-	uid_t		peer_uid;	/* from getpeereid(2) at accept time */
-	gid_t		peer_gid;
+	uid_t		peer_uid;	/* connection-time effective UID */
+	bool		peer_wheel;
+	bool		completed_request;
+	time_t		frame_started;
 	
 	/* Subscriptions */
 	bool		is_subscriber;
@@ -481,12 +488,18 @@ bool		 prowl_is_cond(const char *);
 pid_t		 supervisor_shim_pid(const job_t *);
 
 /* ---- unit.c ---- */
+struct ucl_parser;
+bool	trusted_ucl_add_fd(struct ucl_parser *, int, const char *);
+int	trusted_open_dir(const char *);
+int	trusted_open_file(const char *, bool);
+int	trusted_open_file_at(int, const char *, bool);
 int	unit_load_dir(const char *);
 int	unit_load_file(const char *);
 job_t	*unit_instantiate(const char *);
 
 /* ---- rcshim.c ---- */
 int	rcshim_scan_dir(const char *);
+int	rcshim_exec(char *const *, char *const *);
 bool	rcconf_is_enabled(const char *, bool);
 bool	rcconf_var_is_enabled(const char *, bool);
 bool	rcconf_var_get(const char *, char *, size_t);
@@ -552,6 +565,7 @@ void	socket_close_all(job_t *);
 int	ipc_init(void);
 void	ipc_shutdown(void);
 void	ipc_accept(void);
+void	ipc_expire_clients(void);
 void	ipc_read_client(int);
 void	ipc_write_ready(int);
 void	ipc_close_client(int);
