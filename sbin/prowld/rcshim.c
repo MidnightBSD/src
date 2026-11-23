@@ -506,7 +506,7 @@ rcshim_scan_dir(const char *dirpath)
 bool
 rcconf_is_enabled(const char *name, bool default_val)
 {
-	char varname[PROWL_LABEL_MAX];
+	char varname[PROWL_LABEL_MAX + sizeof("_enable")];
 
 	snprintf(varname, sizeof(varname), "%s_enable", name);
 	return (rcconf_var_is_enabled(varname, default_val));

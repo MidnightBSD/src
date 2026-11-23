@@ -99,7 +99,95 @@ trusted_inputs_cleanup()
 		case "$base" in /tmp/prowl-trust.*) rm -rf "$base" ;; esac
 	fi
 }
+
+atf_test_case nfsv4_acl cleanup
+nfsv4_acl_head()
+{
+	atf_set descr 'Reject NFSv4 ACL mutation grants on trusted unit paths'
+	atf_set require.user root
+	atf_set require.progs 'getfacl setfacl stat'
+}
+
+start_acl_test_daemon()
+{
+	rundir=$1
+	mkdir "$rundir"
+	env -i PATH=/sbin:/bin:/usr/sbin:/usr/bin "$prowld" -d \
+	    -s "$rundir" -u "$units" > "$rundir/log" 2>&1 &
+	echo $! > fixture.pid
+	for i in $(jot 100); do
+		if "$ctl" -s "$rundir" list > /dev/null 2>&1; then
+			return
+		fi
+		sleep 0.05
+	done
+	cat "$rundir/log"
+	atf_fail 'prowld did not start'
+}
+
+nfsv4_acl_body()
+{
+	prowld=$(atf_config_get prowld /sbin/prowld)
+	ctl=$(atf_config_get prowlctl /sbin/prowlctl)
+	[ -x "$prowld" ] || atf_skip 'prowld unavailable'
+	[ -x "$ctl" ] || atf_skip 'prowlctl unavailable'
+
+	umask 022
+	base=$(mktemp -d /tmp/prowl-trust.XXXXXX) || atf_fail 'mktemp failed'
+	printf '%s\n' "$base" > fixture.path
+	getfacl "$base" > acl.out || atf_fail 'getfacl failed'
+	grep -q 'owner@:' acl.out || atf_skip '/tmp lacks NFSv4 ACLs'
+
+	mkdir "$base/sticky" "$base/sticky/units"
+	chmod 1777 "$base/sticky"
+	units=$base/sticky/units
+	for label in harmless ordered inherit final w p A W C o d; do
+		cat > "$units/$label.unit" <<END
+label = "test.$label";
+type = "oneshot";
+program = "/usr/bin/true";
+END
+	done
+	atf_check setfacl -a 0 user:65534:r::allow "$units/harmless.unit"
+	atf_check setfacl -a 0 user:65534:C::allow "$units/ordered.unit"
+	atf_check setfacl -a 0 user:65534:C::deny "$units/ordered.unit"
+	for right in w p A W C o d; do
+		atf_check setfacl -a 0 "user:65534:$right::allow" \
+		    "$units/$right.unit"
+		atf_check -o inline:'644\n' stat -f '%Lp' "$units/$right.unit"
+	done
+	mkdir "$units/test.inherit.d" "$units/test.final.d"
+	atf_check setfacl -a 0 user:65534:C:fi:allow "$units/test.inherit.d"
+	atf_check setfacl -a 0 user:65534:D::allow "$units/test.final.d"
+
+	start_acl_test_daemon "$base/run"
+	for label in harmless ordered inherit; do
+		atf_check -o ignore "$ctl" -s "$base/run" show "test.$label"
+	done
+	for label in w p A W C o d final; do
+		atf_check -s not-exit:0 -o ignore -e ignore \
+		    "$ctl" -s "$base/run" show "test.$label"
+	done
+
+	pid=$(cat fixture.pid)
+	kill -TERM "$pid" || atf_fail 'could not stop prowld'
+	wait "$pid" || atf_fail 'prowld failed during shutdown'
+	rm fixture.pid
+	atf_check setfacl -a 0 group:65534:D::allow "$base/sticky"
+	[ -k "$base/sticky" ] || atf_fail 'sticky ancestor lost the sticky bit'
+	atf_check -o match:'group:65534:[^:]*D[^:]*:[^:]*:allow' \
+	    getfacl -n "$base/sticky"
+	start_acl_test_daemon "$base/run-unsafe"
+	atf_check -s not-exit:0 -o ignore -e ignore \
+	    "$ctl" -s "$base/run-unsafe" show test.harmless
+}
+nfsv4_acl_cleanup()
+{
+	trusted_inputs_cleanup
+}
+
 atf_init_test_cases()
 {
 	atf_add_test_case trusted_inputs
+	atf_add_test_case nfsv4_acl
 }

@@ -2535,7 +2535,7 @@ supervisor_reap(pid_t pid, int status)
 	struct kevent kev;
 	bool was_launcher;
 
-	if (action_reap(pid, status))
+	if (ipc_sysrc_reap(pid, status) || action_reap(pid, status))
 		return;
 
 	TAILQ_FOREACH(job, &g_jobs, entries) {

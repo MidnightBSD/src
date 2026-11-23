@@ -76,6 +76,15 @@ static gid_t g_wheel_gid = 0;
 static ipc_client_t g_clients[IPC_MAX_CLIENTS];
 static uintptr_t g_event_seq;
 
+/* Serialize updates to rc.conf while the event loop continues serving IPC. */
+static struct sysrc_request {
+	job_t		*job;
+	uintptr_t	tag;
+	bool		enabled;
+} sysrc_queue[IPC_MAX_CLIENTS];
+static size_t sysrc_count;
+static pid_t sysrc_pid;
+
 /* Internal prototypes */
 static ipc_client_t *ipc_get_client(int fd);
 static void ipc_send_error(int fd, const char *id, const char *message);
@@ -445,42 +454,6 @@ append_dep_array(const job_t *job, char *buf, size_t bufsz)
 }
 
 /* ------------------------------------------------------------------ */
-/* sysrc helper: call /usr/sbin/sysrc safely via fork+execvp           */
-/* ------------------------------------------------------------------ */
-
-static void
-run_sysrc(const char *varname, const char *value)
-{
-	pid_t pid;
-	char assignment[PROWL_LABEL_MAX + 8];
-	int status;
-
-	snprintf(assignment, sizeof(assignment), "%s=%s", varname, value);
-
-	pid = fork();
-	if (pid == -1) {
-		prowl_log(LOG_ERR, "run_sysrc fork: %m");
-		return;
-	}
-
-	if (pid == 0) {
-		/* Child: close kqueue fd */
-		if (g_kqueue_fd >= 0)
-			close(g_kqueue_fd);
-		prowl_reset_signals();
-		char *argv[] = {
-			(char *)(uintptr_t)"/usr/sbin/sysrc",
-			assignment,
-			NULL
-		};
-		execvp("/usr/sbin/sysrc", argv);
-		_exit(127);
-	}
-
-	waitpid(pid, &status, 0);
-}
-
-/* ------------------------------------------------------------------ */
 /* Resolve a target label/name to a job                                */
 /* ------------------------------------------------------------------ */
 
@@ -821,7 +794,13 @@ ipc_action_complete(uintptr_t tag, int code, const char *out)
 	if (client == NULL)
 		return;
 	client->action_tag = 0;
-	ipc_send_action_result(client->fd, client->action_id, code, out);
+	if (out != NULL)
+		ipc_send_action_result(client->fd, client->action_id, code, out);
+	else if (code == 0)
+		ipc_send_ok(client->fd, client->action_id, NULL);
+	else
+		ipc_send_error(client->fd, client->action_id,
+		    "could not persist enable setting with sysrc");
 	if (ipc_watch_read(client, EV_ADD | EV_ENABLE, false) == -1 ||
 	    clock_gettime(CLOCK_MONOTONIC, &now) == -1) {
 		ipc_close_client(client->fd);
@@ -881,47 +860,83 @@ cmd_reload(int fd, const char *id, const ucl_object_t *req)
 }
 
 static void
-cmd_enable(int fd, const char *id, const ucl_object_t *req)
+sysrc_complete(bool success)
 {
-	job_t *job;
-	char varname[PROWL_LABEL_MAX + 8];
+	struct sysrc_request req = sysrc_queue[0];
 
-	job = resolve_target(req, fd, id);
-	if (job == NULL)
-		return;
+	sysrc_pid = 0;
+	sysrc_count--;
+	memmove(sysrc_queue, sysrc_queue + 1, sysrc_count * sizeof(req));
+	if (success)
+		req.job->enabled = req.enabled;
+	ipc_action_complete(req.tag, success ? 0 : -1, NULL);
+}
 
-	if (job->rc_name[0] == '\0') {
-		ipc_send_error(fd, id, "job has no rc_name");
+bool
+ipc_sysrc_reap(pid_t pid, int status)
+{
+	bool success;
+
+	if (pid != sysrc_pid)
+		return (false);
+	success = WIFEXITED(status) && WEXITSTATUS(status) == 0;
+	if (!success)
+		prowl_log(LOG_ERR, "sysrc failed for %s (wait status %#x)",
+		    sysrc_queue[0].job->label, status);
+	sysrc_complete(success);
+	return (true);
+}
+
+void
+ipc_start_sysrc(void)
+{
+	char assignment[PROWL_LABEL_MAX + sizeof("_enable=YES")];
+
+	if (sysrc_count == 0 || sysrc_pid != 0 || g_shutdown)
 		return;
+	sysrc_pid = fork();
+	if (sysrc_pid == -1) {
+		prowl_log(LOG_ERR, "fork sysrc: %m");
+		sysrc_complete(false);
+	} else if (sysrc_pid == 0) {
+		if (g_kqueue_fd >= 0)
+			close(g_kqueue_fd);
+		prowl_reset_signals();
+		snprintf(assignment, sizeof(assignment), "%s_enable=%s",
+		    sysrc_queue[0].job->rc_name,
+		    sysrc_queue[0].enabled ? "YES" : "NO");
+		execl("/usr/sbin/sysrc", "sysrc", "--", assignment, (char *)NULL);
+		_exit(127);
 	}
-
-	snprintf(varname, sizeof(varname), "%s_enable", job->rc_name);
-	run_sysrc(varname, "YES");
-	job->enabled = true;
-
-	ipc_send_ok(fd, id, NULL);
 }
 
 static void
-cmd_disable(int fd, const char *id, const ucl_object_t *req)
+cmd_set_enabled(int fd, const char *id, const ucl_object_t *req, bool enabled)
 {
+	ipc_client_t *client = ipc_get_client(fd);
+	struct sysrc_request *pending;
 	job_t *job;
-	char varname[PROWL_LABEL_MAX + 8];
 
 	job = resolve_target(req, fd, id);
-	if (job == NULL)
+	if (job == NULL || client == NULL)
 		return;
-
 	if (job->rc_name[0] == '\0') {
 		ipc_send_error(fd, id, "job has no rc_name");
 		return;
 	}
+	if (sysrc_count == nitems(sysrc_queue)) {
+		ipc_send_error(fd, id, "too many pending sysrc requests");
+		return;
+	}
 
-	snprintf(varname, sizeof(varname), "%s_enable", job->rc_name);
-	run_sysrc(varname, "NO");
-	job->enabled = false;
-
-	ipc_send_ok(fd, id, NULL);
+	client->action_tag = ipc_event_tag(READ_EVENT_ACTION);
+	strlcpy(client->action_id, id, sizeof(client->action_id));
+	pending = &sysrc_queue[sysrc_count++];
+	pending->tag = client->action_tag;
+	pending->job = job;
+	pending->enabled = enabled;
+	if (ipc_watch_read(client, EV_ADD, true) == -1)
+		ipc_close_client(fd);
 }
 
 static void
@@ -1274,9 +1289,9 @@ ipc_dispatch_message(int fd, const char *json, size_t len)
 	else if (strcmp(verb, "resync") == 0)
 		cmd_resync(fd, id, root);
 	else if (strcmp(verb, "enable") == 0)
-		cmd_enable(fd, id, root);
+		cmd_set_enabled(fd, id, root, true);
 	else if (strcmp(verb, "disable") == 0)
-		cmd_disable(fd, id, root);
+		cmd_set_enabled(fd, id, root, false);
 	else if (strcmp(verb, "mask") == 0)
 		cmd_mask(fd, id, root);
 	else if (strcmp(verb, "unmask") == 0)

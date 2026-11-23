@@ -767,6 +767,7 @@ main_loop(void)
 			}
 		}
 
+		ipc_start_sysrc();
 		ipc_expire_clients();
 		dag_schedule_ready();
 		check_runtime();

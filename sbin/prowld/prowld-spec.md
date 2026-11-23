@@ -138,8 +138,12 @@ directory.
 session leader, and sets the login name to root. Standard input comes from
 `/dev/null`. Standard output and error are write-only console descriptors.
 It honours the loader variables `init_exec` (run a script instead of init),
-`init_script` (run first; failure means single-user), `init_chroot`, and
-`init_shell`. It then loads units, rc-shims and one getty job per enabled
+`init_script` (run first; failure means single-user recovery), `init_chroot`,
+and `init_shell`. Executable scripts run directly, using their declared
+interpreter when present. Readable plain-text scripts without an interpreter
+line can run under `init_shell` (default `/bin/sh`). Readable scripts with no
+execute bits and an option-free `/bin/sh` interpreter line can run under
+`/bin/sh`. prowld then loads units, rc-shims and one getty job per enabled
 `/etc/ttys` line.
 
 **rc-shims.** Shims run with `autoboot=yes` (unless `-f`), `rc_fast=yes`,
@@ -172,8 +176,11 @@ this run (`PROWLD_RUNDOWN=1`): it would wait for prowld itself.
 is how `stop_boot` in rc.subr aborts a boot). All processes are killed and
 `init_shell` (default `/bin/sh`) runs on the console. If the console is not
 `secure` in `/etc/ttys` and root has a password, it is asked for first; an
-empty password or end of file goes to multi-user. When the shell exits prowld
-re-executes itself with `-f`. Not implemented: init(8)'s DEBUGSHELL prompt for
+empty password or end of file ends the recovery attempt. After a loader
+configuration failure, prowld requires an explicitly secure console entry
+or successful root authentication on a configured console. If `init_chroot`
+succeeds after an `init_script` failure, the new root supplies the console
+policy. When the shell exits prowld re-executes itself with `-f`. Not implemented: init(8)'s DEBUGSHELL prompt for
 an alternate shell.
 
 **Reroot.** On SIGEMT: shutdown as above, SIGKILL all, copy prowld to a tmpfs

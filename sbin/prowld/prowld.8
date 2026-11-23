@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd April 18, 2026
+.Dd November 22, 2026
 .Dt PROWLD 8
 .Os
 .Sh NAME
@@ -664,9 +664,16 @@ The immediate directory and each ancestor must be owned by root.
 The immediate directory must have neither group nor other write
 permission.
 An ancestor with group or other write permission is allowed only when
-it has the sticky bit set, which protects root-owned entries from
-replacement.
+it has the sticky bit set.
 Symbolic links are rejected in these paths.
+.Pp
+On a filesystem that advertises NFSv4 ACLs,
+.Nm
+must also be able to read the ACL on each opened file and directory.
+It rejects grants that allow a non-root principal to modify a trusted
+file, replace an entry, or change its ownership, attributes, or ACL.
+A sticky ancestor may allow entry creation, but an explicit grant of
+deletion rights still makes it unsuitable.
 .Pp
 These checks cover files opened by
 .Nm .
@@ -834,19 +841,34 @@ Run this script in place of init.
 It is expected to end by rebooting.
 If the script cannot be launched, enter single-user recovery.
 .It Va init_script
-Run this script before the boot starts; if it exits non-zero, go to
-single-user mode.
+Run this script before the boot starts.
+If it cannot be launched or does not exit successfully, enter single-user
+recovery.
 .It Va init_chroot
 Change root to this directory before starting.
 If this fails, enter single-user recovery.
+.It Va init_shell
+Select the single-user shell and the shell for plain-text scripts without
+an interpreter line
+.Pq default Pa /bin/sh .
+.El
+.Pp
 Recovery after a loader configuration failure requires an explicitly secure
 console in
 .Xr ttys 5
 or successful root password authentication on a configured console.
-.It Va init_shell
-The shell for single-user mode and for the scripts above
-.Pq default Pa /bin/sh .
-.El
+If
+.Va init_chroot
+succeeds after an
+.Va init_script
+failure, the new root supplies the console policy.
+.Pp
+Executable scripts run directly, using their declared interpreter when
+present.
+A readable script with no execute bits and a
+.Pa /bin/sh
+interpreter line without options can run under
+.Pa /bin/sh .
 .Pp
 The control socket, the PID file and the state directories are created only
 once the

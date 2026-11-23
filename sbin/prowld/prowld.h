@@ -596,6 +596,8 @@ int	ipc_init(void);
 void	ipc_shutdown(void);
 void	ipc_accept(void);
 void	ipc_expire_clients(void);
+void	ipc_start_sysrc(void);
+bool	ipc_sysrc_reap(pid_t, int);
 void	ipc_read_client(int, uintptr_t, bool);
 void	ipc_write_ready(int, uintptr_t);
 void	ipc_close_client(int);
