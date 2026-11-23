@@ -1,6 +1,14 @@
 Updating Information for MidnightBSD users.
 
 20261122:
+	When running as PID 1, prowld now raises kern.securelevel from 0 to 1
+	before starting console logins, as init(8) does. Other levels are
+	preserved.
+
+	prowld now stores system masks in /etc/prowld/masks.d. On upgrades
+	with a separate /var, copy existing mask symlinks from
+	/var/db/prowld/masked.d to the new directory before the first reboot.
+
 	prowld now refuses units with unresolved service credentials. Ensure
 	unit files, drop-ins, and rc.d scripts are owned by root and are
 	writable only by their owner.
