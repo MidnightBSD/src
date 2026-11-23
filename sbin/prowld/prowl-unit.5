@@ -50,6 +50,15 @@ If a drop-in directory or a
 .Pa .unit
 file in it fails validation, or the merged configuration is invalid,
 the affected unit is rejected.
+For a unit with label
+.Ar label ,
+.Xr prowld 8
+first applies the
+.Pa <label>.d/
+fragments beside the selected unit, then those in
+.Pa /etc/prowld/overrides.d/<label>.d/ .
+Within each directory, files are read in filename order.
+A later fragment replaces an earlier value for the same field.
 .Sh SCHEMA
 The following fields are recognised at the top level of a unit file:
 .Ss Identity
@@ -577,6 +586,13 @@ and
 .Pa /usr/local/etc/rc.conf.d/ Ns Ar rc_name ,
 with later files overriding earlier ones.
 They are read each time the job is started.
+Either per-service path may also be a directory.
+Its visible regular files are read in filename order.
+.Xr prowld 8
+checks the ownership, permissions, and ACLs of these inputs and their
+directory chains as described in
+.Xr prowld 8 .
+It skips unsafe inputs and retains assignments from earlier trusted files.
 .Bl -tag -width "@name?text@" -compact
 .It Li @name@
 The value, empty if the variable is not set.

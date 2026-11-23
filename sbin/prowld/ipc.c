@@ -79,6 +79,7 @@ static uintptr_t g_event_seq;
 /* Serialize updates to rc.conf while the event loop continues serving IPC. */
 static struct sysrc_request {
 	job_t		*job;
+	char		rc_name[PROWL_LABEL_MAX];
 	uintptr_t	tag;
 	bool		enabled;
 } sysrc_queue[IPC_MAX_CLIENTS];
@@ -630,8 +631,9 @@ cmd_start(int fd, const char *id, const ucl_object_t *req)
 	if (job == NULL)
 		return;
 
-	if (job->masked) {
-		ipc_send_error(fd, id, "job is masked");
+	if (job_launch_blocked(job)) {
+		ipc_send_error(fd, id, job->policy_blocked ?
+		    "job blocked by native unit policy" : "job is masked");
 		return;
 	}
 
@@ -681,11 +683,14 @@ cmd_restart(int fd, const char *id, const ucl_object_t *req)
 	if (job == NULL)
 		return;
 
-	if (job->masked) {
-		ipc_send_error(fd, id, "job is masked");
+	if (job->masked || (job->policy_blocked && !job->reload_on_exit)) {
+		ipc_send_error(fd, id, job->policy_blocked ?
+		    "job blocked by native unit policy" : "job is masked");
 		return;
 	}
 
+	if (job->reload_on_exit)
+		job->restart_after_reload = true;
 	supervisor_stop(job, false);
 	job->run_at_load = true;
 	if (job->state == JOB_STATE_STOPPING) {
@@ -718,8 +723,9 @@ cmd_action(int fd, const char *id, job_t *job, int action, const char *name)
 		ipc_send_error(fd, id, msg);
 		return;
 	}
-	if (job->masked) {
-		ipc_send_error(fd, id, "job is masked");
+	if (job_launch_blocked(job)) {
+		ipc_send_error(fd, id, job->policy_blocked ?
+		    "job blocked by native unit policy" : "job is masked");
 		return;
 	}
 	if (action != PROWL_ACTION_CHECK &&
@@ -846,8 +852,9 @@ cmd_reload(int fd, const char *id, const ucl_object_t *req)
 		return;
 	}
 
-	if (job->masked) {
-		ipc_send_error(fd, id, "job is masked");
+	if (job_launch_blocked(job)) {
+		ipc_send_error(fd, id, job->policy_blocked ?
+		    "job blocked by native unit policy" : "job is masked");
 		return;
 	}
 
@@ -870,7 +877,7 @@ sysrc_complete(bool success)
 	sysrc_pid = 0;
 	sysrc_count--;
 	memmove(sysrc_queue, sysrc_queue + 1, sysrc_count * sizeof(req));
-	if (success)
+	if (success && strcmp(req.job->rc_name, req.rc_name) == 0)
 		req.job->enabled = req.enabled;
 	ipc_action_complete(req.tag, success ? 0 : -1, NULL);
 }
@@ -906,7 +913,7 @@ ipc_start_sysrc(void)
 			close(g_kqueue_fd);
 		prowl_reset_signals();
 		snprintf(assignment, sizeof(assignment), "%s_enable=%s",
-		    sysrc_queue[0].job->rc_name,
+		    sysrc_queue[0].rc_name,
 		    sysrc_queue[0].enabled ? "YES" : "NO");
 		execl("/usr/sbin/sysrc", "sysrc", "--", assignment, (char *)NULL);
 		_exit(127);
@@ -937,6 +944,7 @@ cmd_set_enabled(int fd, const char *id, const ucl_object_t *req, bool enabled)
 	pending = &sysrc_queue[sysrc_count++];
 	pending->tag = client->action_tag;
 	pending->job = job;
+	strlcpy(pending->rc_name, job->rc_name, sizeof(pending->rc_name));
 	pending->enabled = enabled;
 	if (ipc_watch_read(client, EV_ADD, true) == -1)
 		ipc_close_client(fd);

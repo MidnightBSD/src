@@ -296,7 +296,7 @@ dag_activate(job_t *job)
 		p = job_find_by_provides(job->deps[i].name);
 		if (p == NULL)
 			p = job_find_by_label(job->deps[i].name);
-		if (p == NULL || p == job || p->masked ||
+		if (p == NULL || p == job || job_launch_blocked(p) ||
 		    p->type == JOB_TYPE_RCSHIM)
 			continue;
 		/*
@@ -345,7 +345,7 @@ again:
 		if (g_current_starts >= limit)
 			break;
 
-		if (job->masked || job->state != JOB_STATE_LOADED)
+		if (job_launch_blocked(job) || job->state != JOB_STATE_LOADED)
 			continue;
 
 		if (!job->run_at_load)

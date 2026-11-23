@@ -441,6 +441,11 @@ Searched in this order (later overrides earlier):
 A unit file at a higher-priority path with the same `label` fully replaces
 the lower-priority file. Partial overrides are supported via drop-in files:
 `/etc/prowld/overrides.d/org.example.myservice.d/local.unit`.
+Fragments beside the selected unit are read first. The administrator's
+fragments are read last, in filename order, and can replace individual
+fields. If validation fails for an identified native service, its provider
+names stay reserved so rc.d discovery cannot start it under a different
+policy.
 
 ### 6.2 Runtime State
 
@@ -643,6 +648,14 @@ There is no dual state to reconcile. An admin who edits `rc.conf` directly,
 runs `sysrc`, or runs `prowlctl enable` reaches the same result by any path.
 On startup, prowld reads `rc.conf` to determine which services to launch, in
 the same way `rc(8)` does today.
+
+For its own variable lookups, prowld validates root ownership, write
+permissions and NFSv4 ACLs on the opened files and their directory chains.
+It skips symbolic links and unsafe inputs. For native unit expansion,
+each per-service path may be a regular file or a directory of visible
+regular files read in filename order. An ignored input leaves earlier
+trusted assignments in effect. Shell commands and rc.d scripts that source
+configuration directly use their own configuration readers.
 
 #### 7.6.2 Variable Name Derivation
 

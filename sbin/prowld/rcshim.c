@@ -322,6 +322,13 @@ rcshim_parse_script(int fd, const char *path, const char *scriptname)
 	 * Check whether a native unit already covers the primary PROVIDE.
 	 * If so, skip this rc-shim (§7.3: native unit wins).
 	 */
+	for (int i = 0; i < provides_count; i++) {
+		if (unit_provider_rejected(provides_raw[i])) {
+			prowl_log(LOG_WARNING, "rcshim: rejected native provider "
+			    "%s, skipping %s", provides_raw[i], path);
+			return (NULL);
+		}
+	}
 	if (job_find_by_provides(provides_raw[0]) != NULL) {
 		prowl_log(LOG_DEBUG, "rcshim: native unit covers %s, "
 		    "skipping %s", provides_raw[0], path);
@@ -357,7 +364,13 @@ rcshim_parse_script(int fd, const char *path, const char *scriptname)
 	snprintf(job->label, sizeof(job->label),
 	    "org.midnightbsd.rc.%s", scriptname);
 
-	/* If already registered, skip */
+	/* A rejected native job can reserve the label without registering. */
+	if (unit_label_reserved(job->label)) {
+		prowl_log(LOG_DEBUG, "rcshim: native unit reserves %s, skipping %s",
+		    job->label, path);
+		job_free(job);
+		return (NULL);
+	}
 	if (job_find_by_label(job->label) != NULL) {
 		job_free(job);
 		return (NULL);
@@ -512,74 +525,100 @@ rcconf_is_enabled(const char *name, bool default_val)
 	return (rcconf_var_is_enabled(varname, default_val));
 }
 
-/*
- * Read the files in files, in order, for the variable varname
- * (the full name, e.g. "syslogd_enable").  Later files override earlier
- * ones.  Returns the value found, or default_val if not set.
- */
-static bool
-rcconf_scan(const char *const *files, const char *varname, char *buf,
-    size_t sz)
+static const char *const rcconf_files[] = {
+	"/etc/defaults/rc.conf", RCCONF_PATH, RCCONF_LOCAL_PATH, NULL
+};
+
+/* Take ownership of the descriptor returned by a trusted open. */
+static FILE *
+rcconf_stream(int fd, const char *path)
 {
 	FILE *fp;
-	char line[1024];
-	bool found = false;
-	size_t vlen = strlen(varname);
 
-	if (sz > 0)
-		buf[0] = '\0';
-
-	for (int fi = 0; files[fi] != NULL; fi++) {
-		fp = fopen(files[fi], "r");
-		if (fp == NULL)
-			continue;
-
-		while (fgets(line, sizeof(line), fp) != NULL) {
-			const char *p = skip_ws(line);
-			char q;
-			size_t n;
-
-			if (strncmp(p, varname, vlen) != 0)
-				continue;
-			p = skip_ws(p + vlen);
-			if (*p != '=')
-				continue;
-			p = skip_ws(p + 1);
-
-			q = '\0';
-			if (*p == '"' || *p == '\'') {
-				q = *p;
-				p++;
-			}
-			n = 0;
-			while (*p != '\0' && *p != '\n' &&
-			    (q != '\0' ? *p != q : *p != '#') &&
-			    n < sz - 1)
-				buf[n++] = *p++;
-			buf[n] = '\0';
-			/* trim trailing blanks of an unquoted value */
-			while (q == '\0' && n > 0 &&
-			    (buf[n - 1] == ' ' || buf[n - 1] == '\t'))
-				buf[--n] = '\0';
-			found = true;
-		}
-		fclose(fp);
-	}
-	return (found);
+	if (fd >= 0) {
+		fp = fdopen(fd, "r");
+		if (fp != NULL)
+			return (fp);
+		prowl_log(LOG_WARNING, "rc.conf: fdopen %s: %m", path);
+		close(fd);
+	} else if (errno != ENOENT)
+		prowl_log(LOG_WARNING, "rc.conf: skipping %s: %m", path);
+	return (NULL);
 }
 
+static bool
+rcconf_close(FILE *fp, const char *path)
+{
+	int error = 0;
+
+	if (ferror(fp))
+		error = errno != 0 ? errno : EIO;
+	if (fclose(fp) != 0 && error == 0)
+		error = errno;
+	if (error != 0)
+		prowl_log(LOG_WARNING, "rc.conf: reading %s: %s", path,
+		    strerror(error));
+	return (error == 0);
+}
+
+/* Commit the last assignment only after the entire file was read. */
+static bool
+rcconf_read(const char *path, int fd, const char *varname, char *buf, size_t sz)
+{
+	FILE *fp;
+	char line[1024], value[sizeof(line)];
+	bool found = false;
+	size_t n, vlen = strlen(varname);
+
+	fp = rcconf_stream(fd, path);
+	if (fp == NULL)
+		return (false);
+	while (fgets(line, sizeof(line), fp) != NULL) {
+		const char *p = skip_ws(line);
+		char end = '#';
+		bool quoted;
+
+		if (strncmp(p, varname, vlen) != 0)
+			continue;
+		p = skip_ws(p + vlen);
+		if (*p != '=')
+			continue;
+		p = skip_ws(p + 1);
+		quoted = *p == '"' || *p == '\'';
+		if (quoted)
+			end = *p++;
+		n = 0;
+		while (p[n] != '\0' && p[n] != '\n' && p[n] != end)
+			n++;
+		while (!quoted && n > 0 &&
+		    (p[n - 1] == ' ' || p[n - 1] == '\t'))
+			n--;
+		memcpy(value, p, n);
+		value[n] = '\0';
+		found = true;
+	}
+	if (!rcconf_close(fp, path))
+		found = false;
+	if (found)
+		strlcpy(buf, value, sz);
+	return (found);
+}
 
 bool
 rcconf_var_get(const char *varname, char *buf, size_t sz)
 {
-	const char *files[] = {
-		"/etc/defaults/rc.conf",
-		RCCONF_PATH,
-		RCCONF_LOCAL_PATH,
-		NULL
-	};
+	bool found = false;
+	int i;
 
-	return (rcconf_scan(files, varname, buf, sz));
+	if (sz == 0)
+		return (false);
+	buf[0] = '\0';
+	for (i = 0; rcconf_files[i] != NULL; i++) {
+		if (rcconf_read(rcconf_files[i],
+		    trusted_open_file(rcconf_files[i], false), varname, buf, sz))
+			found = true;
+	}
+	return (found);
 }
 
 /* True for the values rc.subr's checkyesno takes as yes */
@@ -590,32 +629,82 @@ rcconf_value_yes(const char *val)
 	    strcasecmp(val, "on") == 0 || strcmp(val, "1") == 0);
 }
 
-/*
- * As rcconf_var_get(), but also read the per-service files that
- * load_rc_config() reads: rc.conf.d/<rc_name> under /etc and
- * /usr/local/etc.
- */
-bool
-rcconf_job_var(const char *rc_name, const char *varname, char *buf,
-    size_t sz)
+/* Match visible rc.conf.d fragments, as in rc.subr's shell glob. */
+static int
+rcconf_fragment(const struct dirent *entry)
 {
-	char d1[PROWL_PATH_MAX], d2[PROWL_PATH_MAX];
-	const char *files[6];
-	int n = 0;
+	return (entry->d_name[0] != '.' && entry->d_type != DT_DIR);
+}
 
-	files[n++] = "/etc/defaults/rc.conf";
-	files[n++] = RCCONF_PATH;
-	files[n++] = RCCONF_LOCAL_PATH;
-	if (rc_name != NULL && rc_name[0] != '\0') {
-		snprintf(d1, sizeof(d1), "/etc/rc.conf.d/%s", rc_name);
-		snprintf(d2, sizeof(d2), "/usr/local/etc/rc.conf.d/%s",
-		    rc_name);
-		files[n++] = d1;
-		files[n++] = d2;
+static bool
+rcconf_service_file(const char *path, const char *varname, char *buf, size_t sz)
+{
+	struct dirent **entries;
+	char fragment[PROWL_PATH_MAX];
+	int dirfd, count, i, n;
+	bool found = false;
+
+	dirfd = trusted_open_dir(path);
+	if (dirfd == -1) {
+		if (errno == ENOTDIR)
+			return (rcconf_read(path, trusted_open_file(path, false),
+			    varname, buf, sz));
+		if (errno != ENOENT)
+			prowl_log(LOG_WARNING, "rc.conf: skipping %s: %m", path);
+		return (false);
 	}
-	files[n] = NULL;
+	count = fdscandir(dirfd, &entries, rcconf_fragment, alphasort);
+	if (count == -1) {
+		prowl_log(LOG_WARNING, "rc.conf: scanning %s: %m", path);
+		close(dirfd);
+		return (false);
+	}
+	for (i = 0; i < count; i++) {
+		n = snprintf(fragment, sizeof(fragment), "%s/%s", path,
+		    entries[i]->d_name);
+		if (n < 0 || (size_t)n >= sizeof(fragment))
+			prowl_log(LOG_WARNING, "rc.conf: filename too long "
+			    "in %s", path);
+		else if (rcconf_read(fragment, trusted_open_file_at(dirfd,
+		    entries[i]->d_name, false), varname, buf, sz))
+			found = true;
+		free(entries[i]);
+	}
+	free(entries);
+	close(dirfd);
+	return (found);
+}
 
-	return (rcconf_scan(files, varname, buf, sz));
+/* Per-service files and sorted directory fragments override global values. */
+bool
+rcconf_job_var(const char *rc_name, const char *varname, char *buf, size_t sz)
+{
+	static const char *const dirs[] = {
+		"/etc/rc.conf.d", "/usr/local/etc/rc.conf.d", NULL
+	};
+	char path[PROWL_PATH_MAX];
+	bool found;
+	int i, n;
+
+	found = rcconf_var_get(varname, buf, sz);
+	if (sz == 0 || rc_name == NULL || rc_name[0] == '\0')
+		return (found);
+	if (strchr(rc_name, '/') != NULL || strcmp(rc_name, ".") == 0 ||
+	    strcmp(rc_name, "..") == 0) {
+		prowl_log(LOG_WARNING, "rc.conf: invalid service name %.128s",
+		    rc_name);
+		return (found);
+	}
+	for (i = 0; dirs[i] != NULL; i++) {
+		n = snprintf(path, sizeof(path), "%s/%s", dirs[i], rc_name);
+		if (n < 0 || (size_t)n >= sizeof(path)) {
+			prowl_log(LOG_WARNING, "rc.conf: service name too long");
+			break;
+		}
+		if (rcconf_service_file(path, varname, buf, sz))
+			found = true;
+	}
+	return (found);
 }
 
 static bool
@@ -765,18 +854,15 @@ rcconf_expand_args(const char *rc_name, char *const *in, int n, char **out,
 bool
 rcconf_var_is_enabled(const char *varname, bool default_val)
 {
-	const char *files[] = {
-		"/etc/defaults/rc.conf",
-		RCCONF_PATH,
-		RCCONF_LOCAL_PATH,
-		NULL
-	};
 	FILE *fp;
 	char line[1024];
 	bool result = default_val;
 
-	for (int fi = 0; files[fi] != NULL; fi++) {
-		fp = fopen(files[fi], "r");
+	for (int fi = 0; rcconf_files[fi] != NULL; fi++) {
+		bool enabled = result;
+
+		fp = rcconf_stream(trusted_open_file(rcconf_files[fi], false),
+		    rcconf_files[fi]);
 		if (fp == NULL)
 			continue;
 
@@ -805,14 +891,15 @@ rcconf_var_is_enabled(const char *varname, bool default_val)
 			if (strncasecmp(p, "YES", 3) == 0 &&
 			    (p[3] == '\0' || p[3] == '"' ||
 			    p[3] == '\'' || isspace((unsigned char)p[3]))) {
-				result = true;
+				enabled = true;
 			} else if (strncasecmp(p, "NO", 2) == 0 &&
 			    (p[2] == '\0' || p[2] == '"' ||
 			    p[2] == '\'' || isspace((unsigned char)p[2]))) {
-				result = false;
+				enabled = false;
 			}
 		}
-		fclose(fp);
+		if (rcconf_close(fp, rcconf_files[fi]))
+			result = enabled;
 	}
 
 	return (result);

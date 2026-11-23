@@ -166,10 +166,10 @@ Files must have the
 .Pa .unit
 extension.
 .Pp
-Unit file directories are searched in the following order;
-a file at a higher-priority path with the same
+The following directories are listed from lowest to highest priority.
+A file at a higher-priority path with the same
 .Va label
-fully replaces the lower-priority file:
+fully replaces the lower-priority file, even when their filenames differ.
 .Bl -enum -compact
 .It
 .Pa /etc/prowld/units.d/
@@ -651,12 +651,20 @@ script both claim the same
 the native unit wins and the
 .Pa rc.d
 script is skipped.
+If a known native provider is rejected during configuration validation,
+.Nm
+also skips the corresponding legacy script.
+Correct the unit or its drop-ins and run
+.Cm prowlctl reload-config
+to retry loading the provider.
 This allows incremental migration: shipping a native unit file
 automatically retires the rc.d script without any administrator action.
 .Sh CONFIGURATION TRUST
 .Nm
 accepts only regular files owned by root with neither group nor other
-write permission as configuration files, unit files, drop-ins,
+write permission as configuration files, including the
+.Xr rc.conf 5
+inputs it reads, unit files, drop-ins,
 or executable
 .Pa rc.d
 scripts.
@@ -679,6 +687,9 @@ These checks cover files opened by
 .Nm .
 Administrators using UCL includes or load macros must independently
 secure the external inputs and their parent directories.
+The same applies to configuration sourced by shell commands and
+.Pa rc.d
+scripts themselves.
 .Pp
 Each
 .Pa rc.d
