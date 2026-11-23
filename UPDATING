@@ -27,6 +27,10 @@ Updating Information for MidnightBSD users.
 	/boot/loader.conf.  Services with native units are supervised by
 	prowld; see prowld(8) and prowlctl(8).
 
+	prowld rejects malformed chroot, umask, and socket settings and checks
+	NFSv4 ACLs on trusted inputs. Loader script failures use authenticated
+	console recovery. prowlctl reports failed enable and disable writes.
+
 20261121:
 	var_run_enable and var_run_autosave now default to YES.  When
 	/var/run resides on tmpfs, its directory layout is saved at shutdown
