@@ -1457,6 +1457,36 @@ credentials_cleanup()
 	stop_prowld
 }
 
+atf_test_case interactive cleanup
+interactive_head()
+{
+	atf_set descr "interactive is a boolean; outside PID 1 stdin stays /dev/null"
+	atf_set require.user root
+}
+interactive_body()
+{
+	mkdir -p units
+	# Not PID 1: the console is not offered, and the job runs as usual.
+	cat >units/ia.unit <<EOF
+{"label": "org.test.ia", "rc_name": "prowlctl_test_ia",
+ "type": "daemon", "program": "/bin/sh",
+ "arguments": ["-c", "if [ -t 0 ]; then exit 3; fi; exec sleep 300"],
+ "run_at_load": true, "interactive": true}
+EOF
+	cat >units/bad.unit <<EOF
+{"label": "org.test.iabad", "rc_name": "prowlctl_test_iabad",
+ "type": "daemon", "program": "/bin/sleep",
+ "arguments": ["300"], "run_at_load": true, "interactive": "yes"}
+EOF
+	start_prowld
+	wait_state org.test.ia running
+	atf_check -s not-exit:0 -e ignore -o ignore ${CTL} status org.test.iabad
+}
+interactive_cleanup()
+{
+	stop_prowld
+}
+
 atf_test_case unix_socket_access cleanup
 unix_socket_access_head()
 {
@@ -1596,6 +1626,7 @@ atf_init_test_cases()
 	atf_add_test_case persist_enabled
 	atf_add_test_case masked_timer
 	atf_add_test_case unix_socket_access
+	atf_add_test_case interactive
 	atf_add_test_case unit_explicit_settings
 	atf_add_test_case credentials
 	atf_add_test_case dependency_loop

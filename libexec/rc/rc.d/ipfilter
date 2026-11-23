@@ -38,7 +38,7 @@ ipfilter_locked()
 
 ipfilter_apply_rules()
 {
-	local ipf v4 v6 file
+	local ipf v4 v6 file status
 
 	ipf=${ipfilter_program:-/sbin/ipf}
 	v4=${ipfilter_rules}
@@ -60,7 +60,12 @@ ipfilter_apply_rules()
 
 	if [ "${rc_arg}" = start ]; then
 		echo "Enabling ipfilter."
-		"${ipf}" -E || return 1
+		# ipf -E fails with EBUSY when the filter is already on, as
+		# it is when another start or the kernel's defaults enabled it.
+		status=$("${ipf}" -V) || return 1
+		if ! printf '%s\n' "${status}" | grep -qx 'Running: yes'; then
+			"${ipf}" -E || return 1
+		fi
 		if [ -n "${ipfilter_optionlist}" ]; then
 			"${ipf}" -T "${ipfilter_optionlist}" || return 1
 		fi

@@ -337,6 +337,8 @@ File extension: `.unit` (language-neutral; libucl auto-detects syntax).
 
 **I/O**
 - `standard_in_path`, `standard_out_path`, `standard_error_path`
+- `interactive` *(bool)*: while PID 1 boots, standard input is the console
+  (passphrase prompts); rc.d scripts ask with `KEYWORD: interactive`
 
 **Resources**
 - `resource_limits`: maps to `setrlimit(2)`

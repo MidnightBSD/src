@@ -930,9 +930,20 @@ child_setup_and_exec(job_t *job)
 		setrlimit(RLIMIT_NPROC, &rl);
 	}
 
-	/* Standard I/O */
+	/*
+	 * Standard I/O.  Only while PID 1 is still booting does an
+	 * interactive job get the console on standard input, so that a
+	 * script such as geli(8) attach or zfskeys can ask for a
+	 * passphrase.  The console is never offered once multi-user mode
+	 * begins: a service started later must not read what is typed at
+	 * a login prompt.
+	 */
 	if (job->stdin_path[0] != '\0')
 		child_redirect_fd(job, STDIN_FILENO, job->stdin_path, O_RDONLY);
+	else if (job->interactive && g_is_init && !g_multi_user &&
+	    job->action == PROWL_ACTION_NONE)
+		child_redirect_fd(job, STDIN_FILENO, _PATH_CONSOLE,
+		    O_RDONLY | O_NOCTTY);
 
 	/*
 	 * A reload, check or resync command already has standard output

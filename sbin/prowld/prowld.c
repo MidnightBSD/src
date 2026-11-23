@@ -696,6 +696,44 @@ startup_load(void)
 	arm_calendar_tick();
 }
 
+/*
+ * Boot work is still going on while a service that runs at boot is
+ * starting, or is waiting for its first restarts.  init(8) only goes
+ * multi-user once /etc/rc has finished; a service that failed and is
+ * held off for a retry is part of that work, but a service that keeps
+ * failing must not hold up the login prompt, so waiting for retries is
+ * bounded by BOOT_RETRY_WAIT seconds.
+ */
+#define BOOT_RETRY_WAIT	30
+
+static bool
+boot_work_pending(void)
+{
+	static time_t retry_since;
+	job_t *job;
+	time_t now;
+	bool retry = false;
+
+	if (g_current_starts != 0)
+		return (true);
+	TAILQ_FOREACH(job, &g_jobs, entries) {
+		if (job->masked || job->is_getty || !job->enabled ||
+		    !job->run_at_load)
+			continue;
+		if (job->start_pending || job->state == JOB_STATE_STARTING)
+			return (true);
+		if (job->state == JOB_STATE_LOADED && job->restart_hold &&
+		    job->throttle_timer_active)
+			retry = true;
+	}
+	if (!retry)
+		return (false);
+	now = time(NULL);
+	if (retry_since == 0)
+		retry_since = now;
+	return (now - retry_since < BOOT_RETRY_WAIT);
+}
+
 static void
 main_loop(void)
 {
@@ -769,11 +807,12 @@ main_loop(void)
 
 		/*
 		 * LOGIN can precede securelevel and other late rc.d scripts.
-		 * Once the scheduler has drained the ready boot work, apply
-		 * init's securelevel policy before allowing any getty to run.
+		 * Once the boot work has drained, including the first retries
+		 * of services that failed, apply init's securelevel policy
+		 * before allowing any getty to run.
 		 */
 		if (g_is_init && !g_multi_user && !g_shutdown &&
-		    !g_rundown && g_current_starts == 0) {
+		    !g_rundown && !boot_work_pending()) {
 			if (!g_jailed)
 				pid1_raise_securelevel();
 			g_multi_user = true;
