@@ -27,16 +27,17 @@ extern	int	yylex(void);
 extern	int	yydebug;
 extern	FILE	*yyin;
 extern	int	yylineNum;
+extern	int	yytokentype;
 
 static	int	addname(frentry_t **, char *);
 static	frentry_t *addrule(void);
 static frentry_t *allocfr(void);
 static	void	build_dstaddr_af(frentry_t *, void *);
 static	void	build_srcaddr_af(frentry_t *, void *);
-static	void	dobpf(int, char *);
+static	int	dobpf(int, char *);
 static	void	doipfexpr(char *);
-static	void	do_tuneint(char *, int);
-static	void	do_tunestr(char *, char *);
+static	int	do_tuneint(char *, int);
+static	int	do_tunestr(char *, char *);
 static	void	fillgroup(frentry_t *);
 static	int	lookuphost(char *, i6addr_t *);
 static	u_int	makehash(struct alist_s *);
@@ -200,9 +201,22 @@ rules:	line
 	;
 
 setting:
-	IPFY_SET YY_STR YY_NUMBER ';'	{ do_tuneint($2, $3); }
-	| IPFY_SET YY_STR YY_HEX ';'	{ do_tuneint($2, $3); }
-	| IPFY_SET YY_STR YY_STR ';'	{ do_tunestr($2, $3); }
+	IPFY_SET YY_STR YY_NUMBER ';'	{ int error = do_tuneint($2, $3);
+					  free($2);
+					  if (error != 0)
+						YYABORT;
+					}
+	| IPFY_SET YY_STR YY_HEX ';'	{ int error = do_tuneint($2, $3);
+					  free($2);
+					  if (error != 0)
+						YYABORT;
+					}
+	| IPFY_SET YY_STR YY_STR ';'	{ int error = do_tunestr($2, $3);
+					  free($2);
+					  free($3);
+					  if (error != 0)
+						YYABORT;
+					}
 	;
 
 line:	rule		{ while ((fr = frtop) != NULL) {
@@ -300,8 +314,16 @@ family:	| IPFY_FAMILY IPFY_INET		{ if (use_inet6 == 1) {
 	;
 
 bpfrule:
-	IPFY_BPFV4 '{' YY_STR '}' 	{ dobpf(4, $3); free($3); }
-	| IPFY_BPFV6 '{' YY_STR '}' 	{ dobpf(6, $3); free($3); }
+	IPFY_BPFV4 '{' YY_STR '}'	{ int error = dobpf(4, $3);
+					  free($3);
+					  if (error != 0)
+						YYERROR;
+					}
+	| IPFY_BPFV6 '{' YY_STR '}'	{ int error = dobpf(6, $3);
+					  free($3);
+					  if (error != 0)
+						YYERROR;
+					}
 	;
 
 exprrule:
@@ -1986,6 +2008,7 @@ int
 ipf_parsefile(int fd, addfunc_t addfunc, ioctlfunc_t *iocfuncs, char *filename)
 {
 	FILE *fp = NULL;
+	int rv;
 	char *s;
 
 	yylineNum = 1;
@@ -2007,11 +2030,15 @@ ipf_parsefile(int fd, addfunc_t addfunc, ioctlfunc_t *iocfuncs, char *filename)
 	} else
 		fp = stdin;
 
-	while (ipf_parsesome(fd, addfunc, iocfuncs, fp) == 1)
+	while ((rv = ipf_parsesome(fd, addfunc, iocfuncs, fp)) == 1)
 		;
-	if (fp != NULL)
+	if (ferror(fp)) {
+		(void)fprintf(stderr, "Error reading %s\n", filename);
+		rv = -1;
+	}
+	if (fp != stdin)
 		fclose(fp);
-	return(0);
+	return(rv);
 }
 
 
@@ -2030,11 +2057,9 @@ ipf_parsesome(int fd, addfunc_t addfunc, ioctlfunc_t *iocfuncs, FILE *fp)
 		return(0);
 	i = fgetc(fp);
 	if (i == EOF)
-		return(0);
-	if (ungetc(i, fp) == 0)
-		return(0);
-	if (feof(fp))
-		return(0);
+		return(ferror(fp) ? -1 : 0);
+	if (ungetc(i, fp) == EOF)
+		return(-1);
 	s = getenv("YYDEBUG");
 	if (s != NULL)
 		yydebug = atoi(s);
@@ -2042,7 +2067,12 @@ ipf_parsesome(int fd, addfunc_t addfunc, ioctlfunc_t *iocfuncs, FILE *fp)
 		yydebug = 0;
 
 	yyin = fp;
-	yyparse();
+	if (yyparse() != 0 || ferror(fp))
+		return(-1);
+	if (yytokentype < 0) {
+		(void)fprintf(stderr, "Invalid token at line %d\n", yylineNum);
+		return(-1);
+	}
 	return(1);
 }
 
@@ -2163,7 +2193,7 @@ lookuphost(char *name, i6addr_t *addrp)
 }
 
 
-static void
+static int
 dobpf(int v, char *phrase)
 {
 #ifdef IPFILTER_BPF
@@ -2178,7 +2208,7 @@ dobpf(int v, char *phrase)
 	for (fr = frc; fr != NULL; fr = fr->fr_next) {
 		if (fr->fr_type != FR_T_NONE) {
 			fprintf(stderr, "cannot mix IPF and BPF matching\n");
-			return;
+			return(-1);
 		}
 		fr->fr_family = vtof(v);
 		fr->fr_type = FR_T_BPFOPC;
@@ -2218,7 +2248,7 @@ dobpf(int v, char *phrase)
 			i--;
 			fr->fr_dsize = (i / 4 + 1) * sizeof(*fb);
 			fr->fr_data = fb;
-			return;
+			return(0);
 		}
 
 #ifdef IPFILTER_BPF
@@ -2226,14 +2256,14 @@ dobpf(int v, char *phrase)
 		p = pcap_open_dead(DLT_RAW, 1);
 		if (!p) {
 			fprintf(stderr, "pcap_open_dead failed\n");
-			return;
+			return(-1);
 		}
 
 		if (pcap_compile(p, &bpf, phrase, 1, 0xffffffff)) {
 			pcap_perror(p, "ipf");
 			pcap_close(p);
 			fprintf(stderr, "pcap parsing failed (%s)\n", phrase);
-			return;
+			return(-1);
 		}
 		pcap_close(p);
 
@@ -2242,7 +2272,7 @@ dobpf(int v, char *phrase)
 		bcopy((char *)bpf.bf_insns, fr->fr_data, fr->fr_dsize);
 		if (!bpf_validate(fr->fr_data, bpf.bf_len)) {
 			fprintf(stderr, "BPF validation failed\n");
-			return;
+			return(-1);
 		}
 #endif
 	}
@@ -2254,6 +2284,7 @@ dobpf(int v, char *phrase)
 	fprintf(stderr, "BPF filter expressions not supported\n");
 	exit(1);
 #endif
+	return(0);
 }
 
 
@@ -2556,30 +2587,33 @@ doipfexpr(char *line)
 }
 
 
-static void
+static int
 do_tuneint(char *varname, int value)
 {
-	char buffer[80];
+	char buffer[128];
+	int len;
 
-	strncpy(buffer, varname, 60);
-	buffer[59] = '\0';
-	strcat(buffer, "=");
-	snprintf(buffer, sizeof(buffer), "%u", value);
-	ipf_dotuning(ipffd, buffer, ioctl);
+	len = snprintf(buffer, sizeof(buffer), "%s=%u", varname, (u_int)value);
+	if (len < 0 || len >= sizeof(buffer) || strpbrk(varname, ",=") != NULL) {
+		(void)fprintf(stderr, "invalid tunable name '%s'\n", varname);
+		return(-1);
+	}
+	if (opts & OPT_DONOTHING)
+		return(0);
+	return(ipf_dotuning(ipffd, buffer, ipfioctls[IPL_LOGIPF]));
 }
 
 
-static void
+static int
 do_tunestr(char *varname, char *value)
 {
 
-	if (!strcasecmp(value, "true")) {
-		do_tuneint(varname, 1);
-	} else if (!strcasecmp(value, "false")) {
-		do_tuneint(varname, 0);
-	} else {
-		yyerror("did not find true/false where expected");
-	}
+	if (!strcasecmp(value, "true"))
+		return(do_tuneint(varname, 1));
+	if (!strcasecmp(value, "false"))
+		return(do_tuneint(varname, 0));
+	yyerror("did not find true/false where expected");
+	return(-1);
 }
 
 

@@ -241,6 +241,7 @@ nextchar:
 		lnext = 0;
 		if ((isbuilding == 0) && !ISALNUM(c)) {
 			prior = c;
+			yytokentype = c;
 			return (c);
 		}
 		goto nextchar;
