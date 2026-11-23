@@ -1,6 +1,10 @@
 Updating Information for MidnightBSD users.
 
 20261122:
+	prowld now refuses units with unresolved service credentials. Ensure
+	unit files, drop-ins, and rc.d scripts are owned by root and are
+	writable only by their owner.
+
 	The kernel now starts prowld(8) as process 1 instead of init(8).  The
 	default kern.init_path is "/sbin/prowld:/sbin/init:/sbin/oinit:
 	/sbin/init.bak:/rescue/init", so a system whose /sbin/prowld is missing
