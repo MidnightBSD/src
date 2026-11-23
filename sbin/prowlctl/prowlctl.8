@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd April 18, 2026
+.Dd November 22, 2026
 .Dt PROWLCTL 8
 .Os
 .Sh NAME
@@ -249,8 +249,29 @@ output is Graphviz DOT format suitable for rendering with
 .Xr dot 1 .
 .It Cm logs Ar label Op Fl \-follow Op Fl \-lines Ns = Ns Ar N
 Display the captured log output for a job.
-Only available for jobs that write stdout or stderr to
-.Pa /var/log/prowld/jobs/ Ns Ar label Ns Pa .log .
+Only available for jobs whose unit sets
+.Va standard_out_path
+or
+.Va standard_error_path
+to
+.Pa /var/log/prowld/jobs/ Ns Ar label Ns Pa .log ;
+see
+.Xr prowl-unit 5 .
+None of the units in the base system do.
+.Pp
+.Ar label
+may be the full label or any name the other commands accept, such as
+.Dq sshd
+or
+.Dq dhclient@em0 ;
+.Nm
+asks
+.Xr prowld 8
+for the full label.
+A name
+.Xr prowld 8
+does not know is used as given, so the log of a job that has been
+removed can still be read.
 .Pp
 .Fl \-follow
 tails the file continuously, similar to
@@ -395,6 +416,7 @@ via
 .Xr su 1 ,
 .Xr tail 1 ,
 .Xr dot 1 ,
+.Xr prowl-unit 5 ,
 .Xr rc 8 ,
 .Xr service 8 ,
 .Xr sysrc 8 ,
