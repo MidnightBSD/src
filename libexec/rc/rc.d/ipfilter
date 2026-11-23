@@ -13,81 +13,93 @@ name="ipfilter"
 desc="IP packet filter"
 rcvar="ipfilter_enable"
 load_rc_config $name
-stop_precmd="test -f ${ipfilter_rules} -o -f ${ipv6_ipfilter_rules}"
-
-start_precmd="$stop_precmd"
-start_cmd="ipfilter_start"
-stop_cmd="ipfilter_stop"
-reload_precmd="$stop_precmd"
-reload_cmd="ipfilter_reload"
-resync_precmd="$stop_precmd"
+start_cmd="ipfilter_locked ipfilter_apply_rules"
+stop_cmd="ipfilter_locked ipfilter_stop"
+reload_cmd="ipfilter_locked ipfilter_apply_rules"
 resync_cmd="ipfilter_resync"
-status_precmd="$stop_precmd"
 status_cmd="ipfilter_status"
 extra_commands="reload resync"
 required_modules="ipl:ipfilter"
 
-ipfilter_start()
+ipfilter_locked()
 {
-	echo "Enabling ipfilter."
-	if ! ${ipfilter_program:-/sbin/ipf} -V | grep -q 'Running: yes'; then
-		${ipfilter_program:-/sbin/ipf} -E
+	local lock
+
+	# Both rc.d and prowld operate on the same inactive kernel rule set.
+	lock=/var/run/ipfilter.lock
+	# cleanvar removes regular files at boot. Lock a private directory so
+	# concurrent callers keep using the same vnode throughout startup.
+	mkdir -p -m 700 "${lock}" || return 1
+	{
+		/usr/bin/lockf -t 0 9 || return 1
+		"$@"
+	} 9< "${lock}"
+}
+
+ipfilter_apply_rules()
+{
+	local ipf v4 v6 file
+
+	ipf=${ipfilter_program:-/sbin/ipf}
+	v4=${ipfilter_rules}
+	v6=${ipv6_ipfilter_rules}
+	# Either family may be unconfigured. Once selected, its file must load.
+	[ -e "${v4}" ] || [ -L "${v4}" ] || v4=
+	[ -e "${v6}" ] || [ -L "${v6}" ] || v6=
+	if [ -z "${v4}${v6}" ]; then
+		warn "no IPFilter rules file found"
+		return 1
 	fi
-	if [ -n "${ipfilter_optionlist}" ]; then
-		${ipfilter_program:-/sbin/ipf} -T "${ipfilter_optionlist}"
+	for file in "${v4}" "${v6}"; do
+		[ -n "${file}" ] || continue
+		if [ ! -f "${file}" ] || [ ! -r "${file}" ]; then
+			warn "cannot read IPFilter rules from ${file}"
+			return 1
+		fi
+	done
+
+	if [ "${rc_arg}" = start ]; then
+		echo "Enabling ipfilter."
+		"${ipf}" -E || return 1
+		if [ -n "${ipfilter_optionlist}" ]; then
+			"${ipf}" -T "${ipfilter_optionlist}" || return 1
+		fi
+	else
+		echo "Reloading ipfilter rules."
 	fi
-	${ipfilter_program:-/sbin/ipf} -Fa
-	if [ -r "${ipfilter_rules}" ]; then
-		${ipfilter_program:-/sbin/ipf} \
-		    -f "${ipfilter_rules}" ${ipfilter_flags}
+
+	# Build the complete replacement before changing the active rule set.
+	"${ipf}" -I -Fa || return 1
+	if [ -n "${v4}" ]; then
+		"${ipf}" -I -f "${v4}" ${ipfilter_flags} || return 1
 	fi
-	if [ -r "${ipv6_ipfilter_rules}" ]; then
-		${ipfilter_program:-/sbin/ipf} -6 \
-		    -f "${ipv6_ipfilter_rules}" ${ipfilter_flags}
+	if [ -n "${v6}" ]; then
+		"${ipf}" -I -6 -f "${v6}" ${ipfilter_flags} || return 1
 	fi
+	"${ipf}" -s
 }
 
 ipfilter_stop()
 {
-	if ${ipfilter_program:-/sbin/ipf} -V | grep -q 'Running: yes'; then
+	local status
+
+	status=$("${ipfilter_program:-/sbin/ipf}" -V) || return 1
+	if printf '%s\n' "${status}" | grep -qx 'Running: yes'; then
 		echo "Saving firewall state tables"
-		${ipfs_program:-/sbin/ipfs} -W ${ipfs_flags}
+		"${ipfs_program:-/sbin/ipfs}" -W ${ipfs_flags}
 		echo "Disabling ipfilter."
-		${ipfilter_program:-/sbin/ipf} -D
+		"${ipfilter_program:-/sbin/ipf}" -D
 	fi
-}
-
-ipfilter_reload()
-{
-	echo "Reloading ipfilter rules."
-
-	${ipfilter_program:-/sbin/ipf} -I -Fa
-	if [ -r "${ipfilter_rules}" ]; then
-		${ipfilter_program:-/sbin/ipf} -I \
-		    -f "${ipfilter_rules}" ${ipfilter_flags}
-		if [ $? -ne 0 ]; then
-			err 1 'Load of rules into alternate set failed; aborting reload'
-		fi
-	fi
-	if [ -r "${ipv6_ipfilter_rules}" ]; then
-		${ipfilter_program:-/sbin/ipf} -I -6 \
-		    -f "${ipv6_ipfilter_rules}" ${ipfilter_flags}
-		if [ $? -ne 0 ]; then
-			err 1 'Load of IPv6 rules into alternate set failed; aborting reload'
-		fi
-	fi
-	${ipfilter_program:-/sbin/ipf} -s
-
 }
 
 ipfilter_resync()
 {
-	${ipfilter_program:-/sbin/ipf} -y ${ipfilter_flags}
+	"${ipfilter_program:-/sbin/ipf}" -y ${ipfilter_flags}
 }
 
 ipfilter_status()
 {
-	${ipfilter_program:-/sbin/ipf} -V
+	"${ipfilter_program:-/sbin/ipf}" -V
 }
 
 run_rc_command "$1"
