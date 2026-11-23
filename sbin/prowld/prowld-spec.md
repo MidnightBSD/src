@@ -135,8 +135,9 @@ prowld's daemon options; in particular `-s` is single-user, not a run
 directory.
 
 **Startup.** prowld mounts devfs if `/` and `/dev` share a device, becomes a
-session leader, opens `/dev/console` as fds 0-2, sets the login name to root,
-and honours the loader variables `init_exec` (run a script instead of init),
+session leader, and sets the login name to root. Standard input comes from
+`/dev/null`. Standard output and error are write-only console descriptors.
+It honours the loader variables `init_exec` (run a script instead of init),
 `init_script` (run first; failure means single-user), `init_chroot`, and
 `init_shell`. It then loads units, rc-shims and one getty job per enabled
 `/etc/ttys` line.

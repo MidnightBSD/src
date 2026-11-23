@@ -51,6 +51,7 @@
 #include <grp.h>
 #include <libutil.h>
 #include <limits.h>
+#include <paths.h>
 #include <pwd.h>
 #include <signal.h>
 #include <stdint.h>
@@ -602,27 +603,20 @@ prowl_reset_signals(void)
 	(void)sigprocmask(SIG_SETMASK, &set, NULL);
 }
 
-/*
- * Redirect a standard file descriptor to a path.
- * Called in the child after fork(), before the new program is loaded.
- * Must be async-signal-safe: no malloc, no printf.
- */
+/* Redirect a standard file descriptor in the child before exec. */
 static void
-redirect_fd(int stdfd, const char *path, int flags)
+child_redirect_fd(const job_t *job, int stdfd, const char *path, int flags)
 {
 	int fd;
 
-	if (path == NULL || path[0] == '\0')
-		return;
-
 	fd = open(path, flags, 0644);
-	if (fd == -1)
-		return;
-
-	if (fd != stdfd) {
-		dup2(fd, stdfd);
-		close(fd);
+	if (fd == -1 || (fd != stdfd && dup2(fd, stdfd) == -1)) {
+		syslog(LOG_ERR, "prowld: %s: cannot redirect fd %d to %s: %m",
+		    job->label, stdfd, path);
+		_exit(1);
 	}
+	if (fd != stdfd)
+		close(fd);
 }
 
 /*
@@ -880,6 +874,13 @@ child_setup_and_exec(job_t *job)
 	}
 
 	/*
+	 * PID 1 supplies a read-only null descriptor. Other invocations
+	 * must set up default input before entering a unit's chroot.
+	 */
+	if (!g_is_init && job->stdin_path[0] == '\0')
+		child_redirect_fd(job, STDIN_FILENO, _PATH_DEVNULL, O_RDONLY);
+
+	/*
 	 * chroot(2) must be called as root before drop_privileges().
 	 * After chroot we always chdir("/") to ensure the process cannot
 	 * access paths outside the new root via a lingering CWD reference.
@@ -931,9 +932,7 @@ child_setup_and_exec(job_t *job)
 
 	/* Standard I/O */
 	if (job->stdin_path[0] != '\0')
-		redirect_fd(STDIN_FILENO, job->stdin_path, O_RDONLY);
-	else
-		redirect_fd(STDIN_FILENO, "/dev/null", O_RDONLY);
+		child_redirect_fd(job, STDIN_FILENO, job->stdin_path, O_RDONLY);
 
 	/*
 	 * A reload, check or resync command already has standard output
@@ -942,12 +941,12 @@ child_setup_and_exec(job_t *job)
 	 */
 	if (job->action == PROWL_ACTION_NONE &&
 	    job->stdout_path[0] != '\0')
-		redirect_fd(STDOUT_FILENO, job->stdout_path,
+		child_redirect_fd(job, STDOUT_FILENO, job->stdout_path,
 		    O_WRONLY | O_CREAT | O_APPEND);
 
 	if (job->action == PROWL_ACTION_NONE &&
 	    job->stderr_path[0] != '\0')
-		redirect_fd(STDERR_FILENO, job->stderr_path,
+		child_redirect_fd(job, STDERR_FILENO, job->stderr_path,
 		    O_WRONLY | O_CREAT | O_APPEND);
 
 	/*
@@ -1524,7 +1523,7 @@ supervisor_run_list(job_t *job, int list)
 	const char *lname = list == PROWL_CMD_POST ? "stop_post" : "start_post";
 	bool ok = true;
 	const prowl_cmd_t *c;
-	time_t deadline;
+	struct timespec deadline, now;
 	pid_t pid;
 	int i, st;
 
@@ -1533,9 +1532,16 @@ supervisor_run_list(job_t *job, int list)
 	if (!resolve_job_privileges(job))
 		return (false);
 	for (i = 0; i < job->cmd_count[list]; i++) {
+		bool succeeded = false;
+
 		c = &job->cmds[list][i];
 		if (!cmd_enabled(job, c))
 			continue;
+		if (clock_gettime(CLOCK_MONOTONIC, &deadline) == -1) {
+			prowl_log(LOG_ERR, "clock_gettime for %s: %m", job->label);
+			return (false);
+		}
+		deadline.tv_sec += PROWL_ACTION_TIMEOUT;
 		pid = fork();
 		if (pid == -1) {
 			prowl_log(LOG_ERR, "fork %s: %m", job->label);
@@ -1550,30 +1556,31 @@ supervisor_run_list(job_t *job, int list)
 			_exit(127);
 		}
 
-		deadline = time(NULL) + PROWL_ACTION_TIMEOUT;
 		for (;;) {
 			struct timespec ts = { 0, 20000000L };
 			pid_t r = waitpid(pid, &st, WNOHANG);
 
-			if (r == pid)
+			if (r == pid) {
+				succeeded = WIFEXITED(st) && WEXITSTATUS(st) == 0;
 				break;
-			if (r == -1 && errno != EINTR)
+			}
+			if (r == -1 && errno != EINTR) {
+				prowl_log(LOG_ERR, "waitpid for %s: %m", job->label);
 				break;
-			if (time(NULL) >= deadline) {
+			}
+			if (clock_gettime(CLOCK_MONOTONIC, &now) == -1 ||
+			    timespeccmp(&now, &deadline, >=)) {
 				prowl_log(LOG_WARNING, "job %s: %s %s "
 				    "timed out", job->label, lname,
 				    c->argv[prowl_cmd_first(c)]);
-				kill(pid, SIGKILL);
-				while (waitpid(pid, &st, 0) == -1 &&
-				    errno == EINTR)
-					;
-				st = 0;
+				/* The main SIGCHLD handler reaps it on exit. */
+				if (kill(pid, SIGKILL) == -1 && errno != ESRCH)
+					prowl_log(LOG_ERR, "kill %s: %m", job->label);
 				break;
 			}
 			nanosleep(&ts, NULL);
 		}
-		if (c->argv[prowl_cmd_first(c)][0] != '-' &&
-		    !(WIFEXITED(st) && WEXITSTATUS(st) == 0)) {
+		if (c->argv[prowl_cmd_first(c)][0] != '-' && !succeeded) {
 			prowl_log(LOG_WARNING, "job %s: %s %s failed",
 			    job->label, lname, c->argv[prowl_cmd_first(c)]);
 			ok = false;
@@ -1911,13 +1918,12 @@ supervisor_mdns_register(job_t *job)
 		/* Child */
 		if (g_kqueue_fd >= 0) close(g_kqueue_fd);
 		prowl_reset_signals();
-		/* Redirect output to null to avoid cluttering logs */
-		int fd = open("/dev/null", O_WRONLY);
-		if (fd >= 0) {
-			dup2(fd, STDOUT_FILENO);
-			dup2(fd, STDERR_FILENO);
-			close(fd);
-		}
+		/* Redirect output to null to avoid cluttering logs. */
+		if (!g_is_init)
+			child_redirect_fd(job, STDIN_FILENO, _PATH_DEVNULL,
+			    O_RDONLY);
+		child_redirect_fd(job, STDOUT_FILENO, _PATH_DEVNULL, O_WRONLY);
+		child_redirect_fd(job, STDERR_FILENO, _PATH_DEVNULL, O_WRONLY);
 		execve(args[0], args, (char *const *)(uintptr_t)minimal_env);
 		_exit(127);
 	}

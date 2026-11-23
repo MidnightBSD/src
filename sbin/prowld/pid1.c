@@ -116,29 +116,71 @@ pid1_mount_devfs(bool force)
 }
 
 /*
- * Become session leader and make stdin/stdout/stderr the console, as
- * init(8) does, so that anything we or the rc scripts print is visible
- * and logging to stderr works before syslogd is running.
+ * Give an interactive boot or shutdown command the console on all three
+ * descriptors. The caller keeps the safe defaults if there is no console.
+ */
+static int
+pid1_interactive_console(void)
+{
+	int fd, i, ret;
+
+	fd = open(_PATH_CONSOLE, O_RDWR | O_NOCTTY);
+	if (fd == -1)
+		return (0);
+	ret = 0;
+	for (i = STDIN_FILENO; i <= STDERR_FILENO; i++) {
+		if (dup2(fd, i) == -1) {
+			syslog(LOG_ERR, "cannot attach console to fd %d: %m", i);
+			ret = -1;
+			break;
+		}
+	}
+	if (fd > STDERR_FILENO)
+		close(fd);
+	return (ret);
+}
+
+/*
+ * Keep console logging available before syslogd starts. Most children
+ * inherit these write-only outputs and an input that always returns EOF.
  */
 void
 pid1_open_console(void)
 {
-	int fd, i;
+	int error, fd;
 
 	if (setsid() == -1 && (errno != EPERM || getsid(0) != 1))
 		syslog(LOG_WARNING, "initial setsid() failed: %m");
 
-	fd = open(_PATH_CONSOLE, O_RDWR | O_NOCTTY);
+	fd = open(_PATH_CONSOLE, O_WRONLY | O_NOCTTY);
 	if (fd == -1)
-		fd = open(_PATH_DEVNULL, O_RDWR);
+		fd = open(_PATH_DEVNULL, O_WRONLY);
 	if (fd == -1)
-		return;
-	for (i = 0; i < 3; i++) {
-		if (fd != i)
-			(void)dup2(fd, i);
-	}
-	if (fd > 2)
+		goto fail;
+	if (dup2(fd, STDOUT_FILENO) == -1 ||
+	    dup2(fd, STDERR_FILENO) == -1)
+		goto fail_close;
+	if (fd != STDOUT_FILENO && fd != STDERR_FILENO)
 		close(fd);
+
+	fd = open(_PATH_DEVNULL, O_RDONLY);
+	if (fd == -1)
+		goto fail;
+	if (dup2(fd, STDIN_FILENO) == -1)
+		goto fail_close;
+	if (fd != STDIN_FILENO)
+		close(fd);
+	return;
+
+fail_close:
+	error = errno;
+	if (fd > STDERR_FILENO)
+		close(fd);
+	errno = error;
+fail:
+	syslog(LOG_ERR, "cannot set up PID 1 standard descriptors: %m");
+	loader_recovery = true;
+	pid1_single_user();
 }
 
 /*
@@ -231,6 +273,8 @@ boot_run_rundown(const char *arg)
 		char *argv[4];
 
 		prowl_reset_signals();
+		if (pid1_interactive_console() == -1)
+			_exit(1);
 		argv[0] = (char *)(uintptr_t)"sh";
 		argv[1] = (char *)(uintptr_t)PID1_RUNDOWN;
 		argv[2] = (char *)(uintptr_t)arg;
@@ -342,7 +386,8 @@ pid1_init_exec(void)
 	argv[1] = path;
 	argv[2] = NULL;
 	prowl_reset_signals();
-	pid1_exec_script(argv);
+	if (pid1_interactive_console() == 0)
+		pid1_exec_script(argv);
 	prowl_log(LOG_ERR, "init_exec failed; entering single-user mode");
 	loader_recovery = true;
 	pid1_single_user();
@@ -370,6 +415,8 @@ pid1_init_script(void)
 	}
 	if (pid == 0) {
 		prowl_reset_signals();
+		if (pid1_interactive_console() == -1)
+			_exit(1);
 		argv[0] = (char *)(uintptr_t)"sh";
 		argv[1] = path;
 		argv[2] = g_fastboot ? NULL : (char *)(uintptr_t)"autoboot";
