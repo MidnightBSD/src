@@ -213,7 +213,13 @@ Rescan all unit directories and
 .Xr rc.d 8
 script directories for new or changed files,
 then rebuild the dependency graph.
-Running jobs are not stopped or restarted.
+An idle native job takes its updated definition on the rescan.
+A running job keeps its current process and stop command.
+If its replacement policy is valid,
+.Cm restart
+stops the old process and starts the service with the new definition.
+If the native policy is rejected, correct it and rescan before requesting
+a new start or service action.
 Equivalent to sending
 .Dv SIGHUP
 to

@@ -360,6 +360,11 @@ struct job {
 	/* Runtime state */
 	job_state_t	state;
 	bool		masked;		/* administrative mask */
+	bool		policy_blocked;	/* selected native policy supersedes this job */
+	bool		reload_on_exit;	/* install changed unit after the process stops */
+	bool		restart_after_reload;	/* explicit restart of superseded job */
+	char		*template_instance;
+	unsigned char	*unit_config;	/* effective native unit, for reload comparison */
 	pid_t		pid;
 	int		last_exit_status;
 	int		restart_count;
@@ -498,6 +503,8 @@ job_t		*job_find_by_provides(const char *);
 bool		 job_provides(const job_t *, const char *);
 void		 job_set_state(job_t *, job_state_t);
 void		 job_set_masked(job_t *, bool);
+bool		 job_launch_blocked(const job_t *);
+void		 job_replace(job_t *, job_t *);
 job_state_t	 job_reported_state(const job_t *);
 const char	*job_state_str(job_state_t);
 const char	*job_type_str(job_type_t);
@@ -517,8 +524,10 @@ bool	trusted_ucl_add_fd(struct ucl_parser *, int, const char *);
 int	trusted_open_dir(const char *);
 int	trusted_open_file(const char *, bool);
 int	trusted_open_file_at(int, const char *, bool);
-int	unit_load_dir(const char *);
-int	unit_load_file(const char *);
+void	unit_load_all(void);
+void	supervisor_replace_unit(job_t *, job_t *);
+bool	unit_provider_rejected(const char *);
+bool	unit_label_reserved(const char *);
 job_t	*unit_instantiate(const char *);
 
 /* ---- rcshim.c ---- */

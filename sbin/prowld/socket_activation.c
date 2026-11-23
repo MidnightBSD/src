@@ -259,7 +259,7 @@ socket_bind_all(job_t *job)
 {
 	int i;
 
-	if (job->masked)
+	if (job_launch_blocked(job))
 		return (-1);
 	/* A socket-activated child may have exited and rearmed the set. */
 	if (job->sockets_count > 0 && job->sockets[0].fd >= 0)
@@ -297,7 +297,7 @@ socket_handle_activation(prowl_socket_t *sock)
 	job_t *job = sock->job;
 	int i;
 
-	if (job == NULL || job->masked || sock->fd < 0 ||
+	if (job == NULL || job_launch_blocked(job) || sock->fd < 0 ||
 	    job->socket_activated)
 		return;
 
@@ -319,7 +319,7 @@ socket_rearm(job_t *job)
 	int i;
 
 	job->socket_activated = false;
-	if (job->masked)
+	if (job_launch_blocked(job))
 		return;
 
 	for (i = 0; i < job->sockets_count; i++) {

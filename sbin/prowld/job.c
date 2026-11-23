@@ -71,8 +71,8 @@ job_alloc(void)
 	return (job);
 }
 
-void
-job_free(job_t *job)
+static void
+job_clear(job_t *job)
 {
 	int i, a;
 
@@ -102,7 +102,42 @@ job_free(job_t *job)
 
 	if (job->launch_fd >= 0)
 		close(job->launch_fd);
+	free(job->unit_config);
+	free(job->template_instance);
+}
+
+void
+job_free(job_t *job)
+{
+	job_clear(job);
 	free(job);
+}
+
+/* Keep every kqueue and IPC reference to this job valid across a rescan. */
+void
+job_replace(job_t *old, job_t *replacement)
+{
+	replacement->entries = old->entries;
+	/* A reload should not start an explicitly stopped or completed job. */
+	if (old->state == JOB_STATE_STOPPED || old->state == JOB_STATE_COMPLETED)
+		replacement->state = old->state;
+	if (old->restart_after_reload) {
+		replacement->state = JOB_STATE_LOADED;
+		replacement->run_at_load = true;
+		replacement->enabled = true;
+	}
+	replacement->masked = old->masked;
+	replacement->restart_count = old->restart_count;
+	replacement->last_exit_status = old->last_exit_status;
+	replacement->last_run = old->last_run;
+	replacement->started_at = old->started_at;
+	replacement->exited_at = old->exited_at;
+	replacement->stop_timer_generation = old->stop_timer_generation;
+	job_clear(old);
+	*old = *replacement;
+	for (int i = 0; i < PROWL_SOCKETS_MAX; i++)
+		old->sockets[i].job = old;
+	free(replacement);
 }
 
 job_t *
@@ -182,10 +217,20 @@ job_provides(const job_t *job, const char *name)
 	return (false);
 }
 
+bool
+job_launch_blocked(const job_t *job)
+{
+	return (job->masked || job->policy_blocked);
+}
+
 job_state_t
 job_reported_state(const job_t *job)
 {
-	return (job->masked ? JOB_STATE_MASKED : job->state);
+	if (job->masked)
+		return (JOB_STATE_MASKED);
+	if (job->policy_blocked && job->pid <= 0)
+		return (JOB_STATE_FAILED);
+	return (job->state);
 }
 
 static void

@@ -612,14 +612,9 @@ handle_timer_event(struct kevent *kev)
 static void
 load_units(void)
 {
-	if (g_unit_override[0] != '\0') {
-		unit_load_dir(g_unit_override);
+	unit_load_all();
+	if (g_unit_override[0] != '\0')
 		return;
-	}
-	unit_load_dir(UNIT_DIR_BASE);
-	unit_load_dir(UNIT_DIR_LOCAL);
-	unit_load_dir(UNIT_DIR_OVERRIDE);
-	unit_load_dir(g_generated_dir);
 
 	prowl_log(LOG_NOTICE, "scanning rc.d directories");
 	rcshim_scan_dir(RCD_DIR_BASE);

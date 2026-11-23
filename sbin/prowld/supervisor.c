@@ -268,7 +268,7 @@ supervisor_handle_calendar_tick(void)
 	localtime_r(&now, &tm);
 
 	TAILQ_FOREACH(job, &g_jobs, entries) {
-		if (!job->masked && job->state != JOB_STATE_STOPPING &&
+		if (!job_launch_blocked(job) && job->state != JOB_STATE_STOPPING &&
 		    job->schedule.has_calendar &&
 		    calendar_match(&job->schedule.calendar, &tm)) {
 			prowl_log(LOG_INFO, "timer %s: calendar match",
@@ -1144,7 +1144,7 @@ supervisor_start(job_t *job)
 	pid_t pid;
 	bool use_notify;
 
-	if (job->masked || job->state == JOB_STATE_STOPPING)
+	if (job_launch_blocked(job) || job->state == JOB_STATE_STOPPING)
 		return (-1);
 
 	/* Leave even an explicit start queued until PID 1 finishes boot. */
@@ -1670,6 +1670,28 @@ supervisor_mask(job_t *job)
 	return (err);
 }
 
+/* No child or active stop command remains when an idle unit is replaced. */
+void
+supervisor_replace_unit(job_t *job, job_t *replacement)
+{
+	static const uintptr_t kinds[] = { TIMER_THROTTLE, TIMER_STOP,
+	    TIMER_WATCHDOG, NOTIFY_TMO, TIMER_BOOT_DELAY, TIMER_PERIODIC };
+	struct kevent kev;
+
+	for (size_t i = 0; i < nitems(kinds); i++) {
+		EV_SET(&kev, timer_ident(job, kinds[i]), EVFILT_TIMER, EV_DELETE,
+		    0, 0, NULL);
+		(void)kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL);
+	}
+	notify_socket_close(job);
+	socket_close_all(job);
+	job_replace(job, replacement);
+	if (job->enabled && job->type == JOB_TYPE_TIMER) {
+		arm_periodic_timer(job);
+		arm_boot_delay_timer(job);
+	}
+}
+
 void
 supervisor_unmask(job_t *job)
 {
@@ -1729,7 +1751,7 @@ supervisor_socket_activate(job_t *job)
 {
 	pid_t pid;
 
-	if (job->masked || job->state == JOB_STATE_STOPPING)
+	if (job_launch_blocked(job) || job->state == JOB_STATE_STOPPING)
 		return;
 
 	if (!resolve_job_privileges(job)) {
@@ -1832,7 +1854,7 @@ supervisor_signal(job_t *job, int sig)
 void
 supervisor_handle_periodic(job_t *job)
 {
-	if (job->masked || job->state == JOB_STATE_STOPPING)
+	if (job_launch_blocked(job) || job->state == JOB_STATE_STOPPING)
 		return;
 
 	prowl_log(LOG_INFO, "timer %s: periodic interval reached", job->label);
@@ -1844,7 +1866,7 @@ supervisor_handle_periodic(job_t *job)
 void
 supervisor_handle_boot_delay(job_t *job)
 {
-	if (job->masked || job->state == JOB_STATE_STOPPING)
+	if (job_launch_blocked(job) || job->state == JOB_STATE_STOPPING)
 		return;
 
 	prowl_log(LOG_INFO, "timer %s: boot delay reached", job->label);
@@ -2669,9 +2691,11 @@ supervisor_reap(pid_t pid, int status)
 			prowl_log(LOG_NOTICE, "mdns %s (pid %d) killed by signal %d",
 			    job->label, (int)pid, WTERMSIG(status));
 		job->mdns_pid = -1;
-		
+		if (job->reload_on_exit)
+			g_reload = true;
+
 		/* Restart mdns if job is still running */
-		if (!job->masked && job->state == JOB_STATE_RUNNING)
+		if (!job_launch_blocked(job) && job->state == JOB_STATE_RUNNING)
 			supervisor_mdns_register(job);
 		return;
 	}
@@ -2729,6 +2753,8 @@ supervisor_reap(pid_t pid, int status)
 		job->last_exit_status = status;
 	}
 	release_start_slot(job);
+	if (job->reload_on_exit)
+		g_reload = true;
 
 	if (job->stop_after_start) {
 		job->stop_after_start = false;
