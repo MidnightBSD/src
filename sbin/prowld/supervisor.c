@@ -2191,7 +2191,11 @@ supervisor_reap(pid_t pid, int status)
 	}
 
 	if (job == NULL) {
-		prowl_log(LOG_DEBUG, "reap: unknown pid %d", (int)pid);
+		/*
+		 * Orphans reparented to us end up here all the time; keep
+		 * them in syslog at debug level, not on the console.
+		 */
+		syslog(LOG_DEBUG, "reap: unknown pid %d", (int)pid);
 		return;
 	}
 
