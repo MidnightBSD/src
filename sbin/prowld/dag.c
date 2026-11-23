@@ -246,18 +246,13 @@ dag_build(void)
 		cycles++;
 	}
 
-	/* Apply disabled/masked states */
+	/* Apply administrative masks, then mark disabled idle jobs. */
+	supervisor_load_masks();
 	TAILQ_FOREACH(job, &g_jobs, entries) {
-		if (job->state == JOB_STATE_FAILED)
-			continue;
-		if (job_is_masked(job)) {
-			job_set_state(job, JOB_STATE_MASKED);
-			continue;
-		}
-		if (!job->enabled) {
+		if (!job->masked && !job->enabled &&
+		    (job->state == JOB_STATE_LOADED ||
+		    job->state == JOB_STATE_STOPPED))
 			job_set_state(job, JOB_STATE_DISABLED);
-			continue;
-		}
 	}
 
 	return (cycles == 0 ? 0 : -1);
@@ -301,7 +296,8 @@ dag_activate(job_t *job)
 		p = job_find_by_provides(job->deps[i].name);
 		if (p == NULL)
 			p = job_find_by_label(job->deps[i].name);
-		if (p == NULL || p == job || p->type == JOB_TYPE_RCSHIM)
+		if (p == NULL || p == job || p->masked ||
+		    p->type == JOB_TYPE_RCSHIM)
 			continue;
 		/*
 		 * A provider that is disabled is enabled; one that is enabled
@@ -347,7 +343,7 @@ dag_schedule_ready(void)
 		if (g_current_starts >= limit)
 			break;
 
-		if (job->state != JOB_STATE_LOADED)
+		if (job->masked || job->state != JOB_STATE_LOADED)
 			continue;
 
 		if (!job->run_at_load)
@@ -391,8 +387,7 @@ dag_schedule_ready(void)
 				job_set_state(job, JOB_STATE_FAILED);
 			}
 		} else {
-			if (supervisor_start(job) == 0)
-				g_current_starts++;
+			(void)supervisor_start(job);
 		}
 	}
 

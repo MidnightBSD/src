@@ -128,6 +128,12 @@ prints what it writes to standard output and standard error and exits with
 its status.
 A command that runs longer than 30 seconds is killed, and the first 8192
 bytes of its output are kept.
+The deadline also applies after the command closes its output.
+.Xr prowld 8
+continues supervising other jobs while the command runs.
+One action may run per job, with up to eight actions running across
+all jobs.
+An additional request that would exceed either limit reports an error.
 Without
 .Va reload_arguments
 a running job gets SIGHUP.

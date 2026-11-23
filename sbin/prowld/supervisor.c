@@ -51,7 +51,6 @@
 #include <grp.h>
 #include <libutil.h>
 #include <limits.h>
-#include <poll.h>
 #include <pwd.h>
 #include <signal.h>
 #include <stdint.h>
@@ -73,6 +72,22 @@ static bool	not_exec_yet(pid_t);
 
 static bool g_dnssd_available = true;
 static char g_dnssd_path[PROWL_PATH_MAX];
+
+#define ACTION_RUNS_MAX		8
+#define ACTION_READ_MAX		65536
+
+struct action_run {
+	uintptr_t	tag;
+	pid_t		pid;
+	int		fd;
+	int		code;
+	struct timespec	deadline;
+	char		label[PROWL_LABEL_MAX];
+	size_t		len;
+	char		out[PROWL_ACTION_OUT_MAX + 1];
+};
+
+static struct action_run action_runs[ACTION_RUNS_MAX];
 
 /* Internal prototypes */
 static void supervisor_mdns_register(job_t *job);
@@ -252,7 +267,8 @@ supervisor_handle_calendar_tick(void)
 	localtime_r(&now, &tm);
 
 	TAILQ_FOREACH(job, &g_jobs, entries) {
-		if (job->schedule.has_calendar &&
+		if (!job->masked && job->state != JOB_STATE_STOPPING &&
+		    job->schedule.has_calendar &&
 		    calendar_match(&job->schedule.calendar, &tm)) {
 			prowl_log(LOG_INFO, "timer %s: calendar match",
 			    job->label);
@@ -341,12 +357,28 @@ arm_stop_timer(job_t *job)
 	if (ms <= 0)
 		ms = DEFAULT_EXIT_TIMEOUT * 1000;
 
+	/* A previous timeout may still be in the current kevent batch. */
+	job->stop_timer_generation++;
 	EV_SET(&kev, timer_ident(job, TIMER_STOP), EVFILT_TIMER,
-	    EV_ADD | EV_ONESHOT, NOTE_MSECONDS, ms, NULL);
+	    EV_ADD | EV_ONESHOT, NOTE_MSECONDS, ms,
+	    (void *)job->stop_timer_generation);
 	if (kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL) == -1)
 		prowl_log(LOG_WARNING, "kevent stop timer %s: %m",
 		    job->label);
 	job->stop_timer_active = true;
+}
+
+static void
+cancel_stop_timer(job_t *job)
+{
+	struct kevent kev;
+
+	if (!job->stop_timer_active)
+		return;
+	EV_SET(&kev, timer_ident(job, TIMER_STOP), EVFILT_TIMER, EV_DELETE,
+	    0, 0, NULL);
+	(void)kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL);
+	job->stop_timer_active = false;
 }
 
 /*
@@ -905,7 +937,7 @@ child_setup_and_exec(job_t *job)
 
 	/*
 	 * A reload, check or resync command already has standard output
-	 * and standard error on the pipe that supervisor_run_action()
+	 * and standard error on the pipe that supervisor_read_action()
 	 * reads, so that prowlctl can show what it printed.
 	 */
 	if (job->action == PROWL_ACTION_NONE &&
@@ -1095,6 +1127,15 @@ child_setup_and_exec(job_t *job)
 	_exit(127);
 }
 
+static void
+release_start_slot(job_t *job)
+{
+	if (job->start_pending) {
+		job->start_pending = false;
+		g_current_starts--;
+	}
+}
+
 /*
  * Fork and start a job.  Returns 0 on success, -1 if the job cannot start.
  */
@@ -1103,6 +1144,9 @@ supervisor_start(job_t *job)
 {
 	pid_t pid;
 	bool use_notify;
+
+	if (job->masked || job->state == JOB_STATE_STOPPING)
+		return (-1);
 
 	if (job->state == JOB_STATE_RUNNING ||
 	    job->state == JOB_STATE_STARTING)
@@ -1171,8 +1215,6 @@ supervisor_start(job_t *job)
 		prowl_log(LOG_ERR, "fork %s: %m", job->label);
 		notify_socket_close(job);
 		job_set_state(job, JOB_STATE_FAILED);
-		if (g_current_starts > 0)
-			g_current_starts--;
 		return (-1);
 	}
 
@@ -1189,6 +1231,8 @@ supervisor_start(job_t *job)
 
 	/* Parent */
 	job->pid = pid;
+	job->start_pending = true;
+	g_current_starts++;
 	watch_child(pid, job);
 
 	if (use_notify) {
@@ -1260,113 +1304,207 @@ supervisor_rc_stop(job_t *job)
 	return (0);
 }
 
+/* Keep a killed child's slot until SIGCHLD reaps it. */
+static void
+action_finish(struct action_run *run, int code, bool reply)
+{
+	uintptr_t tag = run->tag;
+
+	if (run->fd >= 0) {
+		close(run->fd);
+		run->fd = -1;
+	}
+	if (run->pid > 0 && kill(run->pid, SIGKILL) == -1 && errno != ESRCH)
+		prowl_log(LOG_WARNING, "kill action for %s: %m", run->label);
+	run->tag = 0;
+	if (reply)
+		ipc_action_complete(tag, code, run->out);
+}
+
+static void
+action_complete_if_ready(struct action_run *run)
+{
+	struct timespec now;
+
+	if (run->fd >= 0 || run->pid > 0)
+		return;
+	if (clock_gettime(CLOCK_MONOTONIC, &now) == -1)
+		action_finish(run, -1, true);
+	else if (timespeccmp(&now, &run->deadline, >=))
+		action_finish(run, 124, true);
+	else
+		action_finish(run, run->code, true);
+}
+
 /*
- * Run one of a unit's reload, check or resync commands and wait for it,
- * keeping the first PROWL_ACTION_OUT_MAX bytes of what it prints (standard
- * output and standard error together) in out.  *exitp is its exit status,
- * 128 plus the signal if a signal ended it, or 124 if it ran longer than
- * PROWL_ACTION_TIMEOUT seconds and was killed.  These are administrator
- * commands that finish quickly; prowld does nothing else while it waits.
- * Returns -1 if the command could not be started.
+ * Fork an action using the unit's normal credentials and environment. The
+ * pipe is watched independently of SIGCHLD: either can finish first.
+ * Return 0 on success, EBUSY for this unit, EAGAIN at capacity, or -1.
  */
 int
-supervisor_run_action(job_t *job, int action, char *out, size_t outsz,
-    int *exitp)
+supervisor_start_action(job_t *job, int action, uintptr_t tag)
 {
-	struct pollfd pfd;
-	char buf[1024];
-	time_t deadline, now;
-	size_t len = 0;
-	ssize_t n;
+	struct action_run *run = NULL;
+	struct timespec deadline;
+	struct kevent kev;
+	int fds[2];
 	pid_t pid;
-	int fds[2], st = 0, r;
-	bool timed_out = false;
 
-	if (outsz == 0)
-		return (-1);
-	out[0] = '\0';
-	*exitp = -1;
-
-	if (action <= PROWL_ACTION_NONE || action >= PROWL_ACTION_MAX ||
-	    job->action_argc[action] == 0)
+	if (g_shutdown || action <= PROWL_ACTION_NONE ||
+	    action >= PROWL_ACTION_MAX || job->action_argc[action] == 0)
 		return (-1);
 
+	for (size_t i = 0; i < nitems(action_runs); i++) {
+		struct action_run *active = &action_runs[i];
+
+		if (active->tag == 0 && active->pid == 0) {
+			if (run == NULL)
+				run = active;
+		} else if (strcmp(active->label, job->label) == 0)
+			return (EBUSY);
+	}
+	if (run == NULL)
+		return (EAGAIN);
 	if (!resolve_job_privileges(job))
 		return (-1);
 
-	if (pipe(fds) == -1) {
+	if (pipe2(fds, O_CLOEXEC) == -1) {
 		prowl_log(LOG_ERR, "pipe %s: %m", job->label);
 		return (-1);
 	}
+	EV_SET(&kev, (uintptr_t)fds[0], EVFILT_READ, EV_ADD, 0, 0,
+	    (void *)tag);
+	if (fcntl(fds[0], F_SETFL, O_NONBLOCK) == -1 ||
+	    kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL) == -1 ||
+	    clock_gettime(CLOCK_MONOTONIC, &deadline) == -1) {
+		prowl_log(LOG_ERR, "action setup for %s: %m", job->label);
+		goto fail;
+	}
+	deadline.tv_sec += PROWL_ACTION_TIMEOUT;
 	pid = fork();
 	if (pid == -1) {
 		prowl_log(LOG_ERR, "fork %s: %m", job->label);
-		close(fds[0]);
-		close(fds[1]);
-		return (-1);
+		goto fail;
 	}
 	if (pid == 0) {
 		close(fds[0]);
-		if (g_kqueue_fd >= 0)
-			close(g_kqueue_fd);
-		if (dup2(fds[1], STDOUT_FILENO) == -1 ||
+		close(g_kqueue_fd);
+		if (fcntl(fds[1], F_SETFD, 0) == -1 ||
+		    dup2(fds[1], STDOUT_FILENO) == -1 ||
 		    dup2(fds[1], STDERR_FILENO) == -1)
 			_exit(127);
 		if (fds[1] > STDERR_FILENO)
 			close(fds[1]);
 		job->action = action;
 		child_setup_and_exec(job);
-		/* NOTREACHED */
 		_exit(127);
 	}
 	close(fds[1]);
 
-	deadline = time(NULL) + PROWL_ACTION_TIMEOUT;
-	for (;;) {
-		now = time(NULL);
-		if (now >= deadline) {
-			timed_out = true;
-			break;
-		}
-		pfd.fd = fds[0];
-		pfd.events = POLLIN;
-		pfd.revents = 0;
-		r = poll(&pfd, 1, (int)(deadline - now) * 1000);
-		if (r == -1) {
-			if (errno == EINTR)
-				continue;
-			break;
-		}
-		if (r == 0) {
-			timed_out = true;
-			break;
-		}
-		n = read(fds[0], buf, sizeof(buf));
-		if (n <= 0)
-			break;
-		if (len < outsz - 1) {
-			size_t take = (size_t)n;
+	run->tag = tag;
+	run->pid = pid;
+	run->fd = fds[0];
+	run->deadline = deadline;
+	strlcpy(run->label, job->label, sizeof(run->label));
+	run->len = 0;
+	run->out[0] = '\0';
+	return (0);
 
-			if (take > outsz - 1 - len)
-				take = outsz - 1 - len;
-			memcpy(out + len, buf, take);
-			len += take;
-			out[len] = '\0';
+fail:
+	close(fds[0]);
+	close(fds[1]);
+	return (-1);
+}
+
+void
+supervisor_read_action(int fd, uintptr_t tag)
+{
+	struct action_run *run = NULL;
+	char buf[4096];
+	size_t drained, keep;
+	ssize_t n;
+
+	for (size_t i = 0; i < nitems(action_runs); i++) {
+		if (action_runs[i].tag == tag && action_runs[i].fd == fd) {
+			run = &action_runs[i];
+			break;
 		}
 	}
-	close(fds[0]);
+	if (run == NULL)
+		return;
 
-	if (timed_out)
-		kill(pid, SIGKILL);
-	while (waitpid(pid, &st, 0) == -1 && errno == EINTR)
-		;
-	if (timed_out)
-		*exitp = 124;
-	else if (WIFEXITED(st))
-		*exitp = WEXITSTATUS(st);
-	else if (WIFSIGNALED(st))
-		*exitp = 128 + WTERMSIG(st);
-	return (0);
+	/* Drain excess output too, with bounded work per readiness event. */
+	for (drained = 0; drained < ACTION_READ_MAX; drained += (size_t)n) {
+		n = read(fd, buf, sizeof(buf));
+		if (n == -1) {
+			if (errno != EAGAIN && errno != EINTR)
+				action_finish(run, -1, true);
+			return;
+		}
+		if (n == 0) {
+			close(fd);
+			run->fd = -1;
+			action_complete_if_ready(run);
+			return;
+		}
+		keep = MIN((size_t)n, PROWL_ACTION_OUT_MAX - run->len);
+		memcpy(run->out + run->len, buf, keep);
+		run->len += keep;
+		run->out[run->len] = '\0';
+	}
+}
+
+/* Expire pending actions and shorten the next kevent wait as needed. */
+void
+supervisor_action_timeout(struct timespec *timeout)
+{
+	struct timespec now, remaining;
+	bool have_time;
+
+	have_time = clock_gettime(CLOCK_MONOTONIC, &now) == 0;
+	for (size_t i = 0; i < nitems(action_runs); i++) {
+		struct action_run *run = &action_runs[i];
+
+		if (run->tag == 0)
+			continue;
+		if (!have_time)
+			action_finish(run, -1, true);
+		else if (timespeccmp(&now, &run->deadline, >=))
+			action_finish(run, 124, true);
+		else {
+			timespecsub(&run->deadline, &now, &remaining);
+			if (timespeccmp(&remaining, timeout, <))
+				*timeout = remaining;
+		}
+	}
+}
+
+void
+supervisor_cancel_actions(void)
+{
+	for (size_t i = 0; i < nitems(action_runs); i++) {
+		if (action_runs[i].tag != 0)
+			action_finish(&action_runs[i], -1, false);
+	}
+}
+
+static bool
+action_reap(pid_t pid, int status)
+{
+	for (size_t i = 0; i < nitems(action_runs); i++) {
+		struct action_run *run = &action_runs[i];
+
+		if (run->pid != pid)
+			continue;
+		run->pid = 0;
+		if (run->tag != 0) {
+			run->code = WIFEXITED(status) ? WEXITSTATUS(status) :
+			    128 + WTERMSIG(status);
+			action_complete_if_ready(run);
+		}
+		return (true);
+	}
+	return (false);
 }
 
 /*
@@ -1473,9 +1611,7 @@ supervisor_stop(job_t *job, bool force)
 			job->pid = dpid;
 			watch_child(dpid, job);
 		} else {
-			if (job->state == JOB_STATE_STARTING &&
-			    g_current_starts > 0)
-				g_current_starts--;
+			release_start_slot(job);
 			job_set_state(job, JOB_STATE_STOPPED);
 			return (0);
 		}
@@ -1523,6 +1659,58 @@ supervisor_stop(job_t *job, bool force)
 	return (0);
 }
 
+int
+supervisor_mask(job_t *job)
+{
+	int err;
+
+	job_set_masked(job, true);
+	job->restart_after_stop = false;
+	cancel_notify_timeout_timer(job);
+	notify_socket_close(job);
+	socket_close_all(job);
+	/*
+	 * A start wrapper may already have launched its daemon.  Stop the
+	 * wrapper first, then run the stop command when it has been reaped.
+	 */
+	if (job->start_pending && !job->rc_stopping &&
+	    (job->type == JOB_TYPE_RCSHIM ||
+	    (job->type == JOB_TYPE_ONESHOT && job->stop_argc > 0)))
+		job->stop_after_start = true;
+	err = supervisor_stop(job, false);
+
+	/* An idle listener has no service process to stop. */
+	if (job->pid <= 0 && job->state == JOB_STATE_RUNNING)
+		job_set_state(job, JOB_STATE_STOPPED);
+	return (err);
+}
+
+void
+supervisor_unmask(job_t *job)
+{
+	if (!job->masked)
+		return;
+
+	/* Keep supervising any process that is still stopping. */
+	if (job->state == JOB_STATE_STOPPING)
+		job->restart_after_stop = job->enabled && job->run_at_load;
+	else
+		job_set_state(job, job->enabled ? JOB_STATE_LOADED :
+		    JOB_STATE_DISABLED);
+	job_set_masked(job, false);
+}
+
+void
+supervisor_load_masks(void)
+{
+	job_t *job;
+
+	TAILQ_FOREACH(job, &g_jobs, entries) {
+		if (!job->masked && job_mask_saved(job))
+			(void)supervisor_mask(job);
+	}
+}
+
 /*
  * Fork and exec a socket-activated daemon, passing the bound socket fds
  * (already in job->sockets[]) as file descriptors 3, 4, 5, ...
@@ -1532,6 +1720,9 @@ void
 supervisor_socket_activate(job_t *job)
 {
 	pid_t pid;
+
+	if (job->masked || job->state == JOB_STATE_STOPPING)
+		return;
 
 	if (!resolve_job_privileges(job)) {
 		/* A pending connection would immediately retrigger a rearm. */
@@ -1582,6 +1773,9 @@ supervisor_signal(job_t *job, int sig)
 void
 supervisor_handle_periodic(job_t *job)
 {
+	if (job->masked || job->state == JOB_STATE_STOPPING)
+		return;
+
 	prowl_log(LOG_INFO, "timer %s: periodic interval reached", job->label);
 	job->last_run = time(NULL);
 	timer_state_save();
@@ -1591,6 +1785,9 @@ supervisor_handle_periodic(job_t *job)
 void
 supervisor_handle_boot_delay(job_t *job)
 {
+	if (job->masked || job->state == JOB_STATE_STOPPING)
+		return;
+
 	prowl_log(LOG_INFO, "timer %s: boot delay reached", job->label);
 	job->last_run = time(NULL);
 	timer_state_save();
@@ -1726,6 +1923,9 @@ supervisor_handle_throttle(job_t *job)
 {
 	job->throttle_timer_active = false;
 
+	if (job->masked)
+		return;
+
 	/* Restart hold-off over: the job may be scheduled again. */
 	if (job->restart_hold) {
 		job->restart_hold = false;
@@ -1764,8 +1964,7 @@ supervisor_handle_throttle(job_t *job)
 	if (job->pid > 0 && kill(job->pid, 0) == 0) {
 		job_set_state(job, JOB_STATE_RUNNING);
 		supervisor_mdns_register(job);
-		if (g_current_starts > 0)
-			g_current_starts--;
+		release_start_slot(job);
 		prowl_log(LOG_INFO, "job %s running (pid %d)",
 		    job->label, (int)job->pid);
 		dag_schedule_ready();
@@ -1795,8 +1994,11 @@ not_exec_yet(pid_t pid)
  * Called when the stop-timeout timer fires.  Force-kill the process.
  */
 void
-supervisor_handle_stop_timeout(job_t *job)
+supervisor_handle_stop_timeout(job_t *job, uintptr_t generation)
 {
+	if (!job->stop_timer_active ||
+	    job->stop_timer_generation != generation)
+		return;
 	job->stop_timer_active = false;
 
 	if (job->state != JOB_STATE_STOPPING)
@@ -1818,7 +2020,7 @@ supervisor_handle_stop_timeout(job_t *job)
 void
 supervisor_handle_notify_timeout(job_t *job)
 {
-	if (job->state != JOB_STATE_STARTING)
+	if (job->masked || job->state != JOB_STATE_STARTING)
 		return;
 
 	prowl_log(LOG_WARNING,
@@ -1840,7 +2042,7 @@ supervisor_handle_watchdog(job_t *job)
 {
 	time_t now = time(NULL);
 
-	if (job->state != JOB_STATE_RUNNING)
+	if (job->masked || job->state != JOB_STATE_RUNNING)
 		return;
 
 	if (now - job->watchdog_last_ping < (time_t)job->watchdog_sec)
@@ -1953,7 +2155,7 @@ supervisor_handle_notify(job_t *job)
 	size_t count, i;
 	int received_fd;
 
-	if (job->notify_fd < 0)
+	if (job->masked || job->notify_fd < 0)
 		return;
 	memset(&msg, 0, sizeof(msg));
 	iov.iov_base = buf;
@@ -2018,8 +2220,7 @@ supervisor_handle_notify(job_t *job)
 					cancel_notify_timeout_timer(job);
 					job_set_state(job, JOB_STATE_RUNNING);
 					supervisor_mdns_register(job);
-					if (g_current_starts > 0)
-						g_current_starts--;
+					release_start_slot(job);
 
 					prowl_log(LOG_INFO,
 					    "job %s ready (READY=1)",
@@ -2281,8 +2482,7 @@ supervisor_adopt(job_t *job)
 		job->adopting = false;
 		prowl_log(LOG_ERR, "job %s: the daemon did not appear",
 		    job->label);
-		if (job->state == JOB_STATE_STARTING && g_current_starts > 0)
-			g_current_starts--;
+		release_start_slot(job);
 		job->exited_at = time(NULL);
 		job_restart_or_fail(job, 1 << 8);
 		return;
@@ -2301,6 +2501,9 @@ supervisor_reap(pid_t pid, int status)
 	job_t *job;
 	struct kevent kev;
 	bool was_launcher;
+
+	if (action_reap(pid, status))
+		return;
 
 	TAILQ_FOREACH(job, &g_jobs, entries) {
 		if (job->pid == pid || job->mdns_pid == pid)
@@ -2326,7 +2529,7 @@ supervisor_reap(pid_t pid, int status)
 		job->mdns_pid = -1;
 		
 		/* Restart mdns if job is still running */
-		if (job->state == JOB_STATE_RUNNING)
+		if (!job->masked && job->state == JOB_STATE_RUNNING)
 			supervisor_mdns_register(job);
 		return;
 	}
@@ -2337,10 +2540,6 @@ supervisor_reap(pid_t pid, int status)
 	job->exited_at = time(NULL);
 	job->pid = -1;
 
-	/* A job that dies while STARTING still held a start slot. */
-	if (job->state == JOB_STATE_STARTING && g_current_starts > 0)
-		g_current_starts--;
-
 	/* Cancel throttle timer if still active */
 	if (job->throttle_timer_active) {
 		EV_SET(&kev, timer_ident(job, TIMER_THROTTLE), EVFILT_TIMER,
@@ -2349,6 +2548,7 @@ supervisor_reap(pid_t pid, int status)
 		job->throttle_timer_active = false;
 	}
 
+	cancel_stop_timer(job);
 	cancel_watchdog_timer(job);
 	cancel_notify_timeout_timer(job);
 	notify_socket_close(job);
@@ -2364,10 +2564,21 @@ supervisor_reap(pid_t pid, int status)
 	 * The process that forks a daemon is done: the daemon is what we
 	 * supervise from here on.
 	 */
-	if (was_launcher && !job->rc_stopping &&
+	if (was_launcher && !job->masked && !job->rc_stopping &&
 	    job->state == JOB_STATE_STARTING &&
 	    WIFEXITED(status) && WEXITSTATUS(status) == 0) {
 		supervisor_adopt(job);
+		return;
+	}
+	release_start_slot(job);
+
+	if (job->stop_after_start) {
+		job->stop_after_start = false;
+		if (supervisor_rc_stop(job) == 0)
+			return;
+		job->restart_after_stop = false;
+		job_set_state(job, JOB_STATE_FAILED);
+		dag_schedule_ready();
 		return;
 	}
 
@@ -2377,11 +2588,20 @@ supervisor_reap(pid_t pid, int status)
 	    (job->type != JOB_TYPE_ONESHOT || job->rc_stopping))
 		(void)supervisor_run_list(job, PROWL_CMD_POST);
 
+	if (job->masked) {
+		job->rc_stopping = false;
+		job->restart_after_stop = false;
+		job_set_state(job, JOB_STATE_STOPPED);
+		dag_schedule_ready();
+		return;
+	}
+
 	/*
 	 * A oneshot that ended well is not done until its start_post
 	 * commands have run; if one of them fails the job has failed.
 	 */
-	if (!job->rc_stopping && job->type == JOB_TYPE_ONESHOT &&
+	if (job->state != JOB_STATE_STOPPING && !job->rc_stopping &&
+	    job->type == JOB_TYPE_ONESHOT &&
 	    job->cmd_count[PROWL_CMD_START_POST] > 0 &&
 	    WIFEXITED(status) && WEXITSTATUS(status) == 0 &&
 	    !supervisor_run_list(job, PROWL_CMD_START_POST))
@@ -2392,18 +2612,12 @@ supervisor_reap(pid_t pid, int status)
 	 * rc.d script runs "start" to completion (daemonizing the service
 	 * if it has one), so a clean exit means dependents may proceed.
 	 */
-	if (!job->rc_stopping && (job->type == JOB_TYPE_ONESHOT ||
+	if (job->state != JOB_STATE_STOPPING && !job->rc_stopping &&
+	    (job->type == JOB_TYPE_ONESHOT ||
 	    (job->type == JOB_TYPE_RCSHIM &&
 	    job->state == JOB_STATE_STARTING)) &&
 	    WIFEXITED(status) && WEXITSTATUS(status) == 0) {
 		job_set_state(job, JOB_STATE_COMPLETED);
-		dag_schedule_ready();
-		return;
-	}
-
-	/* Masked while running: the process was stopped, stay masked */
-	if (job->state == JOB_STATE_MASKED) {
-		job->rc_stopping = false;
 		dag_schedule_ready();
 		return;
 	}

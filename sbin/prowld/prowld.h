@@ -70,12 +70,11 @@ typedef struct prowl_cmd {
 #define TIMER_BOOT_DELAY 5UL
 #define TIMER_CALENDAR_TICK 6UL
 
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-#include <assert.h>
-/* Ensure the tagging trick is safe for this architecture */
-static_assert((__alignof__(struct job) & TIMER_MASK) == 0,
-    "struct job alignment insufficient for timer tagging");
-#endif
+/* EVFILT_READ udata uses aligned pointers for service events. */
+#define READ_EVENT_MASK		3UL
+#define READ_EVENT_SOCKET	1UL
+#define READ_EVENT_CLIENT	2UL
+#define READ_EVENT_ACTION	3UL
 
 /* String size limits */
 #define PROWL_LABEL_MAX		256
@@ -197,6 +196,9 @@ struct prowl_socket {
 	int	fd;                        /* bound fd; -1 = not yet bound */
 	job_t  *job;                       /* owning job (back-pointer) */
 };
+
+_Static_assert((__alignof__(struct prowl_socket) & READ_EVENT_MASK) == 0,
+    "struct prowl_socket alignment insufficient for event tagging");
 
 /* Calendar schedule (cron-like) */
 typedef struct calendar_schedule {
@@ -354,6 +356,7 @@ struct job {
 
 	/* Runtime state */
 	job_state_t	state;
+	bool		masked;		/* administrative mask */
 	pid_t		pid;
 	int		last_exit_status;
 	int		restart_count;
@@ -365,6 +368,7 @@ struct job {
 	bool		enabled;
 
 	/* DAG bookkeeping */
+	bool		start_pending;	/* owns a scheduler start slot */
 	int		dag_indegree;
 	bool		dag_visited;
 	bool		dag_in_stack;
@@ -380,9 +384,11 @@ struct job {
 	bool		adopting;	/* looking for the forked daemon */
 	int		adopt_tries;
 	bool		rc_stopping;	/* rc-shim running its "stop" */
+	bool		stop_after_start; /* run stop when a masked wrapper exits */
 	bool		restart_after_stop;	/* restart: start once stopped */
 	int		quick_fails;	/* consecutive short runs */
 	bool		stop_timer_active;
+	uintptr_t	stop_timer_generation;
 	bool		watchdog_timer_active;
 	time_t		watchdog_last_ping;
 
@@ -398,6 +404,13 @@ struct job {
 	TAILQ_ENTRY(job) entries;
 };
 
+_Static_assert((__alignof__(struct job) & READ_EVENT_MASK) == 0,
+    "struct job alignment insufficient for event tagging");
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert((__alignof__(struct job) & TIMER_MASK) == 0,
+    "struct job alignment insufficient for timer tagging");
+#endif
+
 TAILQ_HEAD(job_list, job);
 
 /* IPC client state */
@@ -410,6 +423,9 @@ typedef struct ipc_client {
 	bool		peer_wheel;
 	bool		completed_request;
 	time_t		frame_started;
+	uintptr_t	event_tag;
+	uintptr_t	action_tag;
+	char		action_id[512];
 	
 	/* Subscriptions */
 	bool		is_subscriber;
@@ -424,6 +440,7 @@ typedef struct ipc_client {
 	size_t		out_len;	/* bytes queued in out */
 	size_t		out_off;	/* bytes of out already sent */
 	bool		want_write;	/* EVFILT_WRITE registered */
+	bool		read_eof;	/* drain queued output before closing */
 } ipc_client_t;
 
 /* Prowld daemon configuration */
@@ -475,9 +492,12 @@ job_t		*job_find_instance(const char *);
 job_t		*job_find_by_provides(const char *);
 bool		 job_provides(const job_t *, const char *);
 void		 job_set_state(job_t *, job_state_t);
+void		 job_set_masked(job_t *, bool);
+job_state_t	 job_reported_state(const job_t *);
 const char	*job_state_str(job_state_t);
 const char	*job_type_str(job_type_t);
-bool		 job_is_masked(const job_t *);
+bool		 job_mask_saved(const job_t *);
+int		 job_save_mask(const job_t *, bool);
 bool		 job_dep_satisfied(const job_t *, const dep_entry_t *);
 bool		 job_all_deps_satisfied(const job_t *);
 bool		 job_activations_pending(const job_t *);
@@ -535,11 +555,17 @@ void	timer_state_load(void);
 void	timer_state_save(void);
 int	supervisor_start(job_t *);
 int	supervisor_stop(job_t *, bool);
+int	supervisor_mask(job_t *);
+void	supervisor_unmask(job_t *);
+void	supervisor_load_masks(void);
 int	supervisor_signal(job_t *, int);
-int	supervisor_run_action(job_t *, int, char *, size_t, int *);
+int	supervisor_start_action(job_t *, int, uintptr_t);
+void	supervisor_read_action(int, uintptr_t);
+void	supervisor_action_timeout(struct timespec *);
+void	supervisor_cancel_actions(void);
 void	supervisor_reap(pid_t, int);
 void	supervisor_handle_throttle(job_t *);
-void	supervisor_handle_stop_timeout(job_t *);
+void	supervisor_handle_stop_timeout(job_t *, uintptr_t);
 void	supervisor_handle_watchdog(job_t *);
 void	supervisor_handle_notify(job_t *);
 void	supervisor_handle_notify_timeout(job_t *);
@@ -566,9 +592,10 @@ int	ipc_init(void);
 void	ipc_shutdown(void);
 void	ipc_accept(void);
 void	ipc_expire_clients(void);
-void	ipc_read_client(int);
-void	ipc_write_ready(int);
+void	ipc_read_client(int, uintptr_t, bool);
+void	ipc_write_ready(int, uintptr_t);
 void	ipc_close_client(int);
+void	ipc_action_complete(uintptr_t, int, const char *);
 void	ipc_broadcast_event(const char *, const char *, const char *);
 
 /* ---- logger ---- */

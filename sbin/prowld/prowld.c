@@ -317,8 +317,10 @@ runtime_up(void)
 	else
 		g_ipc_listen_fd = ipc_listen_fd;
 
-	if (g_boot_mode)
+	if (g_boot_mode) {
+		supervisor_load_masks();
 		timer_state_load();
+	}
 	return (0);
 }
 
@@ -575,7 +577,7 @@ handle_timer_event(struct kevent *kev)
 		supervisor_handle_throttle(job);
 		break;
 	case TIMER_STOP:
-		supervisor_handle_stop_timeout(job);
+		supervisor_handle_stop_timeout(job, (uintptr_t)kev->udata);
 		break;
 	case TIMER_WATCHDOG:
 		supervisor_handle_watchdog(job);
@@ -708,6 +710,9 @@ main_loop(void)
 
 		timeout.tv_sec = 5;
 		timeout.tv_nsec = 0;
+		supervisor_action_timeout(&timeout);
+		if (g_shutdown)
+			break;
 
 		nev = kevent(g_kqueue_fd, NULL, 0, events,
 		    (int)(sizeof(events) / sizeof(events[0])), &timeout);
@@ -720,6 +725,7 @@ main_loop(void)
 
 		for (i = 0; i < nev; i++) {
 			struct kevent *kev = &events[i];
+			uintptr_t tag = (uintptr_t)kev->udata;
 
 			switch (kev->filter) {
 			case EVFILT_SIGNAL:
@@ -727,31 +733,23 @@ main_loop(void)
 				break;
 			case EVFILT_READ:
 				if (g_ipc_listen_fd >= 0 &&
+				    tag == 0 &&
 				    (int)kev->ident == g_ipc_listen_fd)
 					ipc_accept();
-				else if (kev->udata != NULL &&
-				    ((uintptr_t)kev->udata & 1UL))
-					/*
-					 * Bit 0 set: socket activation fd.
-					 * Decode the prowl_socket_t pointer.
-					 */
+				else if ((tag & READ_EVENT_MASK) == READ_EVENT_CLIENT)
+					ipc_read_client((int)kev->ident, tag,
+					    (kev->flags & EV_EOF) != 0);
+				else if ((tag & READ_EVENT_MASK) == READ_EVENT_ACTION)
+					supervisor_read_action((int)kev->ident, tag);
+				else if ((tag & READ_EVENT_MASK) == READ_EVENT_SOCKET)
 					socket_handle_activation(
-					    (prowl_socket_t *)
-					    ((uintptr_t)kev->udata & ~1UL));
-				else if (kev->udata != NULL)
-					/*
-					 * Non-NULL, bit 0 clear: notify fd
-					 * registered by supervisor.c with the
-					 * job pointer as udata.
-					 */
-					supervisor_handle_notify(
-					    (job_t *)kev->udata);
-				else
-					ipc_read_client((int)kev->ident);
+					    (prowl_socket_t *)(tag & ~READ_EVENT_MASK));
+				else if (tag != 0)
+					supervisor_handle_notify((job_t *)tag);
 				break;
 			case EVFILT_WRITE:
 				/* IPC client socket has room again */
-				ipc_write_ready((int)kev->ident);
+				ipc_write_ready((int)kev->ident, tag);
 				break;
 			case EVFILT_PROC:
 				handle_proc_event(kev);
@@ -918,6 +916,7 @@ main(int argc, char *argv[])
 
 	startup_load();
 	main_loop();
+	supervisor_cancel_actions();
 
 	prowl_log(LOG_NOTICE, "prowld stopping");
 

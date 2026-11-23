@@ -436,6 +436,139 @@ actions_cleanup()
 	stop_prowld
 }
 
+atf_test_case action_deadline cleanup
+action_deadline_head()
+{
+	atf_set descr "An action's deadline covers process exit after output closes"
+	atf_set require.user root
+	atf_set timeout 60
+}
+action_deadline_body()
+{
+	mkdir units
+	cat >units/action.unit <<'EOF'
+{"label":"org.test.action","type":"oneshot","program":"/bin/sh",
+ "run_at_load":false,
+ "check_arguments":["-c","echo partial; exec 1>&- 2>&-; : >checking; exec /bin/sleep 45"]}
+EOF
+	start_prowld
+	ctl check org.test.action >out &
+	client=$!
+	for i in $(jot 50); do
+		[ -f checking ] && break
+		sleep 0.1
+	done
+	[ -f checking ] || atf_fail "action did not start"
+	atf_check -s exit:0 -o ignore timeout 5 ${CTL} status org.test.action
+	code=0
+	wait "$client" || code=$?
+	atf_check_equal 124 "$code"
+	atf_check -o inline:'partial\n' cat out
+}
+action_deadline_cleanup()
+{
+	stop_prowld
+}
+
+atf_test_case mask_activation cleanup
+mask_activation_head()
+{
+	atf_set descr "A mask prevents socket launches and preserves stop escalation"
+	atf_set require.user root
+	atf_set require.progs nc
+}
+mask_activation_body()
+{
+	mkdir units
+	cat >units/socket.unit <<'EOF'
+{"label":"org.test.listener","program":"/bin/sh","run_at_load":true,
+ "arguments":["-c",": >activated; exec /bin/sleep 40"],
+ "sockets":{"main":{"path":"listener.sock"}}}
+EOF
+	cat >units/stubborn.unit <<'EOF'
+{"label":"org.test.stubborn","program":"/bin/sh","run_at_load":true,
+ "exit_timeout":1,"keep_alive":true,
+ "arguments":["-c","trap '' TERM; : >ready; exec /bin/sleep 40"]}
+EOF
+	start_prowld
+	wait_state org.test.listener running
+	wait_state org.test.stubborn running
+	[ -f ready ] || atf_fail "TERM handler was not installed"
+	pid=$(job_pid org.test.stubborn)
+	atf_check -o ignore ${CTL} mask org.test.stubborn
+	atf_check -o ignore ${CTL} mask org.test.listener
+	atf_check -s not-exit:0 -o ignore -e ignore ${CTL} start org.test.listener
+	: >empty
+	atf_check -s not-exit:0 -o ignore -e ignore nc -w 1 -U listener.sock <empty
+	for i in $(jot 50); do
+		kill -0 "$pid" 2>/dev/null || break
+		sleep 0.1
+	done
+	kill -0 "$pid" 2>/dev/null && atf_fail "masked process survived its stop deadline"
+	wait_state org.test.stubborn masked
+	[ ! -e activated ] || atf_fail "masked listener launched its job"
+	atf_check -o ignore ${CTL} unmask org.test.listener
+	wait_state org.test.listener running
+	atf_check -s exit:0 -o ignore nc -w 1 -U listener.sock <empty
+	for i in $(jot 50); do
+		[ -f activated ] && break
+		sleep 0.1
+	done
+	[ -f activated ] || atf_fail "unmasked listener did not activate"
+}
+mask_activation_cleanup()
+{
+	stop_prowld
+}
+
+atf_test_case masked_timer cleanup
+masked_timer_head()
+{
+	atf_set descr "A saved mask prevents boot and interval timer launches"
+	atf_set require.user root
+	atf_set require.progs chroot
+}
+masked_timer_body()
+{
+	# Keep both the persistent masks and the timer state in the fixture.
+	mkdir -p root/run/db/masked.d root/var/db/prowld root/units \
+	    root/etc root/lib root/libexec
+	cp "${PROWLD}" root/prowld
+	cp /bin/echo root/echo
+	cp /lib/libc.so.7 root/lib/
+	cp /libexec/ld-elf.so.1 root/libexec/
+	for timer in allowed protected; do
+		echo "${timer}_enable=YES" >>root/etc/rc.conf
+		cat >"root/units/$timer.unit" <<EOF
+{"label":"org.test.$timer","type":"timer","run_at_load":false,
+ "schedule":{"interval":1,"on_boot_delay":1},"program":"/echo",
+ "arguments":["tick"],"standard_out_path":"/$timer.out"}
+EOF
+	done
+	ln -s /dev/null root/run/db/masked.d/org.test.protected
+	chroot root /prowld -d -s /run -u /units >prowld.log 2>&1 &
+	echo $! >prowld.pid
+	for i in $(jot 60); do
+		[ -f root/allowed.out ] && \
+		    [ "$(grep -c '^tick$' root/allowed.out)" -ge 2 ] && break
+		sleep 0.1
+	done
+	[ -f root/allowed.out ] && [ "$(grep -c '^tick$' root/allowed.out)" -ge 2 ] ||
+	    atf_fail "control timer did not fire twice"
+	[ ! -e root/protected.out ] || atf_fail "masked timer ran"
+	atf_check -o match:'State: masked' "${PROWLCTL}" -s root/run status org.test.protected
+	atf_check -o ignore "${PROWLCTL}" -s root/run unmask org.test.protected
+	for i in $(jot 50); do
+		[ -s root/protected.out ] && break
+		sleep 0.1
+	done
+	atf_check -o ignore grep -qx tick root/protected.out
+}
+masked_timer_cleanup()
+{
+	stop_prowld
+}
+
 atf_test_case expansion cleanup
 expansion_head()
 {
@@ -1068,6 +1201,9 @@ unix_socket_access_cleanup()
 
 atf_init_test_cases()
 {
+	atf_add_test_case action_deadline
+	atf_add_test_case mask_activation
+	atf_add_test_case masked_timer
 	atf_add_test_case unix_socket_access
 	atf_add_test_case credentials
 	atf_add_test_case dependency_loop

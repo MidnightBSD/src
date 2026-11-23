@@ -178,21 +178,45 @@ job_provides(const job_t *job, const char *name)
 	return (false);
 }
 
-void
-job_set_state(job_t *job, job_state_t state)
+job_state_t
+job_reported_state(const job_t *job)
 {
-	if (job->state == state)
+	return (job->masked ? JOB_STATE_MASKED : job->state);
+}
+
+static void
+job_report_state_change(const job_t *job, job_state_t old)
+{
+	job_state_t state = job_reported_state(job);
+
+	if (old == state)
 		return;
 
 	prowl_log(LOG_DEBUG, "job %s: %s -> %s",
 	    job->label,
-	    job_state_str(job->state),
+	    job_state_str(old),
 	    job_state_str(state));
 
-	ipc_broadcast_event(job->label, job_state_str(job->state),
+	ipc_broadcast_event(job->label, job_state_str(old),
 	    job_state_str(state));
+}
+
+void
+job_set_state(job_t *job, job_state_t state)
+{
+	job_state_t old = job_reported_state(job);
 
 	job->state = state;
+	job_report_state_change(job, old);
+}
+
+void
+job_set_masked(job_t *job, bool masked)
+{
+	job_state_t old = job_reported_state(job);
+
+	job->masked = masked;
+	job_report_state_change(job, old);
 }
 
 const char *
@@ -226,14 +250,49 @@ job_type_str(job_type_t type)
 	}
 }
 
+static int
+job_mask_path(const job_t *job, char *path, size_t size)
+{
+	int n;
+
+	n = snprintf(path, size, "%s/%s", g_mask_dir, job->label);
+	if (n < 0 || (size_t)n >= size) {
+		errno = ENAMETOOLONG;
+		return (-1);
+	}
+	return (0);
+}
+
 bool
-job_is_masked(const job_t *job)
+job_mask_saved(const job_t *job)
 {
 	char path[PROWL_PATH_MAX];
 	struct stat sb;
 
-	snprintf(path, sizeof(path), "%s/%s", g_mask_dir, job->label);
-	return (lstat(path, &sb) == 0);
+	if (job_mask_path(job, path, sizeof(path)) == 0) {
+		if (lstat(path, &sb) == 0)
+			return (true);
+		if (errno == ENOENT)
+			return (false);
+	}
+	prowl_log(LOG_WARNING, "cannot read mask for %s: %m", job->label);
+	return (job->masked);
+}
+
+int
+job_save_mask(const job_t *job, bool masked)
+{
+	char path[PROWL_PATH_MAX];
+
+	if (job_mask_path(job, path, sizeof(path)) == -1)
+		return (-1);
+	if (masked) {
+		if (symlink("/dev/null", path) == -1 && errno != EEXIST)
+			return (-1);
+	} else if (unlink(path) == -1 && errno != ENOENT) {
+		return (-1);
+	}
+	return (0);
 }
 
 /*
@@ -245,6 +304,7 @@ bool
 job_dep_satisfied(const job_t *job, const dep_entry_t *dep)
 {
 	job_t *provider;
+	job_state_t state;
 
 	/* "?name service": nothing to wait for unless the variable holds */
 	if (dep->cond[0] != '\0' && !prowl_cond_holds(job->rc_name, dep->cond))
@@ -259,8 +319,8 @@ job_dep_satisfied(const job_t *job, const dep_entry_t *dep)
 		return (!dep->hard || job->type == JOB_TYPE_RCSHIM);
 	}
 
-	if (provider->state == JOB_STATE_RUNNING ||
-	    provider->state == JOB_STATE_COMPLETED)
+	state = job_reported_state(provider);
+	if (state == JOB_STATE_RUNNING || state == JOB_STATE_COMPLETED)
 		return (true);
 
 	/*
@@ -273,9 +333,9 @@ job_dep_satisfied(const job_t *job, const dep_entry_t *dep)
 	 */
 	if ((job->type == JOB_TYPE_RCSHIM || !dep->hard ||
 	    (dep->activate && provider->type == JOB_TYPE_RCSHIM)) &&
-	    (provider->state == JOB_STATE_DISABLED ||
-	    provider->state == JOB_STATE_MASKED ||
-	    provider->state == JOB_STATE_FAILED ||
+	    (state == JOB_STATE_DISABLED ||
+	    state == JOB_STATE_MASKED ||
+	    state == JOB_STATE_FAILED ||
 	    provider->restart_hold))
 		return (true);
 
