@@ -175,8 +175,9 @@ Octal umask (e.g.,
 .It Va standard_in_path
 .Pq string
 File to open as the job's standard input.
-The default is
-.Pa /dev/null .
+The default is a read-only
+.Pa /dev/null
+descriptor set up before entering the job's root directory.
 .It Va standard_out_path
 .Pq string
 File to append the job's standard output to.
@@ -193,17 +194,21 @@ or
 .Va standard_error_path
 the job shares the standard output or standard error of
 .Xr prowld 8 .
-The files are opened after
+These inherited output descriptors are write-only when
+.Xr prowld 8
+is PID 1.
+.Pp
+Configured paths are opened after
 .Va root_directory ,
 .Va user
 and
 .Va group
 take effect, so a path is looked up inside the
 .Xr chroot 2
-and must be writable by
+and must be accessible to
 .Va user .
-A file that cannot be opened is skipped and the job still starts.
-They are also opened for
+The command fails if a configured descriptor cannot be redirected.
+Configured paths also apply to
 .Va start_pre ,
 .Va start_post ,
 .Va stop_pre ,

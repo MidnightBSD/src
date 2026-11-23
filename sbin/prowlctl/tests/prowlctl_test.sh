@@ -533,7 +533,8 @@ masked_timer_body()
 {
 	# Keep both the persistent masks and the timer state in the fixture.
 	mkdir -p root/etc/prowld/masks.d root/var/db/prowld/masked.d \
-	    root/var/run root/var/log root/units root/lib root/libexec
+	    root/var/run root/var/log root/units root/lib root/libexec root/dev
+	: >root/dev/null
 	cp "${PROWLD}" root/prowld
 	cp /bin/echo root/echo
 	cp /lib/libc.so.7 root/lib/
@@ -1062,6 +1063,62 @@ oneshot_lists_cleanup()
 	stop_prowld
 }
 
+atf_test_case post_hook_timeout cleanup
+post_hook_timeout_head()
+{
+	atf_set descr "A timed-out required start_post hook fails the oneshot"
+	atf_set require.user root
+	atf_set timeout 65
+}
+post_hook_timeout_body()
+{
+	mkdir units
+	cat >units/slow.unit <<'EOF'
+{"label":"org.test.slow","type":"oneshot","program":"/usr/bin/true",
+ "run_at_load":false,"start_post":[["/bin/sleep","45"],
+ ["/bin/sh","-c",": >hooks_done"]]}
+EOF
+	start_prowld
+	atf_check -o ignore ${CTL} start org.test.slow
+	for i in $(jot 40); do
+		[ -f hooks_done ] && break
+		sleep 1
+	done
+	[ -f hooks_done ] || atf_fail "remaining hook did not run after timeout"
+	wait_state org.test.slow failed
+}
+post_hook_timeout_cleanup()
+{
+	stop_prowld
+}
+
+atf_test_case standard_streams cleanup
+standard_streams_head()
+{
+	atf_set descr "A failed standard-stream redirect prevents execution"
+	atf_set require.user root
+}
+standard_streams_body()
+{
+	mkdir units
+	for stream in in out error; do
+		cat >"units/$stream.unit" <<EOF
+{"label":"org.test.$stream","type":"oneshot","program":"/bin/sh",
+ "arguments":["-c",": >ran_$stream"],"run_at_load":true,
+ "standard_${stream}_path":"$(pwd)/missing/file"}
+EOF
+	done
+	start_prowld
+	for stream in in out error; do
+		wait_state "org.test.$stream" failed
+		[ ! -e "ran_$stream" ] || atf_fail "command ran after bad $stream redirect"
+	done
+}
+standard_streams_cleanup()
+{
+	stop_prowld
+}
+
 atf_test_case credentials cleanup
 credentials_head()
 {
@@ -1076,7 +1133,8 @@ credentials_body()
 
 	# Use a private account database so that group membership does not
 	# depend on the test host and no host accounts need to be changed.
-	mkdir -p root/etc root/lib root/libexec root/usr/bin root/units
+	mkdir -p root/etc root/lib root/libexec root/usr/bin root/units root/dev
+	: >root/dev/null
 	cp "${PROWLD}" root/prowld
 	cp /usr/bin/id root/usr/bin/
 	cp /libexec/ld-elf.so.1 root/libexec/
@@ -1219,6 +1277,8 @@ atf_init_test_cases()
 	atf_add_test_case credentials
 	atf_add_test_case dependency_loop
 	atf_add_test_case oneshot_lists
+	atf_add_test_case post_hook_timeout
+	atf_add_test_case standard_streams
 	atf_add_test_case conditions
 	atf_add_test_case activates
 	atf_add_test_case pre_post

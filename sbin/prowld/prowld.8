@@ -811,9 +811,13 @@ Other flags are ignored.
 .Ss Boot
 .Nm
 becomes a session leader, opens
+.Pa /dev/null
+for standard input and
 .Pa /dev/console
-as standard input, output and error, and sets the login name to
+write-only for standard output and error, and sets the login name to
 .Dq root .
+Interactive boot and shutdown scripts reopen the console for input and output
+when it is available.
 It then honours the loader variables that
 .Xr init 8
 honours:
