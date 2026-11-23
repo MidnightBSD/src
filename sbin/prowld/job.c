@@ -35,6 +35,7 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -251,48 +252,41 @@ job_type_str(job_type_t type)
 }
 
 static int
-job_mask_path(const job_t *job, char *path, size_t size)
+update_mask(const job_t *job, const char *dir, bool masked)
 {
-	int n;
-
-	n = snprintf(path, size, "%s/%s", g_mask_dir, job->label);
-	if (n < 0 || (size_t)n >= size) {
-		errno = ENAMETOOLONG;
-		return (-1);
-	}
-	return (0);
-}
-
-bool
-job_mask_saved(const job_t *job)
-{
-	char path[PROWL_PATH_MAX];
 	struct stat sb;
+	int fd, rc, error;
 
-	if (job_mask_path(job, path, sizeof(path)) == 0) {
-		if (lstat(path, &sb) == 0)
-			return (true);
-		if (errno == ENOENT)
-			return (false);
+	fd = trusted_open_dir(dir);
+	if (fd == -1)
+		return (!masked && errno == ENOENT ? 0 : -1);
+
+	if (masked) {
+		rc = symlinkat("/dev/null", fd, job->label);
+		if (rc == -1 && errno == EEXIST)
+			rc = 0;
+	} else {
+		/* An absent marker needs no write on a read-only file system. */
+		rc = fstatat(fd, job->label, &sb, AT_SYMLINK_NOFOLLOW);
+		if (rc == 0)
+			rc = unlinkat(fd, job->label, 0);
+		if (rc == -1 && errno == ENOENT)
+			rc = 0;
 	}
-	prowl_log(LOG_WARNING, "cannot read mask for %s: %m", job->label);
-	return (job->masked);
+	error = errno;
+	close(fd);
+	errno = error;
+	return (rc);
 }
 
 int
 job_save_mask(const job_t *job, bool masked)
 {
-	char path[PROWL_PATH_MAX];
-
-	if (job_mask_path(job, path, sizeof(path)) == -1)
+	/* Keep the early-boot marker until any legacy copy is gone. */
+	if (!masked && g_legacy_mask_dir != NULL &&
+	    update_mask(job, g_legacy_mask_dir, false) == -1)
 		return (-1);
-	if (masked) {
-		if (symlink("/dev/null", path) == -1 && errno != EEXIST)
-			return (-1);
-	} else if (unlink(path) == -1 && errno != ENOENT) {
-		return (-1);
-	}
-	return (0);
+	return (update_mask(job, g_mask_dir, masked));
 }
 
 /*

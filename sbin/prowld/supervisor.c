@@ -1700,15 +1700,38 @@ supervisor_unmask(job_t *job)
 	job_set_masked(job, false);
 }
 
+static void
+load_masks_from(const char *dir)
+{
+	struct stat sb;
+	job_t *job;
+	int fd;
+
+	fd = trusted_open_dir(dir);
+	if (fd == -1) {
+		if (errno != ENOENT)
+			prowl_log(LOG_WARNING,
+			    "cannot open mask directory %s: %m", dir);
+		return;
+	}
+	TAILQ_FOREACH(job, &g_jobs, entries) {
+		if (job->masked)
+			continue;
+		if (fstatat(fd, job->label, &sb, AT_SYMLINK_NOFOLLOW) == 0)
+			(void)supervisor_mask(job);
+		else if (errno != ENOENT)
+			prowl_log(LOG_WARNING, "cannot read mask %s/%s: %m",
+			    dir, job->label);
+	}
+	close(fd);
+}
+
 void
 supervisor_load_masks(void)
 {
-	job_t *job;
-
-	TAILQ_FOREACH(job, &g_jobs, entries) {
-		if (!job->masked && job_mask_saved(job))
-			(void)supervisor_mask(job);
-	}
+	load_masks_from(g_mask_dir);
+	if (g_legacy_mask_dir != NULL)
+		load_masks_from(g_legacy_mask_dir);
 }
 
 /*

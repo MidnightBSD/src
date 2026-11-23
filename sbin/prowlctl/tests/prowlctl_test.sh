@@ -497,6 +497,7 @@ EOF
 	pid=$(job_pid org.test.stubborn)
 	atf_check -o ignore ${CTL} mask org.test.stubborn
 	atf_check -o ignore ${CTL} mask org.test.listener
+	[ -L run/db/masked.d/org.test.listener ] || atf_fail "missing private mask"
 	atf_check -s not-exit:0 -o ignore -e ignore ${CTL} start org.test.listener
 	: >empty
 	atf_check -s not-exit:0 -o ignore -e ignore nc -w 1 -U listener.sock <empty
@@ -531,13 +532,13 @@ masked_timer_head()
 masked_timer_body()
 {
 	# Keep both the persistent masks and the timer state in the fixture.
-	mkdir -p root/run/db/masked.d root/var/db/prowld root/units \
-	    root/etc root/lib root/libexec
+	mkdir -p root/etc/prowld/masks.d root/var/db/prowld/masked.d \
+	    root/var/run root/var/log root/units root/lib root/libexec
 	cp "${PROWLD}" root/prowld
 	cp /bin/echo root/echo
 	cp /lib/libc.so.7 root/lib/
 	cp /libexec/ld-elf.so.1 root/libexec/
-	for timer in allowed protected; do
+	for timer in allowed protected legacy; do
 		echo "${timer}_enable=YES" >>root/etc/rc.conf
 		cat >"root/units/$timer.unit" <<EOF
 {"label":"org.test.$timer","type":"timer","run_at_load":false,
@@ -545,8 +546,12 @@ masked_timer_body()
  "arguments":["tick"],"standard_out_path":"/$timer.out"}
 EOF
 	done
-	ln -s /dev/null root/run/db/masked.d/org.test.protected
-	chroot root /prowld -d -s /run -u /units >prowld.log 2>&1 &
+	new=root/etc/prowld/masks.d
+	old=root/var/db/prowld/masked.d
+	run=root/var/run/prowld
+	ln -s /dev/null "$new/org.test.protected"
+	ln -s /dev/null "$old/org.test.legacy"
+	chroot root /prowld -d -u /units >prowld.log 2>&1 &
 	echo $! >prowld.pid
 	for i in $(jot 60); do
 		[ -f root/allowed.out ] && \
@@ -556,8 +561,14 @@ EOF
 	[ -f root/allowed.out ] && [ "$(grep -c '^tick$' root/allowed.out)" -ge 2 ] ||
 	    atf_fail "control timer did not fire twice"
 	[ ! -e root/protected.out ] || atf_fail "masked timer ran"
-	atf_check -o match:'State: masked' "${PROWLCTL}" -s root/run status org.test.protected
-	atf_check -o ignore "${PROWLCTL}" -s root/run unmask org.test.protected
+	[ ! -e root/legacy.out ] || atf_fail "legacy-masked timer ran"
+	atf_check -o match:'State: masked' "${PROWLCTL}" -s "$run" status org.test.protected
+	atf_check -o ignore "${PROWLCTL}" -s "$run" mask org.test.legacy
+	[ -L "$new/org.test.legacy" ] || atf_fail "missing early-boot mask"
+	atf_check -o ignore "${PROWLCTL}" -s "$run" unmask org.test.legacy
+	[ ! -L "$new/org.test.legacy" ] && [ ! -L "$old/org.test.legacy" ] ||
+	    atf_fail "unmask left a saved mask"
+	atf_check -o ignore "${PROWLCTL}" -s "$run" unmask org.test.protected
 	for i in $(jot 50); do
 		[ -s root/protected.out ] && break
 		sleep 0.1

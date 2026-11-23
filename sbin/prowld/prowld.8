@@ -1047,6 +1047,14 @@ Base system unit files (do not edit; use overrides.d).
 Ports and packages unit files.
 .It Pa /etc/prowld/overrides.d/
 Local administrator overrides.
+.It Pa /etc/prowld/masks.d/
+Root-owned directory with mode 0700 for system masks.
+Each mask is a symlink to
+.Pa /dev/null
+named after the job's label.
+These masks are available before
+.Pa /var
+is mounted.
 .It Pa /var/run/prowld/
 Runtime state directory.
 Replaced by
@@ -1069,10 +1077,15 @@ Each per-job notification socket has mode 0600 and belongs to its service UID.
 Runtime-generated unit files
 .Pq e.g., from prowl-generator .
 .It Pa /var/db/prowld/masked.d/
-Symlinks to
-.Pa /dev/null
-for masked services.
-Each symlink is named after the job's label.
+Legacy system masks, checked when the directory is accessible.
+See
+.Xr prowlctl 8
+for updating a legacy mask before the next boot.
+.It Pa Ar rundir Ns /db/masked.d/
+Private mask directory when
+.Nm
+is started with
+.Fl s Ar rundir .
 .It Pa /var/log/prowld/
 .Nm
 own log directory.

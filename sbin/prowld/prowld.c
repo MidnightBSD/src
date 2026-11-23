@@ -88,6 +88,7 @@ char	g_sock_path[PROWL_PATH_MAX]    = PROWLD_SOCK_PATH;
 char	g_pid_path[PROWL_PATH_MAX]     = PROWLD_PID_PATH;
 char	g_db_dir[PROWL_PATH_MAX]       = PROWLD_DB_DIR;
 char	g_mask_dir[PROWL_PATH_MAX]     = PROWLD_MASK_DIR;
+const char *g_legacy_mask_dir          = PROWLD_LEGACY_MASK_DIR;
 char	g_log_dir[PROWL_PATH_MAX]      = PROWLD_LOG_DIR;
 char	g_job_log_dir[PROWL_PATH_MAX]  = PROWLD_JOB_LOG_DIR;
 char	g_generated_dir[PROWL_PATH_MAX] = UNIT_DIR_GENERATED;
@@ -104,7 +105,7 @@ usage(void)
  * Called when -s is given or when auto-detection falls back to /tmp/prowld.
  */
 static void
-setup_runtime_paths(const char *base)
+setup_runtime_paths(const char *base, bool private_masks)
 {
 	int n;
 
@@ -127,9 +128,14 @@ setup_runtime_paths(const char *base)
 	if (n < 0 || (size_t)n >= sizeof(g_db_dir))
 		goto toolong;
 
-	n = snprintf(g_mask_dir, sizeof(g_mask_dir), "%s/db/masked.d", base);
-	if (n < 0 || (size_t)n >= sizeof(g_mask_dir))
-		goto toolong;
+	/* Only an explicit -s changes the administrative mask namespace. */
+	if (private_masks) {
+		n = snprintf(g_mask_dir, sizeof(g_mask_dir), "%s/db/masked.d",
+		    base);
+		if (n < 0 || (size_t)n >= sizeof(g_mask_dir))
+			goto toolong;
+		g_legacy_mask_dir = NULL;
+	}
 
 	n = snprintf(g_log_dir, sizeof(g_log_dir), "%s/log", base);
 	if (n < 0 || (size_t)n >= sizeof(g_log_dir))
@@ -256,7 +262,7 @@ ensure_dirs(void)
 		prowl_log(LOG_WARNING,
 		    "run dir %s unavailable, falling back to /tmp/prowld",
 		    g_run_dir);
-		setup_runtime_paths("/tmp/prowld");
+		setup_runtime_paths("/tmp/prowld", false);
 		if (secure_mkdir(g_run_dir, 0755) == -1) {
 			prowl_log(LOG_ERR,
 			    "cannot safely create or validate run directory "
@@ -851,7 +857,7 @@ main(int argc, char *argv[])
 
 	/* Apply explicit runtime directory override before anything else. */
 	if (override_dir != NULL)
-		setup_runtime_paths(override_dir);
+		setup_runtime_paths(override_dir, true);
 
 	if (g_is_init) {
 		prowl_log(LOG_NOTICE, "running as PID 1 (init)");
