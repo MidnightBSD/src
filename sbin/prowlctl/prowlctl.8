@@ -178,19 +178,26 @@ in
 Does not stop a currently running instance.
 .It Cm mask Ar label
 Unconditionally prevent a job from starting even as a dependency.
-Creates a placeholder file in
-.Pa /var/db/prowld/masked.d/ .
+For the system daemon, this creates a mask in
+.Pa /etc/prowld/masks.d/ ,
+where it is available during early boot.
 Masking stops a running job, closes its activation sockets, and
 prevents manual, dependency, and timer starts while the mask is present.
-If
-.Pa /var
-is a separate file system, early boot jobs can start before their saved
-masks become available.
 .Xr prowld 8
-rechecks the masks after the file systems are mounted.
+also honors existing masks in
+.Pa /var/db/prowld/masked.d/
+once that directory is accessible.
+To preserve early-boot masking on the first boot after an upgrade,
+copy existing mask symlinks into
+.Pa /etc/prowld/masks.d/
+before rebooting.
+Once the updated daemon is running,
+.Cm prowlctl mask Ar label
+also creates the new marker for an already masked job.
 .It Cm unmask Ar label
-Remove a mask created by
-.Cm mask .
+Remove the mask.
+For the system daemon, this removes it from both the current and legacy
+directories.
 The job becomes eligible for its configured activation sources again.
 .It Cm show Ar label
 Dump the effective configuration of a job as a JSON object.
@@ -408,9 +415,14 @@ If prowld was started with
 the socket is at
 .Pa Ar rundir Ns /prowld.sock
 instead.
-.It Pa /var/db/prowld/masked.d/
+.It Pa /etc/prowld/masks.d/
 Directory of mask files created by
 .Cm prowlctl mask .
+.It Pa /var/db/prowld/masked.d/
+Legacy system mask directory.
+.It Pa Ar rundir Ns /db/masked.d/
+Private mask directory when the daemon is started with
+.Fl s Ar rundir .
 .It Pa /var/log/prowld/jobs/ Ns Ar label Ns Pa .log
 Per-job log file, read by
 .Cm prowlctl logs .

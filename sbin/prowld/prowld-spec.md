@@ -459,15 +459,21 @@ store exists for enabled/disabled state.
 
 **Masking — symlinks**
 
-- `/var/db/prowld/masked.d/<label>` — symlink to `/dev/null`. Presence means
-  masked (cannot be started, even as a dependency). Created by `prowlctl mask`,
-  removed by `prowlctl unmask`.
+- `/etc/prowld/masks.d/<label>` — symlink to `/dev/null` in a root-owned,
+  mode 0700 directory available during early boot. Presence means masked
+  (cannot be started, even as a dependency). Created by `prowlctl mask`.
+- `/var/db/prowld/masked.d/<label>` — legacy system mask honored when
+  accessible. Copy existing mask symlinks to the new directory before the
+  first upgraded boot if `/var` is mounted separately. With the updated
+  daemon running, `prowlctl mask <label>` also creates the new marker.
+  `prowlctl unmask` removes both copies.
+- `<rundir>/db/masked.d/<label>` — private mask location when the daemon
+  is started with an explicit `-s <rundir>`.
 
 Masking is a prowld-specific concept with no rc.conf equivalent, so it has
-its own storage. Symlink creation and removal are atomic single syscalls,
-so the state cannot be observed in a torn form — even across a crash
-mid-operation. An administrator can inspect or repair masking state with
-`ls`, `ln`, and `rm` when prowld is not running.
+its own storage. Each marker is created or removed with a single syscall.
+An administrator can inspect or repair masking state with `ls`, `ln`, and
+`rm` when prowld is not running.
 
 **Persistent timer state — flat UCL file**
 

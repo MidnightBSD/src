@@ -64,8 +64,6 @@
         portsnap
         ..
         prowld
-            masked.d    mode=0700
-            ..
         ..
         zfsd tags=package=zfs
             cases

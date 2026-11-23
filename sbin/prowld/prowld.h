@@ -105,7 +105,8 @@ typedef struct prowl_cmd {
 #define PROWLD_RUN_DIR		"/var/run/prowld"
 #define PROWLD_NOTIFY_DIR	"/var/run/prowld/notify"
 #define PROWLD_CONF_PATH	"/etc/prowld/prowld.conf"
-#define PROWLD_MASK_DIR		"/var/db/prowld/masked.d"
+#define PROWLD_MASK_DIR		"/etc/prowld/masks.d"
+#define PROWLD_LEGACY_MASK_DIR	"/var/db/prowld/masked.d"
 #define PROWLD_DB_DIR		"/var/db/prowld"
 #define PROWLD_TIMER_STATE_PATH	"/var/db/prowld/timers.state"
 #define PROWLD_LOG_DIR		"/var/log/prowld"
@@ -475,6 +476,7 @@ extern char		 g_sock_path[PROWL_PATH_MAX];
 extern char		 g_pid_path[PROWL_PATH_MAX];
 extern char		 g_db_dir[PROWL_PATH_MAX];
 extern char		 g_mask_dir[PROWL_PATH_MAX];
+extern const char	*g_legacy_mask_dir;
 extern char		 g_log_dir[PROWL_PATH_MAX];
 extern char		 g_job_log_dir[PROWL_PATH_MAX];
 extern char		 g_generated_dir[PROWL_PATH_MAX];
@@ -496,7 +498,6 @@ void		 job_set_masked(job_t *, bool);
 job_state_t	 job_reported_state(const job_t *);
 const char	*job_state_str(job_state_t);
 const char	*job_type_str(job_type_t);
-bool		 job_mask_saved(const job_t *);
 int		 job_save_mask(const job_t *, bool);
 bool		 job_dep_satisfied(const job_t *, const dep_entry_t *);
 bool		 job_all_deps_satisfied(const job_t *);
