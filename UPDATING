@@ -1,6 +1,10 @@
 Updating Information for MidnightBSD users.
 
 20261122:
+	prowld services now receive EOF on standard input by default. A failed
+	standard-stream redirect prevents the command from running. IPFilter
+	start and reload stage rules before replacing the active set.
+
 	When running as PID 1, prowld now raises kern.securelevel from 0 to 1
 	before starting console logins, as init(8) does. Other levels are
 	preserved.
