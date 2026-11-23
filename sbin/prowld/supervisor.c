@@ -852,11 +852,18 @@ child_setup_and_exec(job_t *job)
 	else
 		redirect_fd(STDIN_FILENO, "/dev/null", O_RDONLY);
 
-	if (job->stdout_path[0] != '\0')
+	/*
+	 * A reload, check or resync command already has standard output
+	 * and standard error on the pipe that supervisor_run_action()
+	 * reads, so that prowlctl can show what it printed.
+	 */
+	if (job->action == PROWL_ACTION_NONE &&
+	    job->stdout_path[0] != '\0')
 		redirect_fd(STDOUT_FILENO, job->stdout_path,
 		    O_WRONLY | O_CREAT | O_APPEND);
 
-	if (job->stderr_path[0] != '\0')
+	if (job->action == PROWL_ACTION_NONE &&
+	    job->stderr_path[0] != '\0')
 		redirect_fd(STDERR_FILENO, job->stderr_path,
 		    O_WRONLY | O_CREAT | O_APPEND);
 

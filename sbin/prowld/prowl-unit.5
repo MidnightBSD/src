@@ -188,13 +188,16 @@ They are also opened for
 .Va start_pre ,
 .Va start_post ,
 .Va stop_pre ,
-.Va stop_post ,
-.Va stop_arguments
-and the action commands, so the output of
-.Cm prowlctl check
-or
-.Cm reload
-goes to the file as well.
+.Va stop_post
+and
+.Va stop_arguments .
+The output of
+.Va reload_arguments ,
+.Va check_arguments
+and
+.Va resync_arguments
+is not written there; it is passed back to
+.Xr prowlctl 8 .
 .Pp
 To have
 .Cm prowlctl logs
