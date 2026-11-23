@@ -180,13 +180,18 @@ Does not stop a currently running instance.
 Unconditionally prevent a job from starting even as a dependency.
 Creates a placeholder file in
 .Pa /var/db/prowld/masked.d/ .
-A masked job cannot be started with
-.Cm start
-until it is unmasked.
+Masking stops a running job, closes its activation sockets, and
+prevents manual, dependency, and timer starts while the mask is present.
+If
+.Pa /var
+is a separate file system, early boot jobs can start before their saved
+masks become available.
+.Xr prowld 8
+rechecks the masks after the file systems are mounted.
 .It Cm unmask Ar label
 Remove a mask created by
 .Cm mask .
-The job must then be explicitly enabled or started if desired.
+The job becomes eligible for its configured activation sources again.
 .It Cm show Ar label
 Dump the effective configuration of a job as a JSON object.
 The output reflects all parsed unit-file fields and runtime defaults.
@@ -303,6 +308,12 @@ is not running or not responding on the control socket.
 gives up when
 .Xr prowld 8
 has not answered for 30 seconds.
+For
+.Cm check , reload ,
+and
+.Cm resync ,
+the client waits up to 40 seconds so that the daemon can return the
+result of its 30-second action timeout.
 The operation may still be carried out.
 .El
 .Sh EXAMPLES

@@ -60,6 +60,7 @@
 
 /* Exit codes per spec §13.3 */
 #define PROWLD_TIMEOUT		30	/* seconds without an answer */
+#define ACTION_REPLY_TIMEOUT	40	/* includes the daemon's 30s deadline */
 #define EXIT_OK			0
 #define EXIT_NOT_FOUND		1
 #define EXIT_FAILED		2
@@ -67,6 +68,7 @@
 #define EXIT_NO_DAEMON		4
 
 static int g_sock = -1;
+static int g_reply_timeout = PROWLD_TIMEOUT;
 static char g_sock_path[PATH_MAX] = PROWLD_SOCK_PATH;
 static char g_pid_path[PATH_MAX] = "/var/run/prowld/prowld.pid";
 static bool g_json = false;	/* --json flag */
@@ -143,8 +145,12 @@ connect_daemon(void)
 	 * Do not wait for ever on a prowld that does not answer, for example
 	 * one that is busy running rc.shutdown.
 	 */
-	if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) == -1 ||
-	    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) == -1) {
+	if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) == -1) {
+		close(fd);
+		return (-1);
+	}
+	tv.tv_sec = g_reply_timeout;
+	if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) == -1) {
 		close(fd);
 		return (-1);
 	}
@@ -214,7 +220,7 @@ recv_response(int fd)
 	if (n != 4) {
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			warnx("no answer from prowld after %d seconds",
-			    PROWLD_TIMEOUT);
+			    g_reply_timeout);
 		return (NULL);
 	}
 
@@ -232,7 +238,7 @@ recv_response(int fd)
 			if (n == -1 && (errno == EAGAIN ||
 			    errno == EWOULDBLOCK))
 				warnx("no answer from prowld after %d seconds",
-				    PROWLD_TIMEOUT);
+				    g_reply_timeout);
 			free(buf);
 			return (NULL);
 		}
@@ -1301,6 +1307,9 @@ main(int argc, char *argv[])
 		argv++;
 	}
 
+	if (strcmp(cmd, "check") == 0 || strcmp(cmd, "reload") == 0 ||
+	    strcmp(cmd, "resync") == 0)
+		g_reply_timeout = ACTION_REPLY_TIMEOUT;
 	g_sock = connect_daemon();
 	if (g_sock == -1) {
 		if (errno == ENOENT || errno == ECONNREFUSED)

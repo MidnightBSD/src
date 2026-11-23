@@ -219,13 +219,13 @@ socket_bind_one(prowl_socket_t *sock)
 
 /*
  * Register EVFILT_READ for one socket fd.
- * udata has bit 0 set to distinguish from notify fds in the event loop.
+ * Tag udata to distinguish socket readiness from other read events.
  */
 static void
 socket_kqueue_add(prowl_socket_t *sock)
 {
 	struct kevent kev;
-	uintptr_t udata = (uintptr_t)sock | 1UL;
+	uintptr_t udata = (uintptr_t)sock | READ_EVENT_SOCKET;
 
 	EV_SET(&kev, (uintptr_t)sock->fd, EVFILT_READ, EV_ADD,
 	    0, 0, (void *)udata);
@@ -259,6 +259,12 @@ socket_bind_all(job_t *job)
 {
 	int i;
 
+	if (job->masked)
+		return (-1);
+	/* A socket-activated child may have exited and rearmed the set. */
+	if (job->sockets_count > 0 && job->sockets[0].fd >= 0)
+		return (0);
+
 	for (i = 0; i < job->sockets_count; i++) {
 		if (socket_bind_one(&job->sockets[i]) == -1) {
 			prowl_log(LOG_ERR,
@@ -291,7 +297,8 @@ socket_handle_activation(prowl_socket_t *sock)
 	job_t *job = sock->job;
 	int i;
 
-	if (job == NULL || job->socket_activated)
+	if (job == NULL || job->masked || sock->fd < 0 ||
+	    job->socket_activated)
 		return;
 
 	/* Remove EVFILT_READ for all sockets — daemon takes them all over */
@@ -312,6 +319,8 @@ socket_rearm(job_t *job)
 	int i;
 
 	job->socket_activated = false;
+	if (job->masked)
+		return;
 
 	for (i = 0; i < job->sockets_count; i++) {
 		if (job->sockets[i].fd >= 0)
@@ -332,6 +341,7 @@ socket_close_all(job_t *job)
 {
 	int i;
 
+	job->socket_activated = false;
 	for (i = 0; i < job->sockets_count; i++) {
 		prowl_socket_t *s = &job->sockets[i];
 

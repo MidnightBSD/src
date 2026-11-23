@@ -35,6 +35,7 @@
  * Incoming JSON is parsed with libucl.  Responses are built with snprintf.
  */
 
+#include <sys/param.h>
 #include <sys/event.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -47,6 +48,7 @@
 
 #include <errno.h>
 #include <grp.h>
+#include <poll.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -72,10 +74,31 @@ static gid_t g_wheel_gid = 0;
 
 /* Per-client state */
 static ipc_client_t g_clients[IPC_MAX_CLIENTS];
+static uintptr_t g_event_seq;
 
 /* Internal prototypes */
 static ipc_client_t *ipc_get_client(int fd);
 static void ipc_send_error(int fd, const char *id, const char *message);
+static void ipc_dispatch_buffered(ipc_client_t *);
+
+static uintptr_t
+ipc_event_tag(uintptr_t type)
+{
+	g_event_seq += READ_EVENT_MASK + 1;
+	return (g_event_seq | type);
+}
+
+static int
+ipc_watch_read(const ipc_client_t *client, int flags, bool hold)
+{
+	struct kevent kev;
+
+	/* Keep monitoring EOF while leaving later requests in the socket. */
+	EV_SET(&kev, (uintptr_t)client->fd, EVFILT_READ, flags,
+	    hold ? NOTE_LOWAT : 0, hold ? INTPTR_MAX : 0,
+	    (void *)client->event_tag);
+	return (kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL));
+}
 
 /* ------------------------------------------------------------------ */
 /* JSON helpers                                                          */
@@ -187,7 +210,7 @@ ipc_flush_client(ipc_client_t *c)
 				if (c->want_write)
 					return;
 				EV_SET(&kev, (uintptr_t)c->fd, EVFILT_WRITE,
-				    EV_ADD, 0, 0, NULL);
+				    EV_ADD, 0, 0, (void *)c->event_tag);
 				if (kevent(g_kqueue_fd, &kev, 1, NULL, 0,
 				    NULL) == 0) {
 					c->want_write = true;
@@ -268,14 +291,16 @@ ipc_send(int fd, const char *json, size_t len)
  * EVFILT_WRITE fired: the socket has room again.
  */
 void
-ipc_write_ready(int fd)
+ipc_write_ready(int fd, uintptr_t tag)
 {
 	ipc_client_t *c;
 
 	c = ipc_get_client(fd);
-	if (c == NULL)
+	if (c == NULL || c->event_tag != tag)
 		return;
 	ipc_flush_client(c);
+	if (c->read_eof && !c->want_write)
+		ipc_close_client(fd);
 }
 
 static void
@@ -368,7 +393,7 @@ job_to_json(const job_t *job, char *buf, size_t bufsz)
 	    elabel,
 	    edesc,
 	    job_type_str(job->type),
-	    job_state_str(job->state),
+	    job_state_str(job_reported_state(job)),
 	    (int)(job->pid > 0 ? job->pid : supervisor_shim_pid(job)),
 	    ercname,
 	    job->enabled ? "true" : "false",
@@ -572,14 +597,14 @@ cmd_list(int fd, const char *id, const ucl_object_t *req)
 		int n;
 
 		if (state_filter != NULL &&
-		    strcmp(job_state_str(job->state), state_filter) != 0)
+		    strcmp(job_state_str(job_reported_state(job)),
+		    state_filter) != 0)
 			continue;
 		if (type_filter != NULL &&
 		    strcmp(job_type_str(job->type), type_filter) != 0)
 			continue;
 		if (enabled_only && (!job->enabled ||
-		    job->state == JOB_STATE_DISABLED ||
-		    job->state == JOB_STATE_MASKED))
+		    job->state == JOB_STATE_DISABLED || job->masked))
 			continue;
 
 		n = job_to_json(job, jbuf, sizeof(jbuf));
@@ -631,25 +656,26 @@ cmd_start(int fd, const char *id, const ucl_object_t *req)
 	if (job == NULL)
 		return;
 
-	if (job->state == JOB_STATE_MASKED) {
+	if (job->masked) {
 		ipc_send_error(fd, id, "job is masked");
 		return;
 	}
 
 	job->run_at_load = true;
 	job->enabled = true;
-	if (job->state != JOB_STATE_RUNNING &&
+	if (job->state == JOB_STATE_STOPPING) {
+		job->restart_after_stop = true;
+	} else if (job->state != JOB_STATE_RUNNING &&
 	    job->state != JOB_STATE_STARTING &&
-	    (dag_activate(job) || job_activations_pending(job))) {
-		/* Wait for the services it activates: the scheduler starts it */
+	    (dag_activate(job) || job_activations_pending(job) ||
+	    job->sockets_count > 0)) {
+		/* The scheduler handles dependencies and socket listeners. */
 		job_set_state(job, JOB_STATE_LOADED);
 		dag_schedule_ready();
 	} else if (job->state != JOB_STATE_RUNNING &&
 	    job->state != JOB_STATE_STARTING) {
 		job_set_state(job, JOB_STATE_LOADED);
-		if (supervisor_start(job) == 0)
-			g_current_starts++;
-		else {
+		if (supervisor_start(job) == -1) {
 			ipc_send_error(fd, id, "job failed to start "
 			    "(see the system log)");
 			return;
@@ -681,6 +707,11 @@ cmd_restart(int fd, const char *id, const ucl_object_t *req)
 	if (job == NULL)
 		return;
 
+	if (job->masked) {
+		ipc_send_error(fd, id, "job is masked");
+		return;
+	}
+
 	supervisor_stop(job, false);
 	job->run_at_load = true;
 	if (job->state == JOB_STATE_STOPPING) {
@@ -688,7 +719,6 @@ cmd_restart(int fd, const char *id, const ucl_object_t *req)
 		job->restart_after_stop = true;
 	} else if (job->state != JOB_STATE_RUNNING &&
 	    job->state != JOB_STATE_STARTING &&
-	    job->state != JOB_STATE_MASKED &&
 	    job->state != JOB_STATE_DISABLED) {
 		job_set_state(job, JOB_STATE_LOADED);
 		dag_schedule_ready();
@@ -704,18 +734,17 @@ cmd_restart(int fd, const char *id, const ucl_object_t *req)
 static void
 cmd_action(int fd, const char *id, job_t *job, int action, const char *name)
 {
-	char out[PROWL_ACTION_OUT_MAX];
+	ipc_client_t *client = ipc_get_client(fd);
 	char msg[96];
-	char *esc, *result;
-	size_t cap;
-	int code;
+	uintptr_t tag;
+	int error;
 
 	if (job->action_argc[action] == 0) {
 		snprintf(msg, sizeof(msg), "job has no %s command", name);
 		ipc_send_error(fd, id, msg);
 		return;
 	}
-	if (job->state == JOB_STATE_MASKED) {
+	if (job->masked) {
 		ipc_send_error(fd, id, "job is masked");
 		return;
 	}
@@ -726,8 +755,29 @@ cmd_action(int fd, const char *id, job_t *job, int action, const char *name)
 		return;
 	}
 
-	if (supervisor_run_action(job, action, out, sizeof(out), &code) == -1) {
-		ipc_send_error(fd, id, "could not run the command");
+	tag = ipc_event_tag(READ_EVENT_ACTION);
+	error = client == NULL ? -1 : supervisor_start_action(job, action, tag);
+	if (error != 0) {
+		ipc_send_error(fd, id, error == EBUSY ?
+		    "another command is running for this job" : error == EAGAIN ?
+		    "too many service actions are running" :
+		    "could not run the command");
+		return;
+	}
+	client->action_tag = tag;
+	strlcpy(client->action_id, id, sizeof(client->action_id));
+	if (ipc_watch_read(client, EV_ADD, true) == -1)
+		ipc_close_client(fd);
+}
+
+static void
+ipc_send_action_result(int fd, const char *id, int code, const char *out)
+{
+	char *esc, *result;
+	size_t cap;
+
+	if (code < 0) {
+		ipc_send_error(fd, id, "could not collect command output");
 		return;
 	}
 
@@ -754,6 +804,31 @@ cmd_action(int fd, const char *id, job_t *job, int action, const char *name)
 	ipc_send_ok(fd, id, result);
 	free(result);
 	free(esc);
+}
+
+void
+ipc_action_complete(uintptr_t tag, int code, const char *out)
+{
+	ipc_client_t *client = NULL;
+	struct timespec now;
+
+	for (size_t i = 0; i < nitems(g_clients); i++) {
+		if (g_clients[i].active && g_clients[i].action_tag == tag) {
+			client = &g_clients[i];
+			break;
+		}
+	}
+	if (client == NULL)
+		return;
+	client->action_tag = 0;
+	ipc_send_action_result(client->fd, client->action_id, code, out);
+	if (ipc_watch_read(client, EV_ADD | EV_ENABLE, false) == -1 ||
+	    clock_gettime(CLOCK_MONOTONIC, &now) == -1) {
+		ipc_close_client(client->fd);
+		return;
+	}
+	client->frame_started = now.tv_sec;
+	ipc_dispatch_buffered(client);
 }
 
 static void
@@ -788,6 +863,11 @@ cmd_reload(int fd, const char *id, const ucl_object_t *req)
 	/* A unit with a reload command has it run instead of a SIGHUP */
 	if (job->action_argc[PROWL_ACTION_RELOAD] > 0) {
 		cmd_action(fd, id, job, PROWL_ACTION_RELOAD, "reload");
+		return;
+	}
+
+	if (job->masked) {
+		ipc_send_error(fd, id, "job is masked");
 		return;
 	}
 
@@ -848,20 +928,20 @@ static void
 cmd_mask(int fd, const char *id, const ucl_object_t *req)
 {
 	job_t *job;
-	char path[PROWL_PATH_MAX];
 
 	job = resolve_target(req, fd, id);
 	if (job == NULL)
 		return;
 
-	snprintf(path, sizeof(path), "%s/%s", g_mask_dir, job->label);
-	if (symlink("/dev/null", path) == -1 && errno != EEXIST) {
+	if (job_save_mask(job, true) == -1) {
 		ipc_send_error(fd, id, "mask failed");
 		return;
 	}
 
-	supervisor_stop(job, false);
-	job_set_state(job, JOB_STATE_MASKED);
+	if (supervisor_mask(job) == -1) {
+		ipc_send_error(fd, id, "job masked, but stop failed");
+		return;
+	}
 	ipc_send_ok(fd, id, NULL);
 }
 
@@ -869,18 +949,17 @@ static void
 cmd_unmask(int fd, const char *id, const ucl_object_t *req)
 {
 	job_t *job;
-	char path[PROWL_PATH_MAX];
 
 	job = resolve_target(req, fd, id);
 	if (job == NULL)
 		return;
 
-	snprintf(path, sizeof(path), "%s/%s", g_mask_dir, job->label);
-	unlink(path);
+	if (job_save_mask(job, false) == -1) {
+		ipc_send_error(fd, id, "unmask failed");
+		return;
+	}
 
-	if (job->state == JOB_STATE_MASKED)
-		job_set_state(job, JOB_STATE_LOADED);
-
+	supervisor_unmask(job);
 	ipc_send_ok(fd, id, NULL);
 }
 
@@ -1323,7 +1402,6 @@ ipc_accept(void)
 {
 	struct xucred cred;
 	struct timespec now;
-	struct kevent kev;
 	socklen_t credlen;
 	int batch, cfd, i, slot, nonroot, sameuid;
 	bool wheel;
@@ -1382,8 +1460,8 @@ ipc_accept(void)
 		g_clients[slot].peer_uid = cred.cr_uid;
 		g_clients[slot].peer_wheel = wheel;
 		g_clients[slot].frame_started = now.tv_sec;
-		EV_SET(&kev, (uintptr_t)cfd, EVFILT_READ, EV_ADD, 0, 0, NULL);
-		if (kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL) == -1) {
+		g_clients[slot].event_tag = ipc_event_tag(READ_EVENT_CLIENT);
+		if (ipc_watch_read(&g_clients[slot], EV_ADD, false) == -1) {
 			prowl_log(LOG_WARNING, "ipc_accept kevent: %m");
 			close(cfd);
 			continue;
@@ -1402,7 +1480,7 @@ ipc_expire_clients(void)
 	if (clock_gettime(CLOCK_MONOTONIC, &now) == -1)
 		return;
 	for (i = 0; i < IPC_MAX_CLIENTS; i++) {
-		if (g_clients[i].active &&
+		if (g_clients[i].active && g_clients[i].action_tag == 0 &&
 		    (!g_clients[i].completed_request || g_clients[i].buf_used != 0) &&
 		    now.tv_sec - g_clients[i].frame_started >= IPC_FRAME_TIMEOUT)
 			ipc_close_client(g_clients[i].fd);
@@ -1421,6 +1499,7 @@ ipc_close_client(int fd)
 
 	for (i = 0; i < IPC_MAX_CLIENTS; i++) {
 		if (g_clients[i].active && g_clients[i].fd == fd) {
+			g_clients[i].action_tag = 0;
 			free(g_clients[i].out);
 			g_clients[i].out = NULL;
 			g_clients[i].out_len = 0;
@@ -1436,21 +1515,24 @@ ipc_close_client(int fd)
 }
 
 void
-ipc_read_client(int fd)
+ipc_read_client(int fd, uintptr_t tag, bool eof)
 {
-	ipc_client_t *client = NULL;
+	ipc_client_t *client = ipc_get_client(fd);
 	ssize_t n;
-	int i;
 
-	for (i = 0; i < IPC_MAX_CLIENTS; i++) {
-		if (g_clients[i].active && g_clients[i].fd == fd) {
-			client = &g_clients[i];
-			break;
-		}
-	}
+	if (client == NULL || client->event_tag != tag)
+		return;
+	if (client->action_tag != 0) {
+		struct pollfd pfd = { .fd = fd };
 
-	if (client == NULL) {
-		close(fd);
+		if (!eof)
+			return;
+		/* A peer that only closed its write side can still read the reply. */
+		if (poll(&pfd, 1, 0) == -1 && errno == EINTR)
+			return;
+		if ((pfd.revents & (POLLHUP | POLLERR | POLLNVAL)) != 0 ||
+		    ipc_watch_read(client, EV_DISABLE, true) == -1)
+			ipc_close_client(fd);
 		return;
 	}
 
@@ -1464,6 +1546,11 @@ ipc_read_client(int fd)
 		return;
 	}
 	if (n == 0) {
+		if (client->want_write &&
+		    ipc_watch_read(client, EV_DISABLE, false) == 0) {
+			client->read_eof = true;
+			return;
+		}
 		ipc_close_client(fd);
 		return;
 	}
@@ -1478,8 +1565,15 @@ ipc_read_client(int fd)
 		client->frame_started = now.tv_sec;
 	}
 	client->buf_used += (size_t)n;
+	ipc_dispatch_buffered(client);
+}
 
-	for (;;) {
+static void
+ipc_dispatch_buffered(ipc_client_t *client)
+{
+	int fd = client->fd;
+
+	while (client->action_tag == 0) {
 		uint32_t msglen;
 		size_t total;
 
@@ -1501,6 +1595,8 @@ ipc_read_client(int fd)
 			break;
 
 		ipc_dispatch_message(fd, client->buf + 4, (size_t)msglen);
+		if (!client->active)
+			return;
 		client->completed_request = true;
 
 		if (client->buf_used > total) {
