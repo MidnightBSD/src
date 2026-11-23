@@ -2,7 +2,7 @@
 
 # PROVIDE: firstboot
 # REQUIRE: NETWORKING FILESYSTEMS
-# KEYWORD: nojail
+# KEYWORD: nojail interactive
 
 . /etc/rc.subr
 

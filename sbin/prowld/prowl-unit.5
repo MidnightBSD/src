@@ -192,6 +192,24 @@ File to open as the job's standard input.
 The default is a read-only
 .Pa /dev/null
 descriptor set up before entering the job's root directory.
+.It Va interactive
+.Pq boolean
+Let the job read the console while PID 1 is booting, for scripts that ask
+for a passphrase.
+Its standard input is then
+.Pa /dev/console
+instead of
+.Pa /dev/null ,
+unless
+.Va standard_in_path
+is set.
+This applies only when
+.Xr prowld 8
+is PID 1 and only until it goes multi-user; a job started later gets no
+console input.
+An rc.d script asks for it with
+.Dq KEYWORD: interactive .
+The default is false.
 .It Va standard_out_path
 .Pq string
 File to append the job's standard output to.

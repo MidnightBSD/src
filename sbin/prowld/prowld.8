@@ -836,6 +836,14 @@ write-only for standard output and error, and sets the login name to
 .Dq root .
 Interactive boot and shutdown scripts reopen the console for input and output
 when it is available.
+An rc.d script with
+.Dq KEYWORD: interactive
+.Pq the geli, zfskeys and firstboot scripts have it
+or a unit with
+.Va interactive
+set, also reads the console while the system is booting, so that it can
+ask for a passphrase.
+Once multi-user mode begins no service gets the console as standard input.
 It then honours the loader variables that
 .Xr init 8
 honours:
@@ -890,7 +898,8 @@ runs a keep-alive job
 that starts the line's getty with the line's terminal type, once the
 .Dv LOGIN
 rc.d milestone is reached and the boot scheduler has finished starting
-the available jobs.
+the boot jobs, including a first retry of a boot job that failed
+.Pq waiting at most 30 seconds for retries .
 At that point, even on a host without gettys, PID 1 raises
 .Va kern.securelevel
 from 0 to 1 as

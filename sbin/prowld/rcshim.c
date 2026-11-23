@@ -226,6 +226,7 @@ rcshim_parse_script(int fd, const char *path, const char *scriptname)
 	bool keyword_shutdown = false;
 	bool keyword_nojail = false;
 	bool keyword_nostart = false;
+	bool keyword_interactive = false;
 	bool done_headers = false;
 	bool has_rcvar = false;
 	char rcvar_name[PROWL_LABEL_MAX];
@@ -306,6 +307,8 @@ rcshim_parse_script(int fd, const char *path, const char *scriptname)
 				keyword_nojail = true;
 			if (strstr(kw, "nostart") != NULL)
 				keyword_nostart = true;
+			if (strstr(kw, "interactive") != NULL)
+				keyword_interactive = true;
 		}
 	}
 	fclose(fp);
@@ -404,6 +407,8 @@ rcshim_parse_script(int fd, const char *path, const char *scriptname)
 	job->before_count = before_count;
 
 	job->shutdown_wait = keyword_shutdown;
+	/* KEYWORD: interactive scripts may prompt on the console while booting */
+	job->interactive = keyword_interactive;
 	/* rcorder -s nojail: scripts that cannot work in a jail are skipped */
 	if (keyword_nojail && g_jailed)
 		keyword_nostart = true;

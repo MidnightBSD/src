@@ -935,6 +935,18 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 	job->provides_count = parse_str_array(arr, job->provides,
 	    PROWL_PROVIDES_MAX);
 
+	/* Console input while PID 1 boots (passphrase prompts) */
+	obj = ucl_object_lookup(root, "interactive");
+	if (obj != NULL) {
+		if (ucl_object_type(obj) != UCL_BOOLEAN) {
+			prowl_log(LOG_ERR, "unit %s: invalid interactive",
+			    path);
+			job_free(job);
+			return (NULL);
+		}
+		job->interactive = ucl_object_toboolean(obj);
+	}
+
 	/* I/O paths */
 	obj = ucl_object_lookup(root, "standard_in_path");
 	if (obj != NULL && ucl_object_type(obj) == UCL_STRING)
