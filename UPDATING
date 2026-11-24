@@ -7,6 +7,8 @@ Updating Information for MidnightBSD users.
 	CVE-2026-134703. It also updates XML name handling to XML 1.0
 	Fifth Edition.
 
+	OpenSSL 3.5.9
+
 20261117:
 	tmpfs: clear setgid on files created by nonmembers of the group
 	(CVE-2026-127749, FreeBSD-SA-26:94.tmpfs).  A user could create a
