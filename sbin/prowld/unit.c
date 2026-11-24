@@ -1629,7 +1629,7 @@ add_dropin_dir(ucl_object_t *root, const char *parent, const char *key,
 		prowl_log(LOG_ERR, "drop-in directory %s: %m", dir);
 		return (false);
 	}
-	count = fdscandir(dfd, &names, is_unit_entry, alphasort);
+	count = scandirat(dfd, ".", &names, is_unit_entry, alphasort);
 	ok = count >= 0;
 	if (!ok)
 		prowl_log(LOG_ERR, "read drop-in directory %s: %m", dir);
@@ -2098,7 +2098,7 @@ unit_load_dir(const char *dirpath)
 			prowl_log(LOG_WARNING, "ignoring unit directory %s: %m", dirpath);
 		return;
 	}
-	count = fdscandir(fd, &names, is_unit_entry, alphasort);
+	count = scandirat(fd, ".", &names, is_unit_entry, alphasort);
 	close(fd);
 	if (count == -1) {
 		prowl_log(LOG_WARNING, "unit_load_dir %s: %m", dirpath);
