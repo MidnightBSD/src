@@ -5,6 +5,7 @@ EXPAT=		${SRCTOP}/contrib/expat
 LIB=		bsdxml
 SHLIBDIR?=	/lib
 SHLIB_MAJOR=	4
+# Expat ships the generated XML name table in lib/nametab.h.
 SRCS=		xmlparse.c xmlrole.c xmltok.c xcs.c \
 		random_arc4random.c random_arc4random_buf.c \
 		random_dev_urandom.c random_getrandom.c
