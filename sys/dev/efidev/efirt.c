@@ -46,7 +46,6 @@
 #include <sys/sched.h>
 #include <sys/sysctl.h>
 #include <sys/systm.h>
-#include <sys/uio.h>
 #include <sys/vmmeter.h>
 
 #include <machine/fpu.h>
@@ -349,6 +348,25 @@ efi_get_table(struct uuid *uuid, void **ptr)
 }
 
 /*
+ * Copy len bytes of a configuration table at physical address pa.  The table
+ * may live in memory the VM system does not manage (EfiRuntimeServicesData),
+ * so map it the way BIOS tables are mapped rather than using physcopyout(),
+ * which needs a vm_page for every page and panics without one.
+ */
+static int
+efi_table_copy(void *pa, void *buf, size_t len)
+{
+	void *va;
+
+	va = pmap_mapbios((vm_paddr_t)(uintptr_t)pa, len);
+	if (va == NULL)
+		return (ENOMEM);
+	memcpy(buf, va, len);
+	pmap_unmapbios((vm_offset_t)va, len);
+	return (0);
+}
+
+/*
  * Find a configuration table the kernel knows how to size, and return its
  * physical address and length.  The length comes from the table's own header,
  * so it is bounded before anything is allocated from it.
@@ -367,8 +385,7 @@ get_table_length(enum efi_table_type type, size_t *table_len, void **taddr)
 		error = efi_get_table(&uuid, &pa);
 		if (error != 0)
 			return (error);
-		error = physcopyout((vm_paddr_t)(uintptr_t)pa, &esrt,
-		    sizeof(esrt));
+		error = efi_table_copy(pa, &esrt, sizeof(esrt));
 		if (error != 0)
 			return (error);
 		if (esrt.fw_resource_version != ESRT_FIRMWARE_RESOURCE_VERSION)
@@ -391,8 +408,7 @@ get_table_length(enum efi_table_type type, size_t *table_len, void **taddr)
 		error = efi_get_table(&uuid, &pa);
 		if (error != 0)
 			return (error);
-		error = physcopyout((vm_paddr_t)(uintptr_t)pa, &prop,
-		    sizeof(prop));
+		error = efi_table_copy(pa, &prop, sizeof(prop));
 		if (error != 0)
 			return (error);
 		if (prop.length < sizeof(prop))
@@ -443,7 +459,7 @@ efi_copy_table(struct uuid *uuid, void **buf, size_t buf_len __unused,
 		return (0);
 
 	tbuf = malloc(*table_len, M_TEMP, M_WAITOK);
-	error = physcopyout((vm_paddr_t)(uintptr_t)taddr, tbuf, *table_len);
+	error = efi_table_copy(taddr, tbuf, *table_len);
 	if (error != 0) {
 		free(tbuf, M_TEMP);
 		return (error);
