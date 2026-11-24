@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Przemyslaw Skibinski, Yann Collet, Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  * All rights reserved.
  *
  * This source code is licensed under both the BSD-style license (found in the
@@ -8,10 +8,11 @@
  * You may select, at your option, one of the above-listed licenses.
  */
 
-#if defined (__cplusplus)
-extern "C" {
+/* Linux's O_PATH opens a directory without requiring read permission.
+ * Its feature-test macro must precede every system header. */
+#if defined(__linux__) && !defined(_GNU_SOURCE)
+#  define _GNU_SOURCE
 #endif
-
 
 /*-****************************************
 *  Dependencies
@@ -20,19 +21,38 @@ extern "C" {
 #include <stdlib.h>     /* malloc, realloc, free */
 #include <stdio.h>      /* fprintf */
 #include <time.h>       /* clock_t, clock, CLOCKS_PER_SEC, nanosleep */
+#include <fcntl.h>      /* open, O_RDONLY, AT_FDCWD */
 #include <errno.h>
 #include <assert.h>
 
+#ifndef UTIL_HAVE_OPENAT
+#  if !defined(_WIN32) && (PLATFORM_POSIX_VERSION >= 200809L) && defined(st_mtime)
+#    define UTIL_HAVE_OPENAT 1
+#  else
+#    define UTIL_HAVE_OPENAT 0
+#  endif
+#endif
+
+#if defined(__FreeBSD__)
+#include <sys/param.h> /* __FreeBSD_version */
+#endif /* #ifdef __FreeBSD__ */
+
 #if defined(_WIN32)
+#  include <windows.h>    /* CreateFileA, GetFileInformationByHandle */
 #  include <sys/utime.h>  /* utime */
 #  include <io.h>         /* _chmod */
+#  define ZSTD_USE_UTIMENSAT 0
 #else
 #  include <unistd.h>     /* chown, stat */
-#  if PLATFORM_POSIX_VERSION < 200809L || !defined(st_mtime)
-#    include <utime.h>    /* utime */
+#  include <sys/stat.h>   /* utimensat, st_mtime */
+#  if (PLATFORM_POSIX_VERSION >= 200809L && defined(st_mtime)) \
+      || (defined(__FreeBSD__) && __FreeBSD_version >= 1100056)
+#    define ZSTD_USE_UTIMENSAT 1
 #  else
-#    include <fcntl.h>    /* AT_FDCWD */
-#    include <sys/stat.h> /* utimensat */
+#    define ZSTD_USE_UTIMENSAT 0
+#  endif
+#  if !ZSTD_USE_UTIMENSAT
+#    include <utime.h>    /* utime */
 #  endif
 #endif
 
@@ -44,6 +64,15 @@ extern "C" {
 #  include <dirent.h>       /* opendir, readdir */
 #  include <string.h>       /* strerror, memcpy */
 #endif /* #ifdef _WIN32 */
+
+/* Recent glibc versions expose _Generic-based string macros under
+ * _GNU_SOURCE. Use the ordinary C90 functions in pre-C11 builds. */
+#if defined(__GLIBC__) && !defined(__cplusplus) \
+    && (!defined(__STDC_VERSION__) || __STDC_VERSION__ < 201112L)
+#  undef strchr
+#  undef strrchr
+#  undef strstr
+#endif
 
 /*-****************************************
 *  Internal Macros
@@ -66,6 +95,27 @@ extern "C" {
 #define UTIL_DISPLAY(...)         fprintf(stderr, __VA_ARGS__)
 #define UTIL_DISPLAYLEVEL(l, ...) { if (g_utilDisplayLevel>=l) { UTIL_DISPLAY(__VA_ARGS__); } }
 
+static int g_traceDepth = 0;
+int g_traceFileStat = 0;
+
+#define UTIL_TRACE_CALL(...)                                         \
+    {                                                                \
+        if (g_traceFileStat) {                                       \
+            UTIL_DISPLAY("Trace:FileStat: %*s> ", g_traceDepth, ""); \
+            UTIL_DISPLAY(__VA_ARGS__);                               \
+            UTIL_DISPLAY("\n");                                      \
+            ++g_traceDepth;                                          \
+        }                                                            \
+    }
+
+#define UTIL_TRACE_RET(ret)                                                     \
+    {                                                                           \
+        if (g_traceFileStat) {                                                  \
+            --g_traceDepth;                                                     \
+            UTIL_DISPLAY("Trace:FileStat: %*s< %d\n", g_traceDepth, "", (ret)); \
+        }                                                                      \
+    }
+
 /* A modified version of realloc().
  * If UTIL_realloc() fails the original block is freed.
  */
@@ -81,6 +131,17 @@ UTIL_STATIC void* UTIL_realloc(void *ptr, size_t size)
     #define chmod _chmod
 #endif
 
+#ifndef ZSTD_HAVE_FCHMOD
+#if PLATFORM_POSIX_VERSION >= 199309L
+#define ZSTD_HAVE_FCHMOD
+#endif
+#endif
+
+#ifndef ZSTD_HAVE_FCHOWN
+#if PLATFORM_POSIX_VERSION >= 200809L
+#define ZSTD_HAVE_FCHOWN
+#endif
+#endif
 
 /*-****************************************
 *  Console log
@@ -100,7 +161,7 @@ int UTIL_requireUserConfirmation(const char* prompt, const char* abortMsg,
     ch = getchar();
     result = 0;
     if (strchr(acceptableLetters, ch) == NULL) {
-        UTIL_DISPLAY("%s", abortMsg);
+        UTIL_DISPLAY("%s \n", abortMsg);
         result = 1;
     }
     /* flush the rest */
@@ -113,7 +174,8 @@ int UTIL_requireUserConfirmation(const char* prompt, const char* abortMsg,
 /*-*************************************
 *  Constants
 ***************************************/
-#define LIST_SIZE_INCREASE   (8*1024)
+#define KB * (1 << 10)
+#define LIST_SIZE_INCREASE   (8 KB)
 #define MAX_FILE_OF_FILE_NAMES_SIZE (1<<20)*50
 
 
@@ -121,21 +183,61 @@ int UTIL_requireUserConfirmation(const char* prompt, const char* abortMsg,
 *  Functions
 ***************************************/
 
+void UTIL_traceFileStat(void)
+{
+    g_traceFileStat = 1;
+}
+
+int UTIL_fstat(const int fd, const char* filename, stat_t* statbuf)
+{
+    int ret;
+    UTIL_TRACE_CALL("UTIL_stat(%d, %s)", fd, filename);
+#if defined(_MSC_VER)
+    if (fd >= 0) {
+        ret = !_fstat64(fd, statbuf);
+    } else {
+        ret = !_stat64(filename, statbuf);
+    }
+#elif defined(__MINGW32__) && defined (__MSVCRT__)
+    if (fd >= 0) {
+        ret = !_fstati64(fd, statbuf);
+    } else {
+        ret = !_stati64(filename, statbuf);
+    }
+#else
+    if (fd >= 0) {
+        ret = !fstat(fd, statbuf);
+    } else {
+        ret = !stat(filename, statbuf);
+    }
+#endif
+    UTIL_TRACE_RET(ret);
+    return ret;
+}
+
 int UTIL_stat(const char* filename, stat_t* statbuf)
 {
-#if defined(_MSC_VER)
-    return !_stat64(filename, statbuf);
-#elif defined(__MINGW32__) && defined (__MSVCRT__)
-    return !_stati64(filename, statbuf);
-#else
-    return !stat(filename, statbuf);
-#endif
+    return UTIL_fstat(-1, filename, statbuf);
+}
+
+int UTIL_isFdRegularFile(int fd)
+{
+    stat_t statbuf;
+    int ret;
+    UTIL_TRACE_CALL("UTIL_isFdRegularFile(%d)", fd);
+    ret = fd >= 0 && UTIL_fstat(fd, "", &statbuf) && UTIL_isRegularFileStat(&statbuf);
+    UTIL_TRACE_RET(ret);
+    return ret;
 }
 
 int UTIL_isRegularFile(const char* infilename)
 {
     stat_t statbuf;
-    return UTIL_stat(infilename, &statbuf) && UTIL_isRegularFileStat(&statbuf);
+    int ret;
+    UTIL_TRACE_CALL("UTIL_isRegularFile(%s)", infilename);
+    ret = UTIL_stat(infilename, &statbuf) && UTIL_isRegularFileStat(&statbuf);
+    UTIL_TRACE_RET(ret);
+    return ret;
 }
 
 int UTIL_isRegularFileStat(const stat_t* statbuf)
@@ -150,107 +252,404 @@ int UTIL_isRegularFileStat(const stat_t* statbuf)
 /* like chmod, but avoid changing permission of /dev/null */
 int UTIL_chmod(char const* filename, const stat_t* statbuf, mode_t permissions)
 {
+    return UTIL_fchmod(-1, filename, statbuf, permissions);
+}
+
+int UTIL_fchmod(const int fd, char const* filename, const stat_t* statbuf, mode_t permissions)
+{
     stat_t localStatBuf;
+    UTIL_TRACE_CALL("UTIL_chmod(%s, %#4o)", filename, (unsigned)permissions);
     if (statbuf == NULL) {
-        if (!UTIL_stat(filename, &localStatBuf)) return 0;
+        if (!UTIL_fstat(fd, filename, &localStatBuf)) {
+            UTIL_TRACE_RET(0);
+            return 0;
+        }
         statbuf = &localStatBuf;
     }
-    if (!UTIL_isRegularFileStat(statbuf)) return 0; /* pretend success, but don't change anything */
-    return chmod(filename, permissions);
+    if (!UTIL_isRegularFileStat(statbuf)) {
+        UTIL_TRACE_RET(0);
+        return 0; /* pretend success, but don't change anything */
+    }
+#ifdef ZSTD_HAVE_FCHMOD
+    if (fd >= 0) {
+        int ret;
+        UTIL_TRACE_CALL("fchmod");
+        ret = fchmod(fd, permissions);
+        UTIL_TRACE_RET(ret);
+        UTIL_TRACE_RET(ret);
+        return ret;
+    } else
+#endif
+    {
+        int ret;
+        UTIL_TRACE_CALL("chmod");
+        ret = chmod(filename, permissions);
+        UTIL_TRACE_RET(ret);
+        UTIL_TRACE_RET(ret);
+        return ret;
+    }
 }
+
+#if ZSTD_USE_UTIMENSAT
+static int UTIL_utimensat(int dirfd, const char* filename,
+                         const stat_t* statbuf, int flags)
+{
+    struct timespec timebuf[2] = { {0, UTIME_NOW} };  /* (atime, mtime) */
+    timebuf[1] = statbuf->st_mtim;
+    return utimensat(dirfd, filename, timebuf, flags);
+}
+#endif
 
 /* set access and modification times */
 int UTIL_utime(const char* filename, const stat_t *statbuf)
 {
     int ret;
+    UTIL_TRACE_CALL("UTIL_utime(%s)", filename);
     /* We check that st_mtime is a macro here in order to give us confidence
      * that struct stat has a struct timespec st_mtim member. We need this
      * check because there are some platforms that claim to be POSIX 2008
      * compliant but which do not have st_mtim... */
-#if (PLATFORM_POSIX_VERSION >= 200809L) && defined(st_mtime)
-    /* (atime, mtime) */
-    struct timespec timebuf[2] = { {0, UTIME_NOW} };
-    timebuf[1] = statbuf->st_mtim;
-    ret = utimensat(AT_FDCWD, filename, timebuf, 0);
+    /* FreeBSD has implemented POSIX 2008 for a long time but still only
+     * advertises support for POSIX 2001. They have a version macro that
+     * lets us safely gate them in.
+     * See https://docs.freebsd.org/en/books/porters-handbook/versions/.
+     */
+#if ZSTD_USE_UTIMENSAT
+    ret = UTIL_utimensat(AT_FDCWD, filename, statbuf, 0);
 #else
-    struct utimbuf timebuf;
-    timebuf.actime = time(NULL);
-    timebuf.modtime = statbuf->st_mtime;
-    ret = utime(filename, &timebuf);
+    {
+        struct utimbuf timebuf;
+        timebuf.actime = time(NULL);
+        timebuf.modtime = statbuf->st_mtime;
+        ret = utime(filename, &timebuf);
+    }
 #endif
     errno = 0;
+    UTIL_TRACE_RET(ret);
     return ret;
+}
+
+#if UTIL_HAVE_OPENAT && !ZSTD_USE_UTIMENSAT
+#  error "UTIL_HAVE_OPENAT requires utimensat()"
+#endif
+
+#if UTIL_HAVE_OPENAT
+static const char* UTIL_baseName(const char* filename)
+{
+    const char* const sep = strrchr(filename, '/');
+    return sep == NULL ? filename : sep + 1;
+}
+#endif
+
+int UTIL_openParentDir(const char* filename, int refDir, const char* refName)
+{
+#if UTIL_HAVE_OPENAT
+    /* The directory is only used to resolve names : O_SEARCH (or Linux O_PATH)
+     * doesn't require read permission on it. On platforms without either,
+     * opening a directory without read permission can still fail. */
+#  if defined(O_PATH)
+    int const flags = O_PATH | O_DIRECTORY | O_CLOEXEC;
+#  elif defined(O_SEARCH)
+    int const flags = O_SEARCH | O_DIRECTORY | O_CLOEXEC;
+#  else
+    int const flags = O_RDONLY | O_DIRECTORY | O_CLOEXEC;
+#  endif
+    const char* const base = UTIL_baseName(filename);
+    size_t const prefixLen = (size_t)(base - filename);
+    char* dirName;
+    int fd;
+    if (*base == '\0') return -1;
+    if (refDir >= 0 && refName != NULL
+     && (size_t)(UTIL_baseName(refName) - refName) == prefixLen
+     && !memcmp(refName, filename, prefixLen))
+        return refDir;
+    if (prefixLen == 0) return open(".", flags);
+    dirName = (char*)malloc(prefixLen + 1);
+    if (dirName == NULL) return -1;
+    memcpy(dirName, filename, prefixLen);
+    dirName[prefixLen] = '\0';
+    fd = open(dirName, flags);
+    free(dirName);
+    return fd;
+#else
+    (void)filename; (void)refDir; (void)refName;
+    return -1;
+#endif
+}
+
+void UTIL_closeParentDir(int dirfd, int refDir)
+{
+#if UTIL_HAVE_OPENAT
+    if (dirfd >= 0 && dirfd != refDir) close(dirfd);
+#else
+    (void)dirfd; (void)refDir;
+#endif
+}
+
+int UTIL_openInDir(int dirfd, const char* filename, int flags, mode_t mode)
+{
+#if UTIL_HAVE_OPENAT
+    if (dirfd >= 0) return openat(dirfd, UTIL_baseName(filename), flags, mode);
+#endif
+    (void)dirfd;
+#if defined(_WIN32)
+    return _open(filename, flags, mode);
+#else
+    return open(filename, flags, mode);
+#endif
+}
+
+FILE* UTIL_fopenReadInDir(int dirfd, const char* filename)
+{
+#if UTIL_HAVE_OPENAT
+    if (dirfd >= 0) {
+        int const fd = UTIL_openInDir(dirfd, filename, O_RDONLY, 0);
+        FILE* const f = fd < 0 ? NULL : fdopen(fd, "rb");
+        if (fd >= 0 && f == NULL) { int const e = errno; close(fd); errno = e; }
+        return f;
+    }
+#endif
+    (void)dirfd;
+    return fopen(filename, "rb");
+}
+
+int UTIL_removeInDir(int dirfd, const char* filename)
+{
+#if UTIL_HAVE_OPENAT
+    if (dirfd >= 0) return unlinkat(dirfd, UTIL_baseName(filename), 0);
+#endif
+    (void)dirfd;
+    return remove(filename);
+}
+
+int UTIL_statInDir(int dirfd, const char* filename, stat_t* statbuf)
+{
+#if UTIL_HAVE_OPENAT
+    if (dirfd >= 0) {
+        int ret;
+        filename = UTIL_baseName(filename);
+        UTIL_TRACE_CALL("UTIL_statInDir(%d, %s)", dirfd, filename);
+        ret = !fstatat(dirfd, filename, statbuf, 0);
+        UTIL_TRACE_RET(ret);
+        return ret;
+    }
+#endif
+    (void)dirfd;
+    return UTIL_stat(filename, statbuf);
+}
+
+int UTIL_isLinkInDir(int dirfd, const char* filename)
+{
+#if UTIL_HAVE_OPENAT
+    if (dirfd >= 0) {
+        stat_t statbuf;
+        int ret;
+        filename = UTIL_baseName(filename);
+        UTIL_TRACE_CALL("UTIL_isLinkInDir(%d, %s)", dirfd, filename);
+        ret = !fstatat(dirfd, filename, &statbuf, AT_SYMLINK_NOFOLLOW)
+            && S_ISLNK(statbuf.st_mode);
+        UTIL_TRACE_RET(ret);
+        return ret;
+    }
+#endif
+    (void)dirfd;
+    return UTIL_isLink(filename);
+}
+
+int UTIL_utimeInDir(int dirfd, const char* filename, const stat_t* statbuf)
+{
+#if UTIL_HAVE_OPENAT
+    if (dirfd >= 0) {
+        int ret;
+        filename = UTIL_baseName(filename);
+        UTIL_TRACE_CALL("UTIL_utimeInDir(%d, %s)", dirfd, filename);
+        ret = UTIL_utimensat(dirfd, filename, statbuf, AT_SYMLINK_NOFOLLOW);
+        errno = 0;
+        UTIL_TRACE_RET(ret);
+        return ret;
+    }
+#endif
+    (void)dirfd;
+    return UTIL_utime(filename, statbuf);
 }
 
 int UTIL_setFileStat(const char *filename, const stat_t *statbuf)
 {
+    return UTIL_setFDStat(-1, filename, statbuf);
+}
+
+int UTIL_setFDStat(const int fd, const char *filename, const stat_t *statbuf)
+{
     int res = 0;
-
     stat_t curStatBuf;
-    if (!UTIL_stat(filename, &curStatBuf) || !UTIL_isRegularFileStat(&curStatBuf))
-        return -1;
+    UTIL_TRACE_CALL("UTIL_setFileStat(%d, %s)", fd, filename);
 
-    /* set access and modification times */
-    res += UTIL_utime(filename, statbuf);
+    if (!UTIL_fstat(fd, filename, &curStatBuf) || !UTIL_isRegularFileStat(&curStatBuf)) {
+        UTIL_TRACE_RET(-1);
+        return -1;
+    }
+
+    /* Mimic gzip's behavior:
+     *
+     * "Change the group first, then the permissions, then the owner.
+     * That way, the permissions will be correct on systems that allow
+     * users to give away files, without introducing a security hole.
+     * Security depends on permissions not containing the setuid or
+     * setgid bits." */
 
 #if !defined(_WIN32)
-    res += chown(filename, statbuf->st_uid, statbuf->st_gid);  /* Copy ownership */
+#ifdef ZSTD_HAVE_FCHOWN
+    if (fd >= 0) {
+        res += fchown(fd, -1, statbuf->st_gid);  /* Apply group ownership */
+    } else
+#endif
+    {
+        res += chown(filename, -1, statbuf->st_gid);  /* Apply group ownership */
+    }
 #endif
 
-    res += UTIL_chmod(filename, &curStatBuf, statbuf->st_mode & 07777);  /* Copy file permissions */
+    res += UTIL_fchmod(fd, filename, &curStatBuf, statbuf->st_mode & 0777);  /* Copy file permissions */
+
+#if !defined(_WIN32)
+#ifdef ZSTD_HAVE_FCHOWN
+    if (fd >= 0) {
+        res += fchown(fd, statbuf->st_uid, -1);  /* Apply user ownership */
+    } else
+#endif
+    {
+        res += chown(filename, statbuf->st_uid, -1);  /* Apply user ownership */
+    }
+#endif
 
     errno = 0;
+    UTIL_TRACE_RET(-res);
     return -res; /* number of errors is returned */
 }
 
 int UTIL_isDirectory(const char* infilename)
 {
     stat_t statbuf;
-    return UTIL_stat(infilename, &statbuf) && UTIL_isDirectoryStat(&statbuf);
+    int ret;
+    UTIL_TRACE_CALL("UTIL_isDirectory(%s)", infilename);
+    ret = UTIL_stat(infilename, &statbuf) && UTIL_isDirectoryStat(&statbuf);
+    UTIL_TRACE_RET(ret);
+    return ret;
 }
 
 int UTIL_isDirectoryStat(const stat_t* statbuf)
 {
+    int ret;
+    UTIL_TRACE_CALL("UTIL_isDirectoryStat()");
 #if defined(_MSC_VER)
-    return (statbuf->st_mode & _S_IFDIR) != 0;
+    ret = (statbuf->st_mode & _S_IFDIR) != 0;
 #else
-    return S_ISDIR(statbuf->st_mode) != 0;
+    ret = S_ISDIR(statbuf->st_mode) != 0;
 #endif
+    UTIL_TRACE_RET(ret);
+    return ret;
 }
 
 int UTIL_compareStr(const void *p1, const void *p2) {
     return strcmp(* (char * const *) p1, * (char * const *) p2);
 }
 
+#if defined(_WIN32)
+/* note : Windows has no inode numbers, but a file's identity is given by
+ *        its volume serial number and file index, which stay the same
+ *        however the path to the file is spelled */
+static int UTIL_isSameFileWin32(const char* fName1, const char* fName2)
+{
+    BY_HANDLE_FILE_INFORMATION file1Info;
+    BY_HANDLE_FILE_INFORMATION file2Info;
+    HANDLE file1Handle;
+    HANDLE file2Handle;
+    int same;
+
+    if (!strcmp(fName1, fName2)) return 1;
+
+    file1Handle = CreateFileA(fName1, FILE_READ_ATTRIBUTES,
+                              FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                              NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+    if (file1Handle == INVALID_HANDLE_VALUE) return 0;
+
+    file2Handle = CreateFileA(fName2, FILE_READ_ATTRIBUTES,
+                              FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                              NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+    if (file2Handle == INVALID_HANDLE_VALUE) {
+        CloseHandle(file1Handle);
+        return 0;
+    }
+
+    same = GetFileInformationByHandle(file1Handle, &file1Info)
+        && GetFileInformationByHandle(file2Handle, &file2Info)
+        && file1Info.dwVolumeSerialNumber == file2Info.dwVolumeSerialNumber
+        && file1Info.nFileIndexHigh == file2Info.nFileIndexHigh
+        && file1Info.nFileIndexLow == file2Info.nFileIndexLow;
+
+    CloseHandle(file1Handle);
+    CloseHandle(file2Handle);
+    return same;
+}
+#endif
+
 int UTIL_isSameFile(const char* fName1, const char* fName2)
 {
+    int ret;
     assert(fName1 != NULL); assert(fName2 != NULL);
+    UTIL_TRACE_CALL("UTIL_isSameFile(%s, %s)", fName1, fName2);
 #if defined(_MSC_VER) || defined(_WIN32)
-    /* note : Visual does not support file identification by inode.
-     *        inode does not work on Windows, even with a posix layer, like msys2.
-     *        The following work-around is limited to detecting exact name repetition only,
-     *        aka `filename` is considered different from `subdir/../filename` */
-    return !strcmp(fName1, fName2);
+    ret = UTIL_isSameFileWin32(fName1, fName2);
 #else
     {   stat_t file1Stat;
         stat_t file2Stat;
-        return UTIL_stat(fName1, &file1Stat)
+        ret =  UTIL_stat(fName1, &file1Stat)
             && UTIL_stat(fName2, &file2Stat)
-            && (file1Stat.st_dev == file2Stat.st_dev)
-            && (file1Stat.st_ino == file2Stat.st_ino);
+            && UTIL_isSameFileStat(fName1, fName2, &file1Stat, &file2Stat);
     }
 #endif
+    UTIL_TRACE_RET(ret);
+    return ret;
+}
+
+int UTIL_isSameFileStat(
+        const char* fName1, const char* fName2,
+        const stat_t* file1Stat, const stat_t* file2Stat)
+{
+    int ret;
+    assert(fName1 != NULL); assert(fName2 != NULL);
+    UTIL_TRACE_CALL("UTIL_isSameFileStat(%s, %s)", fName1, fName2);
+#if defined(_MSC_VER) || defined(_WIN32)
+    /* note : stat_t does not carry a usable file identity on Windows,
+     *        so compare the files themselves */
+    (void)file1Stat;
+    (void)file2Stat;
+    ret = UTIL_isSameFileWin32(fName1, fName2);
+#else
+    {
+        ret =  (file1Stat->st_dev == file2Stat->st_dev)
+            && (file1Stat->st_ino == file2Stat->st_ino);
+    }
+#endif
+    UTIL_TRACE_RET(ret);
+    return ret;
 }
 
 /* UTIL_isFIFO : distinguish named pipes */
 int UTIL_isFIFO(const char* infilename)
 {
+    UTIL_TRACE_CALL("UTIL_isFIFO(%s)", infilename);
 /* macro guards, as defined in : https://linux.die.net/man/2/lstat */
 #if PLATFORM_POSIX_VERSION >= 200112L
-    stat_t statbuf;
-    if (UTIL_stat(infilename, &statbuf) && UTIL_isFIFOStat(&statbuf)) return 1;
+    {
+        stat_t statbuf;
+        if (UTIL_stat(infilename, &statbuf) && UTIL_isFIFOStat(&statbuf)) {
+            UTIL_TRACE_RET(1);
+            return 1;
+        }
+    }
 #endif
     (void)infilename;
+    UTIL_TRACE_RET(0);
     return 0;
 }
 
@@ -265,6 +664,26 @@ int UTIL_isFIFOStat(const stat_t* statbuf)
     return 0;
 }
 
+/* process substitution */
+int UTIL_isFileDescriptorPipe(const char* filename)
+{
+    UTIL_TRACE_CALL("UTIL_isFileDescriptorPipe(%s)", filename);
+    /* Check if the filename is a /dev/fd/ path which indicates a file descriptor */
+    if (filename[0] == '/' && strncmp(filename, "/dev/fd/", 8) == 0) {
+        UTIL_TRACE_RET(1);
+        return 1;
+    }
+
+    /* Check for alternative process substitution formats on different systems */
+    if (filename[0] == '/' && strncmp(filename, "/proc/self/fd/", 14) == 0) {
+        UTIL_TRACE_RET(1);
+        return 1;
+    }
+
+    UTIL_TRACE_RET(0);
+    return 0; /* Not recognized as a file descriptor pipe */
+}
+
 /* UTIL_isBlockDevStat : distinguish named pipes */
 int UTIL_isBlockDevStat(const stat_t* statbuf)
 {
@@ -276,23 +695,100 @@ int UTIL_isBlockDevStat(const stat_t* statbuf)
     return 0;
 }
 
+#if defined(_WIN32)
+/* Symbolic links and junctions are "name surrogate" reparse points.
+ * Other reparse points (OneDrive placeholders, deduplicated files, ...)
+ * are regular files and directories : they must not be treated as links. */
+static int UTIL_isNameSurrogate(DWORD attributes, DWORD reparseTag)
+{
+    return (attributes & FILE_ATTRIBUTE_REPARSE_POINT)
+        && IsReparseTagNameSurrogate(reparseTag);
+}
+#endif
+
 int UTIL_isLink(const char* infilename)
 {
+    UTIL_TRACE_CALL("UTIL_isLink(%s)", infilename);
 /* macro guards, as defined in : https://linux.die.net/man/2/lstat */
 #if PLATFORM_POSIX_VERSION >= 200112L
-    stat_t statbuf;
-    int const r = lstat(infilename, &statbuf);
-    if (!r && S_ISLNK(statbuf.st_mode)) return 1;
+    {
+        stat_t statbuf;
+        int const r = lstat(infilename, &statbuf);
+        if (!r && S_ISLNK(statbuf.st_mode)) {
+            UTIL_TRACE_RET(1);
+            return 1;
+        }
+    }
+#elif defined(_WIN32)
+    {
+        DWORD const attributes = GetFileAttributesA(infilename);
+        if ( attributes != INVALID_FILE_ATTRIBUTES
+          && (attributes & FILE_ATTRIBUTE_REPARSE_POINT) ) {
+            /* GetFileAttributes() does not report the reparse tag, FindFirstFile() does */
+            WIN32_FIND_DATAA findData;
+            HANDLE const hFind = FindFirstFileA(infilename, &findData);
+            if (hFind != INVALID_HANDLE_VALUE) {
+                int const isLink = UTIL_isNameSurrogate(findData.dwFileAttributes, findData.dwReserved0);
+                FindClose(hFind);
+                if (isLink) {
+                    UTIL_TRACE_RET(1);
+                    return 1;
+                }
+            }
+        }
+    }
 #endif
     (void)infilename;
+    UTIL_TRACE_RET(0);
     return 0;
+}
+
+static int g_fakeStdinIsConsole = 0;
+static int g_fakeStderrIsConsole = 0;
+static int g_fakeStdoutIsConsole = 0;
+
+int UTIL_isConsole(FILE* file)
+{
+    int ret;
+    UTIL_TRACE_CALL("UTIL_isConsole(%d)", fileno(file));
+    if (file == stdin && g_fakeStdinIsConsole)
+        ret = 1;
+    else if (file == stderr && g_fakeStderrIsConsole)
+        ret = 1;
+    else if (file == stdout && g_fakeStdoutIsConsole)
+        ret = 1;
+    else
+        ret = IS_CONSOLE(file);
+    UTIL_TRACE_RET(ret);
+    return ret;
+}
+
+void UTIL_fakeStdinIsConsole(void)
+{
+    g_fakeStdinIsConsole = 1;
+}
+void UTIL_fakeStdoutIsConsole(void)
+{
+    g_fakeStdoutIsConsole = 1;
+}
+void UTIL_fakeStderrIsConsole(void)
+{
+    g_fakeStderrIsConsole = 1;
 }
 
 U64 UTIL_getFileSize(const char* infilename)
 {
     stat_t statbuf;
-    if (!UTIL_stat(infilename, &statbuf)) return UTIL_FILESIZE_UNKNOWN;
-    return UTIL_getFileSizeStat(&statbuf);
+    UTIL_TRACE_CALL("UTIL_getFileSize(%s)", infilename);
+    if (!UTIL_stat(infilename, &statbuf)) {
+        UTIL_TRACE_RET(-1);
+        return UTIL_FILESIZE_UNKNOWN;
+    }
+    {
+        U64 const size = UTIL_getFileSizeStat(&statbuf);
+        UTIL_TRACE_RET((int)size);
+        return size;
+    }
 }
 
 U64 UTIL_getFileSizeStat(const stat_t* statbuf)
@@ -369,109 +865,177 @@ U64 UTIL_getTotalFileSize(const char* const * fileNamesTable, unsigned nbFiles)
 {
     U64 total = 0;
     unsigned n;
+    UTIL_TRACE_CALL("UTIL_getTotalFileSize(%u)", nbFiles);
     for (n=0; n<nbFiles; n++) {
         U64 const size = UTIL_getFileSize(fileNamesTable[n]);
-        if (size == UTIL_FILESIZE_UNKNOWN) return UTIL_FILESIZE_UNKNOWN;
+        if (size == UTIL_FILESIZE_UNKNOWN) {
+            UTIL_TRACE_RET(-1);
+            return UTIL_FILESIZE_UNKNOWN;
+        }
         total += size;
     }
+    UTIL_TRACE_RET((int)total);
     return total;
 }
 
 
-/* condition : @file must be valid, and not have reached its end.
- * @return : length of line written into @buf, ended with `\0` instead of '\n',
- *           or 0, if there is no new line */
-static size_t readLineFromFile(char* buf, size_t len, FILE* file)
+/* Read the entire content of a file into a buffer with progressive resizing */
+static char* UTIL_readFileContent(FILE* inFile, size_t* totalReadPtr)
 {
-    assert(!feof(file));
-    if ( fgets(buf, (int) len, file) == NULL ) return 0;
-    {   size_t linelen = strlen(buf);
-        if (strlen(buf)==0) return 0;
-        if (buf[linelen-1] == '\n') linelen--;
-        buf[linelen] = '\0';
-        return linelen+1;
+    size_t bufSize = 64 KB;  /* Start with a reasonable buffer size */
+    size_t totalRead = 0;
+    size_t bytesRead = 0;
+    char* buf = (char*)malloc(bufSize);
+    if (buf == NULL) return NULL;
+
+
+    /* Read the file incrementally */
+    while ((bytesRead = fread(buf + totalRead, 1, bufSize - totalRead - 1, inFile)) > 0) {
+        totalRead += bytesRead;
+
+        /* If buffer is nearly full, expand it */
+        if (bufSize - totalRead < 1 KB) {
+            if (bufSize >= MAX_FILE_OF_FILE_NAMES_SIZE) {
+                /* Too large, abort */
+                free(buf);
+                return NULL;
+            }
+
+            {   size_t newBufSize = bufSize * 2;
+                if (newBufSize > MAX_FILE_OF_FILE_NAMES_SIZE)
+                    newBufSize = MAX_FILE_OF_FILE_NAMES_SIZE;
+
+                {   char* newBuf = (char*)realloc(buf, newBufSize);
+                    if (newBuf == NULL) {
+                        free(buf);
+                        return NULL;
+                    }
+
+                    buf = newBuf;
+                    bufSize = newBufSize;
+        }   }   }
     }
+
+    /* Add null terminator to the end */
+    buf[totalRead] = '\0';
+    *totalReadPtr = totalRead;
+
+    return buf;
 }
 
-/* Conditions :
- *   size of @inputFileName file must be < @dstCapacity
- *   @dst must be initialized
- * @return : nb of lines
- *       or -1 if there's an error
- */
-static int
-readLinesFromFile(void* dst, size_t dstCapacity,
-            const char* inputFileName)
+/* Process a buffer containing multiple lines and count the number of lines */
+static size_t UTIL_processLines(char* buffer, size_t bufferSize)
 {
-    int nbFiles = 0;
-    size_t pos = 0;
-    char* const buf = (char*)dst;
-    FILE* const inputFile = fopen(inputFileName, "r");
+    size_t lineCount = 0;
+    size_t i = 0;
 
-    assert(dst != NULL);
-
-    if(!inputFile) {
-        if (g_utilDisplayLevel >= 1) perror("zstd:util:readLinesFromFile");
-        return -1;
-    }
-
-    while ( !feof(inputFile) ) {
-        size_t const lineLength = readLineFromFile(buf+pos, dstCapacity-pos, inputFile);
-        if (lineLength == 0) break;
-        assert(pos + lineLength < dstCapacity);
-        pos += lineLength;
-        ++nbFiles;
-    }
-
-    CONTROL( fclose(inputFile) == 0 );
-
-    return nbFiles;
-}
-
-/*Note: buf is not freed in case function successfully created table because filesTable->fileNames[0] = buf*/
-FileNamesTable*
-UTIL_createFileNamesTable_fromFileName(const char* inputFileName)
-{
-    size_t nbFiles = 0;
-    char* buf;
-    size_t bufSize;
-    size_t pos = 0;
-    stat_t statbuf;
-
-    if (!UTIL_stat(inputFileName, &statbuf) || !UTIL_isRegularFileStat(&statbuf))
-        return NULL;
-
-    {   U64 const inputFileSize = UTIL_getFileSizeStat(&statbuf);
-        if(inputFileSize > MAX_FILE_OF_FILE_NAMES_SIZE)
-            return NULL;
-        bufSize = (size_t)(inputFileSize + 1); /* (+1) to add '\0' at the end of last filename */
-    }
-
-    buf = (char*) malloc(bufSize);
-    CONTROL( buf != NULL );
-
-    {   int const ret_nbFiles = readLinesFromFile(buf, bufSize, inputFileName);
-
-        if (ret_nbFiles <= 0) {
-          free(buf);
-          return NULL;
+    /* Convert newlines to null terminators and count lines */
+    while (i < bufferSize) {
+        if (buffer[i] == '\n') {
+            buffer[i] = '\0';  /* Replace newlines with null terminators */
+            lineCount++;
         }
-        nbFiles = (size_t)ret_nbFiles;
+        i++;
     }
 
-    {   const char** filenamesTable = (const char**) malloc(nbFiles * sizeof(*filenamesTable));
-        CONTROL(filenamesTable != NULL);
+    /* Count the last line if it doesn't end with a newline */
+    if (bufferSize > 0 && (i == 0 || buffer[i-1] != '\0')) {
+        lineCount++;
+    }
 
-        {   size_t fnb;
-            for (fnb = 0, pos = 0; fnb < nbFiles; fnb++) {
-                filenamesTable[fnb] = buf+pos;
-                pos += strlen(buf+pos)+1;  /* +1 for the finishing `\0` */
-        }   }
-        assert(pos <= bufSize);
+    return lineCount;
+}
 
-        return UTIL_assembleFileNamesTable(filenamesTable, nbFiles, buf);
+/* Create an array of pointers to the lines in a buffer */
+static const char** UTIL_createLinePointers(char* buffer, size_t numLines, size_t bufferSize)
+{
+    size_t lineIndex = 0;
+    size_t pos = 0;
+    void* const bufferPtrs = malloc(numLines * sizeof(const char**));
+    const char** const linePointers = (const char**)bufferPtrs;
+    if (bufferPtrs == NULL) return NULL;
+
+    while (lineIndex < numLines && pos < bufferSize) {
+        size_t len = 0;
+        linePointers[lineIndex++] = buffer+pos;
+
+        /* Find the next null terminator, being careful not to go past the buffer */
+        while ((pos + len < bufferSize) && buffer[pos + len] != '\0') {
+            len++;
+        }
+
+#if defined(_WIN32)
+        /* note: read in binary mode, so the CRT no longer folds CRLF; CR is legal in a filename elsewhere */
+        if (len > 0 && buffer[pos + len - 1] == '\r') {
+            buffer[pos + len - 1] = '\0';
+        }
+#endif
+
+        /* Move past this string and its null terminator */
+        pos += len;
+        if (pos < bufferSize) pos++;  /* Skip the null terminator if we're not at buffer end */
+    }
+
+    /* Verify we processed the expected number of lines */
+    if (lineIndex != numLines) {
+        /* Something went wrong - we didn't find as many lines as expected */
+        free(bufferPtrs);
+        return NULL;
+    }
+
+    return linePointers;
+}
+
+FileNamesTable*
+UTIL_createFileNamesTable_fromFileList(const char* fileList)
+{
+    stat_t statbuf;
+    char* buffer = NULL;
+    size_t numLines = 0;
+    size_t bufferSize = 0;
+
+    /* Check if the input is a valid file */
+    if (!UTIL_stat(fileList, &statbuf)) {
+        return NULL;
+    }
+
+    /* Check if the input is a supported type */
+    if (!UTIL_isRegularFileStat(&statbuf) &&
+        !UTIL_isFIFOStat(&statbuf) &&
+        !UTIL_isFileDescriptorPipe(fileList)) {
+        return NULL;
+    }
+
+    /* Open the input file */
+    {   FILE* const inFile = fopen(fileList, "rb");
+        if (inFile == NULL) return NULL;
+
+        /* Read the file content */
+        buffer = UTIL_readFileContent(inFile, &bufferSize);
+        fclose(inFile);
+    }
+
+    if (buffer == NULL) return NULL;
+
+    /* Process lines */
+    numLines = UTIL_processLines(buffer, bufferSize);
+    if (numLines == 0) {
+        free(buffer);
+        return NULL;
+    }
+
+    /* Create line pointers */
+    {   const char** linePointers = UTIL_createLinePointers(buffer, numLines, bufferSize);
+        if (linePointers == NULL) {
+            free(buffer);
+            return NULL;
+        }
+
+        /* Create the final table */
+        return UTIL_assembleFileNamesTable(linePointers, numLines, buffer);
     }
 }
+
 
 static FileNamesTable*
 UTIL_assembleFileNamesTable2(const char** filenames, size_t tableSize, size_t tableCapacity, char* buf)
@@ -509,6 +1073,16 @@ FileNamesTable* UTIL_allocateFileNamesTable(size_t tableSize)
     return fnt;
 }
 
+int UTIL_searchFileNamesTable(FileNamesTable* table, char const* name) {
+    size_t i;
+    for(i=0 ;i < table->tableSize; i++) {
+        if(!strcmp(table->fileNames[i], name)) {
+            return (int)i;
+        }
+    }
+    return -1;
+}
+
 void UTIL_refFilename(FileNamesTable* fnt, const char* filename)
 {
     assert(fnt->tableSize < fnt->tableCapacity);
@@ -518,7 +1092,7 @@ void UTIL_refFilename(FileNamesTable* fnt, const char* filename)
 
 static size_t getTotalTableSize(FileNamesTable* table)
 {
-    size_t fnb = 0, totalSize = 0;
+    size_t fnb, totalSize = 0;
     for(fnb = 0 ; fnb < table->tableSize && table->fileNames[fnb] ; ++fnb) {
         totalSize += strlen(table->fileNames[fnb]) + 1; /* +1 to add '\0' at the end of each fileName */
     }
@@ -559,7 +1133,7 @@ UTIL_mergeFileNamesTable(FileNamesTable* table1, FileNamesTable* table2)
         for( idx2=0 ; (idx2 < table2->tableSize) && table2->fileNames[idx2] && (pos < newTotalTableSize) ; ++idx2, ++newTableIdx) {
             size_t const curLen = strlen(table2->fileNames[idx2]);
             memcpy(buf+pos, table2->fileNames[idx2], curLen);
-            assert(newTableIdx <= newTable->tableSize);
+            assert(newTableIdx < newTable->tableSize);
             newTable->fileNames[newTableIdx] = buf+pos;
             pos += curLen+1;
     }   }
@@ -595,6 +1169,7 @@ static int UTIL_prepareFileList(const char* dirName,
     hFile=FindFirstFileA(path, &cFile);
     if (hFile == INVALID_HANDLE_VALUE) {
         UTIL_DISPLAYLEVEL(1, "Cannot open directory '%s'\n", dirName);
+        free(path);
         return 0;
     }
     free(path);
@@ -608,6 +1183,11 @@ static int UTIL_prepareFileList(const char* dirName,
         memcpy(path+dirLength+1, cFile.cFileName, fnameLength);
         pathLength = dirLength+1+fnameLength;
         path[pathLength] = 0;
+        if (!followLinks && UTIL_isNameSurrogate(cFile.dwFileAttributes, cFile.dwReserved0)) {
+            UTIL_DISPLAYLEVEL(2, "Warning : %s is a symbolic link, ignoring\n", path);
+            free(path);
+            continue;
+        }
         if (cFile.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
             if ( strcmp (cFile.cFileName, "..") == 0
               || strcmp (cFile.cFileName, ".") == 0 )
@@ -683,8 +1263,11 @@ static int UTIL_prepareFileList(const char *dirName,
                 ptrdiff_t newListSize = (*bufEnd - *bufStart) + LIST_SIZE_INCREASE;
                 assert(newListSize >= 0);
                 *bufStart = (char*)UTIL_realloc(*bufStart, (size_t)newListSize);
-                *bufEnd = *bufStart + newListSize;
-                if (*bufStart == NULL) { free(path); closedir(dir); return 0; }
+                if (*bufStart != NULL) {
+                    *bufEnd = *bufStart + newListSize;
+                } else {
+                    free(path); closedir(dir); return 0;
+                }
             }
             if (*bufStart + *pos + pathLength < *bufEnd) {
                 memcpy(*bufStart + *pos, path, pathLength + 1);  /* with final \0 */
@@ -870,30 +1453,27 @@ static const char * trimPath(const char *pathname)
 
 static char* mallocAndJoin2Dir(const char *dir1, const char *dir2)
 {
-    const size_t dir1Size = strlen(dir1);
-    const size_t dir2Size = strlen(dir2);
-    char *outDirBuffer, *buffer, trailingChar;
-
     assert(dir1 != NULL && dir2 != NULL);
-    outDirBuffer = (char *) malloc(dir1Size + dir2Size + 2);
-    CONTROL(outDirBuffer != NULL);
+    {   const size_t dir1Size = strlen(dir1);
+        const size_t dir2Size = strlen(dir2);
+        char *outDirBuffer, *buffer;
 
-    memcpy(outDirBuffer, dir1, dir1Size);
-    outDirBuffer[dir1Size] = '\0';
+        outDirBuffer = (char *) malloc(dir1Size + dir2Size + 2);
+        CONTROL(outDirBuffer != NULL);
 
-    if (dir2[0] == '.')
+        memcpy(outDirBuffer, dir1, dir1Size);
+        outDirBuffer[dir1Size] = '\0';
+
+        buffer = outDirBuffer + dir1Size;
+        if (dir1Size > 0 && *(buffer - 1) != PATH_SEP) {
+            *buffer = PATH_SEP;
+            buffer++;
+        }
+        memcpy(buffer, dir2, dir2Size);
+        buffer[dir2Size] = '\0';
+
         return outDirBuffer;
-
-    buffer = outDirBuffer + dir1Size;
-    trailingChar = *(buffer - 1);
-    if (trailingChar != PATH_SEP) {
-        *buffer = PATH_SEP;
-        buffer++;
     }
-    memcpy(buffer, dir2, dir2Size);
-    buffer[dir2Size] = '\0';
-
-    return outDirBuffer;
 }
 
 /* this function will return NULL if input srcFileName is not valid name for mirrored output path */
@@ -999,7 +1579,7 @@ makeUniqueMirroredDestDirs(char** srcDirNames, unsigned nbFile, const char* outD
                                             trimPath(currDirName)))
             uniqueDirNr++;
 
-        /* we need maintain original src dir name instead of trimmed
+        /* we need to maintain original src dir name instead of trimmed
          * dir, so we can retrieve the original src dir's mode_t */
         uniqueDirNames[uniqueDirNr - 1] = currDirName;
     }
@@ -1308,7 +1888,6 @@ failed:
 
 #elif defined(__FreeBSD__)
 
-#include <sys/param.h>
 #include <sys/sysctl.h>
 
 /* Use physical core sysctl when available
@@ -1378,6 +1957,9 @@ int UTIL_countCores(int logical)
 
 int UTIL_countCores(int logical)
 {
+    /* suppress unused parameter warning */
+    (void)logical;
+
     /* assume 1 */
     return 1;
 }
@@ -1393,7 +1975,3 @@ int UTIL_countLogicalCores(void)
 {
     return UTIL_countCores(1);
 }
-
-#if defined (__cplusplus)
-}
-#endif

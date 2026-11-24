@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Yann Collet, Facebook, Inc.
+ * Copyright (c) Yann Collet, Meta Platforms, Inc. and affiliates.
  * All rights reserved.
  *
  * This source code is licensed under both the BSD-style license (found in the
@@ -14,6 +14,7 @@
 ******************************************/
 #include <stddef.h>    /* size_t, ptrdiff_t */
 #include "zstd_v01.h"
+#include "../common/compiler.h"
 #include "../common/error_private.h"
 
 
@@ -190,25 +191,6 @@ typedef   signed long long  S64;
 /****************************************************************
 *  Memory I/O
 *****************************************************************/
-/* FSE_FORCE_MEMORY_ACCESS
- * By default, access to unaligned memory is controlled by `memcpy()`, which is safe and portable.
- * Unfortunately, on some target/compiler combinations, the generated assembly is sub-optimal.
- * The below switch allow to select different access method for improved performance.
- * Method 0 (default) : use `memcpy()`. Safe and portable.
- * Method 1 : `__packed` statement. It depends on compiler extension (ie, not portable).
- *            This method is safe if your compiler supports it, and *generally* as fast or faster than `memcpy`.
- * Method 2 : direct access. This method is portable but violate C standard.
- *            It can generate buggy code on targets generating assembly depending on alignment.
- *            But in some circumstances, it's the only known way to get the most performance (ie GCC + ARMv6)
- * See http://fastcompression.blogspot.fr/2015/08/accessing-unaligned-memory.html for details.
- * Prefer these methods in priority order (0 > 1 > 2)
- */
-#ifndef FSE_FORCE_MEMORY_ACCESS   /* can be defined externally, on command line for example */
-#  if defined(__INTEL_COMPILER) || defined(__GNUC__) || defined(__ICCARM__)
-#    define FSE_FORCE_MEMORY_ACCESS 1
-#  endif
-#endif
-
 
 static unsigned FSE_32bits(void)
 {
@@ -220,24 +202,6 @@ static unsigned FSE_isLittleEndian(void)
     const union { U32 i; BYTE c[4]; } one = { 1 };   /* don't use static : performance detrimental  */
     return one.c[0];
 }
-
-#if defined(FSE_FORCE_MEMORY_ACCESS) && (FSE_FORCE_MEMORY_ACCESS==2)
-
-static U16 FSE_read16(const void* memPtr) { return *(const U16*) memPtr; }
-static U32 FSE_read32(const void* memPtr) { return *(const U32*) memPtr; }
-static U64 FSE_read64(const void* memPtr) { return *(const U64*) memPtr; }
-
-#elif defined(FSE_FORCE_MEMORY_ACCESS) && (FSE_FORCE_MEMORY_ACCESS==1)
-
-/* __pack instructions are safer, but compiler specific, hence potentially problematic for some compilers */
-/* currently only defined for gcc and icc */
-typedef union { U16 u16; U32 u32; U64 u64; } __attribute__((packed)) unalign;
-
-static U16 FSE_read16(const void* ptr) { return ((const unalign*)ptr)->u16; }
-static U32 FSE_read32(const void* ptr) { return ((const unalign*)ptr)->u32; }
-static U64 FSE_read64(const void* ptr) { return ((const unalign*)ptr)->u64; }
-
-#else
 
 static U16 FSE_read16(const void* memPtr)
 {
@@ -253,8 +217,6 @@ static U64 FSE_read64(const void* memPtr)
 {
     U64 val; memcpy(&val, memPtr, sizeof(val)); return val;
 }
-
-#endif /* FSE_FORCE_MEMORY_ACCESS */
 
 static U16 FSE_readLE16(const void* memPtr)
 {
@@ -468,7 +430,7 @@ static unsigned FSE_isError(size_t code) { return (code > (size_t)(-FSE_ERROR_ma
 
 static short FSE_abs(short a)
 {
-    return a<0? -a : a;
+    return a<0? (short)-a : a;
 }
 
 
@@ -1190,7 +1152,7 @@ static size_t HUF_decompress (void* dst, size_t maxDstSize, const void* cSrc, si
     zstd - standard compression library
     Copyright (C) 2014-2015, Yann Collet.
 
-    BSD 2-Clause License (http://www.opensource.org/licenses/bsd-license.php)
+    BSD 2-Clause License (https://opensource.org/licenses/bsd-license.php)
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions are
@@ -1421,7 +1383,7 @@ typedef struct {
     BYTE* matchLength;
     BYTE* dumpsStart;
     BYTE* dumps;
-} seqStore_t;
+} SeqStore_t;
 
 
 typedef struct ZSTD_Cctx_s
@@ -1429,7 +1391,7 @@ typedef struct ZSTD_Cctx_s
     const BYTE* base;
     U32 current;
     U32 nextUpdate;
-    seqStore_t seqStore;
+    SeqStore_t seqStore;
 #ifdef __AVX2__
     __m256i hashTable[HASH_TABLESIZE>>3];
 #else
@@ -1475,6 +1437,7 @@ static size_t ZSTDv01_getcBlockSize(const void* src, size_t srcSize, blockProper
     bpPtr->origSize = (bpPtr->blockType == bt_rle) ? cSize : 0;
 
     if (bpPtr->blockType == bt_end) return 0;
+    if (cSize > BLOCKSIZE) return ERROR(corruption_detected);
     if (bpPtr->blockType == bt_rle) return 1;
     return cSize;
 }
@@ -1759,20 +1722,27 @@ static size_t ZSTD_execSequence(BYTE* op,
     static const int dec32table[] = {0, 1, 2, 1, 4, 4, 4, 4};   /* added */
     static const int dec64table[] = {8, 8, 8, 7, 8, 9,10,11};   /* subtracted */
     const BYTE* const ostart = op;
+    BYTE* const oLitEnd = op + sequence.litLength;
     const size_t litLength = sequence.litLength;
     BYTE* const endMatch = op + litLength + sequence.matchLength;    /* risk : address space overflow (32-bits) */
     const BYTE* const litEnd = *litPtr + litLength;
 
-    /* check */
+    /* checks */
+    size_t const seqLength = sequence.litLength + sequence.matchLength;
+
+    if (sequence.offset == 0) return ERROR(corruption_detected);
+    if (seqLength > (size_t)(oend - op)) return ERROR(dstSize_tooSmall);
+    if (sequence.litLength > (size_t)(litLimit - *litPtr)) return ERROR(corruption_detected);
+    /* Now we know there are no overflow in literal nor match lengths, can use pointer checks */
+    if (sequence.offset > (size_t)(oLitEnd - base)) return ERROR(corruption_detected);
+
     if (endMatch > oend) return ERROR(dstSize_tooSmall);   /* overwrite beyond dst buffer */
-    if (litEnd > litLimit) return ERROR(corruption_detected);
-    if (sequence.matchLength > (size_t)(*litPtr-op))  return ERROR(dstSize_tooSmall);    /* overwrite literal segment */
+    if (litEnd > litLimit) return ERROR(corruption_detected);   /* overRead beyond lit buffer */
+    if (sequence.matchLength > (size_t)(*litPtr-op)) return ERROR(dstSize_tooSmall);  /* overwrite literal segment */
 
     /* copy Literals */
-    if (((size_t)(*litPtr - op) < 8) || ((size_t)(oend-litEnd) < 8) || (op+litLength > oend-8))
-        memmove(op, *litPtr, litLength);   /* overwrite risk */
-    else
-        ZSTD_wildcopy(op, *litPtr, litLength);
+    ZSTD_memmove(op, *litPtr, sequence.litLength);   /* note : v0.1 seems to allow scenarios where output or input are close to end of buffer */
+
     op += litLength;
     *litPtr = litEnd;   /* update for next sequence */
 
@@ -1782,13 +1752,12 @@ static size_t ZSTD_execSequence(BYTE* op,
     /* copy Match */
     {
         const U32 overlapRisk = (((size_t)(litEnd - endMatch)) < 12);
-        const BYTE* match = op - sequence.offset;            /* possible underflow at op - offset ? */
+        const BYTE* match = op - sequence.offset;            /* >= base : see the offset check above */
         size_t qutt = 12;
         U64 saved[2];
 
         /* check */
         if (match < base) return ERROR(corruption_detected);
-        if (sequence.offset > (size_t)base) return ERROR(corruption_detected);
 
         /* save beginning of literal sequence, in case of write overlap */
         if (overlapRisk)
@@ -1855,11 +1824,12 @@ static size_t ZSTD_decompressSequences(
     BYTE* const ostart = (BYTE* const)dst;
     BYTE* op = ostart;
     BYTE* const oend = ostart + maxDstSize;
-    size_t errorCode, dumpsLength;
+    size_t errorCode = 0;
+    size_t dumpsLength = 0;
     const BYTE* litPtr = litStart;
     const BYTE* const litEnd = litStart + litSize;
-    int nbSeq;
-    const BYTE* dumps;
+    int nbSeq = 0;
+    const BYTE* dumps = NULL;
     U32* DTableLL = dctx->LLTable;
     U32* DTableML = dctx->MLTable;
     U32* DTableOffb = dctx->OffTable;
@@ -1947,7 +1917,7 @@ size_t ZSTDv01_decompressDCtx(void* ctx, void* dst, size_t maxDstSize, const voi
     size_t remainingSize = srcSize;
     U32 magicNumber;
     size_t errorCode=0;
-    blockProperties_t blockProperties;
+    blockProperties_t blockProperties = { 0 };
 
     /* Frame Header */
     if (srcSize < ZSTD_frameHeaderSize+ZSTD_blockHeaderSize) return ERROR(srcSize_wrong);
@@ -2151,6 +2121,7 @@ size_t ZSTDv01_decompressContinue(ZSTDv01_Dctx* dctx, void* dst, size_t maxDstSi
         }
         ctx->phase = 1;
         ctx->expected = ZSTD_blockHeaderSize;
+        if (ZSTDv01_isError(rSize)) return rSize;
         ctx->previousDstEnd = (void*)( ((char*)dst) + rSize);
         return rSize;
     }

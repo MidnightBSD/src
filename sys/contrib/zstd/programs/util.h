@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Przemyslaw Skibinski, Yann Collet, Facebook, Inc.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  * All rights reserved.
  *
  * This source code is licensed under both the BSD-style license (found in the
@@ -11,25 +11,26 @@
 #ifndef UTIL_H_MODULE
 #define UTIL_H_MODULE
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
-
 /*-****************************************
 *  Dependencies
 ******************************************/
 #include "platform.h"     /* PLATFORM_POSIX_VERSION, ZSTD_NANOSLEEP_SUPPORT, ZSTD_SETPRIORITY_SUPPORT */
 #include <stddef.h>       /* size_t, ptrdiff_t */
+#include <stdio.h>        /* FILE */
 #include <sys/types.h>    /* stat, utime */
 #include <sys/stat.h>     /* stat, chmod */
 #include "../lib/common/mem.h"          /* U64 */
-
+#if !(defined(_MSC_VER) || defined(__MINGW32__) || defined (__MSVCRT__))
+#include <libgen.h>
+#endif
 
 /*-************************************************************
-* Avoid fseek()'s 2GiB barrier with MSVC, macOS, *BSD, MinGW
+*  Fix fseek()'s 2GiB barrier with MSVC, macOS, *BSD, MinGW
 ***************************************************************/
-#if defined(_MSC_VER) && (_MSC_VER >= 1400)
+#if defined(LIBC_NO_FSEEKO)
+/* Some older libc implementations don't include these functions (e.g. Bionic < 24) */
+#  define UTIL_fseek fseek
+#elif defined(_MSC_VER) && (_MSC_VER >= 1400)
 #  define UTIL_fseek _fseeki64
 #elif !defined(__64BIT__) && (PLATFORM_POSIX_VERSION >= 200112L) /* No point defining Large file for 64 bit */
 #  define UTIL_fseek fseeko
@@ -38,7 +39,6 @@ extern "C" {
 #else
 #  define UTIL_fseek fseek
 #endif
-
 
 /*-*************************************************
 *  Sleep & priority functions: Windows - Posix - others
@@ -88,6 +88,10 @@ extern "C" {
 #endif
 
 
+#if defined (__cplusplus)
+extern "C" {
+#endif
+
 /*-****************************************
 *  Console log
 ******************************************/
@@ -118,7 +122,6 @@ int UTIL_requireUserConfirmation(const char* prompt, const char* abortMsg, const
 #define STRDUP(s) _strdup(s)
 #else
 #define PATH_SEP '/'
-#include <libgen.h>
 #define STRDUP(s) strdup(s)
 #endif
 
@@ -126,15 +129,25 @@ int UTIL_requireUserConfirmation(const char* prompt, const char* abortMsg, const
 /**
  * Calls platform's equivalent of stat() on filename and writes info to statbuf.
  * Returns success (1) or failure (0).
+ *
+ * UTIL_fstat() is like UTIL_stat() but takes an optional fd that refers to the
+ * file in question. It turns out that this can be meaningfully faster. If fd is
+ * -1, behaves just like UTIL_stat() (i.e., falls back to using the filename).
  */
 int UTIL_stat(const char* filename, stat_t* statbuf);
+int UTIL_fstat(const int fd, const char* filename, stat_t* statbuf);
 
 /**
  * Instead of getting a file's stats, this updates them with the info in the
- * provided stat_t. Currently sets owner, group, atime, and mtime. Will only
- * update this info for regular files.
+ * provided stat_t. Sets owner, group, and permissions for regular files only.
+ * Timestamps are handled separately by UTIL_utime() or UTIL_utimeInDir().
+ *
+ * UTIL_setFDStat() also takes an fd, and will preferentially use that to
+ * indicate which file to modify, If fd is -1, it will fall back to using the
+ * filename.
  */
 int UTIL_setFileStat(const char* filename, const stat_t* statbuf);
+int UTIL_setFDStat(const int fd, const char* filename, const stat_t* statbuf);
 
 /**
  * Set atime to now and mtime to the st_mtim in statbuf.
@@ -143,6 +156,30 @@ int UTIL_setFileStat(const char* filename, const stat_t* statbuf);
  * Does not validate filename is valid.
  */
 int UTIL_utime(const char* filename, const stat_t *statbuf);
+
+/*-****************************************
+*  Directory-relative file functions
+******************************************/
+/* Open filename's parent, or borrow refDir if refName has a byte-for-byte
+ * identical directory prefix. Equivalent paths are not canonicalized.
+ * Returns -1 if unavailable or the parent cannot be opened.
+ * Close with the same refDir, so a borrowed descriptor is not closed. */
+int UTIL_openParentDir(const char* filename, int refDir, const char* refName);
+void UTIL_closeParentDir(int dirfd, int refDir);
+
+/* These operations always take the full filename. With a parent descriptor,
+ * they resolve only its last component relative to that directory, even after
+ * the directory is renamed or replaced at its original pathname. This binding
+ * starts when the parent is opened; it does not pin the last component's
+ * identity or prevent its replacement between operations.
+ * With dirfd == -1 they retain the historical full-pathname behavior and
+ * portable operations, without a directory binding. */
+int UTIL_openInDir(int dirfd, const char* filename, int flags, mode_t mode);
+FILE* UTIL_fopenReadInDir(int dirfd, const char* filename);
+int UTIL_removeInDir(int dirfd, const char* filename);
+int UTIL_statInDir(int dirfd, const char* filename, stat_t* statbuf);
+int UTIL_isLinkInDir(int dirfd, const char* filename);
+int UTIL_utimeInDir(int dirfd, const char* filename, const stat_t* statbuf);
 
 /*
  * These helpers operate on a pre-populated stat_t, i.e., the result of
@@ -159,8 +196,11 @@ U64 UTIL_getFileSizeStat(const stat_t* statbuf);
  * Like chmod(), but only modifies regular files. Provided statbuf may be NULL,
  * in which case this function will stat() the file internally, in order to
  * check whether it should be modified.
+ *
+ * If fd is -1, fd is ignored and the filename is used.
  */
 int UTIL_chmod(char const* filename, const stat_t* statbuf, mode_t permissions);
+int UTIL_fchmod(const int fd, char const* filename, const stat_t* statbuf, mode_t permissions);
 
 /*
  * In the absence of a pre-existing stat result on the file in question, these
@@ -168,12 +208,34 @@ int UTIL_chmod(char const* filename, const stat_t* statbuf, mode_t permissions);
  * compute the needed information.
  */
 
+int UTIL_isFdRegularFile(int fd);
 int UTIL_isRegularFile(const char* infilename);
 int UTIL_isDirectory(const char* infilename);
 int UTIL_isSameFile(const char* file1, const char* file2);
+int UTIL_isSameFileStat(const char* file1, const char* file2, const stat_t* file1Stat, const stat_t* file2Stat);
 int UTIL_isCompressedFile(const char* infilename, const char *extensionList[]);
 int UTIL_isLink(const char* infilename);
 int UTIL_isFIFO(const char* infilename);
+int UTIL_isFileDescriptorPipe(const char* filename);
+
+/**
+ * Returns with the given file descriptor is a console.
+ * Allows faking whether stdin/stdout/stderr is a console
+ * using UTIL_fake*IsConsole().
+ */
+int UTIL_isConsole(FILE* file);
+
+/**
+ * Pretends that stdin/stdout/stderr is a console for testing.
+ */
+void UTIL_fakeStdinIsConsole(void);
+void UTIL_fakeStdoutIsConsole(void);
+void UTIL_fakeStderrIsConsole(void);
+
+/**
+ * Emit traces for functions that read, or modify file metadata.
+ */
+void UTIL_traceFileStat(void);
 
 #define UTIL_FILESIZE_UNKNOWN  ((U64)(-1))
 U64 UTIL_getFileSize(const char* infilename);
@@ -214,13 +276,13 @@ typedef struct
     size_t tableCapacity;
 } FileNamesTable;
 
-/*! UTIL_createFileNamesTable_fromFileName() :
+/*! UTIL_createFileNamesTable_fromFileList() :
  *  read filenames from @inputFileName, and store them into returned object.
  * @return : a FileNamesTable*, or NULL in case of error (ex: @inputFileName doesn't exist).
  *  Note: inputFileSize must be less than 50MB
  */
 FileNamesTable*
-UTIL_createFileNamesTable_fromFileName(const char* inputFileName);
+UTIL_createFileNamesTable_fromFileList(const char* inputFileName);
 
 /*! UTIL_assembleFileNamesTable() :
  *  This function takes ownership of its arguments, @filenames and @buf,
@@ -248,7 +310,6 @@ UTIL_mergeFileNamesTable(FileNamesTable* table1, FileNamesTable* table2);
 /*! UTIL_expandFNT() :
  *  read names from @fnt, and expand those corresponding to directories
  *  update @fnt, now containing only file names,
- * @return : 0 in case of success, 1 if error
  *  note : in case of error, @fnt[0] is NULL
  */
 void UTIL_expandFNT(FileNamesTable** fnt, int followLinks);
@@ -269,6 +330,11 @@ UTIL_createFNT_fromROTable(const char** filenames, size_t nbFilenames);
  */
 FileNamesTable* UTIL_allocateFileNamesTable(size_t tableSize);
 
+/*! UTIL_searchFileNamesTable() :
+ *  Searched through entries in FileNamesTable for a specific name.
+ * @return : index of entry if found or -1 if not found
+ */
+int UTIL_searchFileNamesTable(FileNamesTable* table, char const* name);
 
 /*! UTIL_refFilename() :
  *  Add a reference to read-only name into @fnt table.
@@ -301,7 +367,7 @@ void UTIL_refFilename(FileNamesTable* fnt, const char* filename);
 FileNamesTable*
 UTIL_createExpandedFNT(const char* const* filenames, size_t nbFilenames, int followLinks);
 
-#if defined(_WIN32) || defined(WIN32)
+#if defined(_WIN32)
 DWORD CountSetBits(ULONG_PTR bitMask);
 #endif
 

@@ -13,6 +13,7 @@ SRCS=	entropy_common.c \
 	zstd_compress_literals.c \
 	zstd_compress_sequences.c \
 	zstd_compress_superblock.c \
+	zstd_preSplit.c \
 	zstdmt_compress.c \
 	huf_decompress.c \
 	zstd_ddict.c \
@@ -38,6 +39,11 @@ CFLAGS+=	-I${ZSTDDIR}/lib -I${ZSTDDIR}/lib/common -DXXH_NAMESPACE=ZSTD_ \
 		-DZSTD_MULTITHREAD=1 -fvisibility=hidden
 LIBADD=	pthread
 
+# ZSTD_ASM_SUPPORTED is 0 on MidnightBSD but 1 on macOS and Linux.  Since
+# we build this as a bootstrap library and do not include any assembly
+# sources in SRCS, explicitly disable assembly.
+CFLAGS+=	-DZSTD_DISABLE_ASM
+
 PRIVATELIB=	yes
 PACKAGE=	runtime
 
@@ -47,6 +53,9 @@ ZSTDDIR=	${SRCTOP}/sys/contrib/zstd
 	${ZSTDDIR}/lib/dictBuilder ${ZSTDDIR}/lib
 
 .include <bsd.compiler.mk>
+
+# These symbols are needed by dll-linked CLI zstd(1).
+CFLAGS.pool.c+=		-fvisibility=default
 
 CFLAGS.huf_decompress.c+=	${NO_WBITWISE_INSTEAD_OF_LOGICAL}
 
