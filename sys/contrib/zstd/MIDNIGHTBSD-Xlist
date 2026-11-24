@@ -12,6 +12,7 @@
 .cirrus.yml
 .github
 .travis.yml
+CMakeLists.txt
 CODE_OF_CONDUCT.md
 Package.swift
 build
