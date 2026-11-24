@@ -2,8 +2,8 @@ Upgrade procedure for Expat
 
 Source:
   https://github.com/libexpat/libexpat/releases/download/R_VERSION/expat-VERSION.tar.xz
-  Replace R_VERSION with the underscore-separated release tag (e.g. R_2_10_0)
-  and VERSION with the dotted version (e.g. 2.10.0).
+  Replace R_VERSION with the underscore-separated release tag (e.g. R_2_11_0)
+  and VERSION with the dotted version (e.g. 2.11.0).
 
 To upgrade:
 
@@ -24,7 +24,7 @@ To upgrade:
 
 Local patches:
 
-  None in the imported sources as of Expat 2.10.0.  MIDNIGHTBSD-Xlist and
+  None in the imported sources as of Expat 2.11.0.  MIDNIGHTBSD-Xlist and
   this file are downstream metadata and must not enter the vendor branch.
 
 Native integration outside the imported subtree:
