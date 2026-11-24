@@ -110,6 +110,7 @@ options 	EARLY_AP_STARTUP
 
 # CPU frequency control
 device		cpufreq
+device		intel_rapl		# Intel package power limits and energy measurement
 
 # Intel Hardware Feedback Interface and Thread Director for SCHED_MIC;
 # attaches only on CPUs that support it.  See hfi(4).
@@ -122,6 +123,7 @@ options 	IOMMU
 device		pci
 options 	PCI_HP			# PCI-Express native HotPlug
 options		PCI_IOV			# PCI SR-IOV support
+device		mei			# Intel Management Engine Interface
 
 options 	COMPAT_LINUXKPI
 
