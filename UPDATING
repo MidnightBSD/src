@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20261124:
+	Expat 2.11.0 fixes CVE-2026-124317, CVE-2026-128241, and
+	CVE-2026-134703. It also updates XML name handling to XML 1.0
+	Fifth Edition.
+
 20261119:
 	4.0.9 RELEASE
 
