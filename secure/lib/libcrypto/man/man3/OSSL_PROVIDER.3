@@ -58,20 +58,23 @@
 .\" ========================================================================
 .\"
 .IX Title "OSSL_PROVIDER 3ossl"
-.TH OSSL_PROVIDER 3ossl 2026-04-07 3.0.20 OpenSSL
+.TH OSSL_PROVIDER 3ossl 2026-09-29 3.5.9 OpenSSL
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH NAME
 OSSL_PROVIDER_set_default_search_path,
+OSSL_PROVIDER_get0_default_search_path,
 OSSL_PROVIDER, OSSL_PROVIDER_load, OSSL_PROVIDER_try_load, OSSL_PROVIDER_unload,
+OSSL_PROVIDER_load_ex, OSSL_PROVIDER_try_load_ex,
 OSSL_PROVIDER_available, OSSL_PROVIDER_do_all,
 OSSL_PROVIDER_gettable_params, OSSL_PROVIDER_get_params,
 OSSL_PROVIDER_query_operation, OSSL_PROVIDER_unquery_operation,
 OSSL_PROVIDER_get0_provider_ctx, OSSL_PROVIDER_get0_dispatch,
 OSSL_PROVIDER_add_builtin, OSSL_PROVIDER_get0_name, OSSL_PROVIDER_get_capabilities,
-OSSL_PROVIDER_self_test
+OSSL_PROVIDER_add_conf_parameter, OSSL_PROVIDER_get_conf_parameters,
+OSSL_PROVIDER_conf_get_bool, OSSL_PROVIDER_self_test
 \&\- provider routines
 .SH SYNOPSIS
 .IX Header "SYNOPSIS"
@@ -82,10 +85,16 @@ OSSL_PROVIDER_self_test
 \&
 \& int OSSL_PROVIDER_set_default_search_path(OSSL_LIB_CTX *libctx,
 \&                                           const char *path);
+\& const char *OSSL_PROVIDER_get0_default_search_path(OSSL_LIB_CTX *libctx);
 \&
 \& OSSL_PROVIDER *OSSL_PROVIDER_load(OSSL_LIB_CTX *libctx, const char *name);
+\& OSSL_PROVIDER *OSSL_PROVIDER_load_ex(OSSL_LIB_CTX *, const char *name,
+\&                                      OSSL_PARAM *params);
 \& OSSL_PROVIDER *OSSL_PROVIDER_try_load(OSSL_LIB_CTX *libctx, const char *name,
 \&                                       int retain_fallbacks);
+\& OSSL_PROVIDER *OSSL_PROVIDER_try_load_ex(OSSL_LIB_CTX *, const char *name,
+\&                                          OSSL_PARAM *params,
+\&                                          int retain_fallbacks);
 \& int OSSL_PROVIDER_unload(OSSL_PROVIDER *prov);
 \& int OSSL_PROVIDER_available(OSSL_LIB_CTX *libctx, const char *name);
 \& int OSSL_PROVIDER_do_all(OSSL_LIB_CTX *ctx,
@@ -113,6 +122,12 @@ OSSL_PROVIDER_self_test
 \&                                    const char *capability,
 \&                                    OSSL_CALLBACK *cb,
 \&                                    void *arg);
+\& int OSSL_PROVIDER_add_conf_parameter(OSSL_PROVIDER *prov, const char *name,
+\&                                      const char *value);
+\& int OSSL_PROVIDER_get_conf_parameters(OSSL_PROVIDER *prov,
+\&                                       OSSL_PARAM params[]);
+\& int OSSL_PROVIDER_conf_get_bool(const OSSL_PROVIDER *prov,
+\&                                 const char *name, int defval);
 \& int OSSL_PROVIDER_self_test(const OSSL_PROVIDER *prov);
 .Ve
 .SH DESCRIPTION
@@ -132,6 +147,11 @@ Some of these functions operate within a library context, please see
 that is to be used for looking for providers in the specified \fIlibctx\fR.
 If left unspecified, an environment variable and a fall back default value will
 be used instead.
+.PP
+\&\fBOSSL_PROVIDER_get0_default_search_path()\fR retrieves the default search \fIpath\fR
+that is to be used for looking for providers in the specified \fIlibctx\fR.
+If successful returns the path or empty string; the path is valid until the
+context is released or \fBOSSL_PROVIDER_set_default_search_path()\fR is called.
 .PP
 \&\fBOSSL_PROVIDER_add_builtin()\fR is used to add a built in provider to
 \&\fBOSSL_PROVIDER\fR store in the given library context, by associating a
@@ -155,6 +175,13 @@ loaded and initialized or if \fIretain_fallbacks\fR is nonzero.
 If the provider loads successfully and \fIretain_fallbacks\fR is zero, the
 fallback providers are disabled.
 .PP
+\&\fBOSSL_PROVIDER_load_ex()\fR and \fBOSSL_PROVIDER_try_load_ex()\fR are the variants
+of the previous functions accepting an \f(CW\*(C`OSSL_PARAM\*(C'\fR array of the parameters
+that are passed as the configuration of the loaded provider. The parameters
+of any type but \f(CW\*(C`OSSL_PARAM_UTF8_STRING\*(C'\fR are silently ignored. If the
+parameters are provided, they replace \fBall\fR the ones specified in the
+configuration file.
+.PP
 \&\fBOSSL_PROVIDER_unload()\fR unloads the given provider.
 For a provider added with \fBOSSL_PROVIDER_add_builtin()\fR, this simply
 runs its teardown function.
@@ -177,6 +204,33 @@ descriptor set as a constant \fBOSSL_PARAM\fR\|(3) array.
 The caller must prepare the \fBOSSL_PARAM\fR\|(3) array before calling this
 function, and the variables acting as buffers for this parameter array
 should be filled with data when it returns successfully.
+.PP
+\&\fBOSSL_PROVIDER_add_conf_parameter()\fR sets the provider configuration parameter
+\&\fIname\fR to \fIvalue\fR.
+Provider configuration parameters are managed by the OpenSSL core and normally
+set in the configuration file, but can also be set early in the main program
+before a provider is in use by multiple threads.
+Parameters that only affect provider initialisation must, for now, be set in
+the configuration file, only parameters that are also queried later have any
+affect when set via this interface.
+Only text parameters can be given, and it\*(Aqs up to the provider to
+interpret them.
+.PP
+\&\fBOSSL_PROVIDER_get_conf_parameters()\fR retrieves global configuration parameters
+associated with \fIprov\fR.
+These configuration parameters are stored for each provider by the OpenSSL core,
+not the provider itself, parameters managed by the provider are queried via
+\&\fBOSSL_PROVIDER_get_params()\fR described above.
+The parameters are returned by reference, not as copies, and so the elements of
+the \fIparam\fR array must have \fBOSSL_PARAM_UTF8_PTR\fR as their \fBdata_type\fR.
+.PP
+\&\fBOSSL_PROVIDER_conf_get_bool()\fR parses the global configuration parameter \fIname\fR
+associated with provider \fIprov\fR as a boolean value, returning a default value
+\&\fIdefval\fR when unable to retrieve or parse the parameter.
+Parameter values equal (case\-insensitively) to \f(CW1\fR, \f(CW\*(C`on\*(C'\fR, \f(CW\*(C`yes\*(C'\fR, or \f(CW\*(C`true\*(C'\fR
+yield a true (nonzero) result.
+Parameter values equal (case\-insensitively) to \f(CW0\fR, \f(CW\*(C`off\*(C'\fR, \f(CW\*(C`no\*(C'\fR, or \f(CW\*(C`false\*(C'\fR
+yield a false (zero) result.
 .PP
 \&\fBOSSL_PROVIDER_self_test()\fR is used to run a provider\*(Aqs self tests on demand.
 If the self tests fail then the provider will fail to provide any further
@@ -217,8 +271,13 @@ capabilities and what they can be used for please see
 .SH "RETURN VALUES"
 .IX Header "RETURN VALUES"
 \&\fBOSSL_PROVIDER_set_default_search_path()\fR, \fBOSSL_PROVIDER_add()\fR,
-\&\fBOSSL_PROVIDER_unload()\fR, \fBOSSL_PROVIDER_get_params()\fR and
+\&\fBOSSL_PROVIDER_unload()\fR, \fBOSSL_PROVIDER_get_params()\fR,
+\&\fBOSSL_PROVIDER_add_conf_parameter()\fR, \fBOSSL_PROVIDER_get_conf_parameters()\fR
+and
 \&\fBOSSL_PROVIDER_get_capabilities()\fR return 1 on success, or 0 on error.
+.PP
+\&\fBOSSL_PROVIDER_get0_default_search_path()\fR returns a pointer to a path on success,
+or NULL on error or if the path has not previously been set.
 .PP
 \&\fBOSSL_PROVIDER_load()\fR and \fBOSSL_PROVIDER_try_load()\fR return a pointer to a
 provider object on success, or NULL on error.
@@ -269,9 +328,18 @@ its build information.
 .SH HISTORY
 .IX Header "HISTORY"
 The type and functions described here were added in OpenSSL 3.0.
+.PP
+The \fIOSSL_PROVIDER_load_ex\fR and \fIOSSL_PROVIDER_try_load_ex\fR functions were
+added in OpenSSL 3.2.
+.PP
+The
+\&\fIOSSL_PROVIDER_add_conf_parameter\fR,
+\&\fIOSSL_PROVIDER_get_conf_parameters\fR, and
+\&\fIOSSL_PROVIDER_conf_get_bool\fR functions
+were added in OpenSSL 3.5.
 .SH COPYRIGHT
 .IX Header "COPYRIGHT"
-Copyright 2019\-2026 The OpenSSL Project Authors. All Rights Reserved.
+Copyright 2019\-2025 The OpenSSL Project Authors. All Rights Reserved.
 .PP
 Licensed under the Apache License 2.0 (the "License").  You may not use
 this file except in compliance with the License.  You can obtain a copy

@@ -58,7 +58,7 @@
 .\" ========================================================================
 .\"
 .IX Title "SSL_IN_INIT 3ossl"
-.TH SSL_IN_INIT 3ossl 2026-04-07 3.0.20 OpenSSL
+.TH SSL_IN_INIT 3ossl 2026-09-29 3.5.9 OpenSSL
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -99,6 +99,8 @@ fully protected application data can be transferred or 0 otherwise.
 Note that in some circumstances (such as when early data is being transferred)
 \&\fBSSL_in_init()\fR, \fBSSL_in_before()\fR and \fBSSL_is_init_finished()\fR can all return 0.
 .PP
+\&\fBs\fR \fBMUST NOT\fR be NULL.
+.PP
 \&\fBSSL_in_connect_init()\fR returns 1 if \fBs\fR is acting as a client and \fBSSL_in_init()\fR
 would return 1, or 0 otherwise.
 .PP
@@ -128,7 +130,7 @@ Additionally there are some special states that do not conform to the above
 format. These are:
 .IP TLS_ST_BEFORE 4
 .IX Item "TLS_ST_BEFORE"
-No handshake messages have yet been been sent or received.
+No handshake messages have yet been sent or received.
 .IP TLS_ST_OK 4
 .IX Item "TLS_ST_OK"
 Handshake message sending/processing has completed.
@@ -150,7 +152,7 @@ and \fBSSL_in_accept_init()\fR return values as indicated above.
 \&\fBSSL_read_early_data\fR\|(3)
 .SH COPYRIGHT
 .IX Header "COPYRIGHT"
-Copyright 2017\-2018 The OpenSSL Project Authors. All Rights Reserved.
+Copyright 2017\-2026 The OpenSSL Project Authors. All Rights Reserved.
 .PP
 Licensed under the Apache License 2.0 (the "License").  You may not use
 this file except in compliance with the License.  You can obtain a copy

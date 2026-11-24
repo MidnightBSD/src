@@ -1,5 +1,5 @@
 /*
- * Copyright 1999-2021 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1999-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -29,7 +29,7 @@ int PKCS12_key_gen_asc_ex(const char *pass, int passlen, unsigned char *salt,
         unipass = NULL;
         uniplen = 0;
     } else if (!OPENSSL_asc2uni(pass, passlen, &unipass, &uniplen)) {
-        ERR_raise(ERR_LIB_PKCS12, ERR_R_MALLOC_FAILURE);
+        ERR_raise(ERR_LIB_PKCS12, ERR_R_PKCS12_LIB);
         return 0;
     }
     ret = PKCS12_key_gen_uni_ex(unipass, uniplen, salt, saltlen, id, iter,
@@ -59,7 +59,7 @@ int PKCS12_key_gen_utf8_ex(const char *pass, int passlen, unsigned char *salt,
         unipass = NULL;
         uniplen = 0;
     } else if (!OPENSSL_utf82uni(pass, passlen, &unipass, &uniplen)) {
-        ERR_raise(ERR_LIB_PKCS12, ERR_R_MALLOC_FAILURE);
+        ERR_raise(ERR_LIB_PKCS12, ERR_R_PKCS12_LIB);
         return 0;
     }
     ret = PKCS12_key_gen_uni_ex(unipass, uniplen, salt, saltlen, id, iter,

@@ -541,6 +541,7 @@ $code.=<<___;
 .align	16
 gcm_init_clmul:
 .cfi_startproc
+	endbranch
 .L_init_clmul:
 ___
 $code.=<<___ if ($win64);
@@ -1034,6 +1035,7 @@ $code.=<<___;
 .align	32
 gcm_init_avx:
 .cfi_startproc
+	endbranch
 ___
 if ($avx) {
 my ($Htbl,$Xip)=@_4args;
@@ -1616,6 +1618,7 @@ ___
 }
 
 $code.=<<___;
+.section .rodata align=64
 .align	64
 .Lbswap_mask:
 	.byte	15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0
@@ -1669,6 +1672,7 @@ $code.=<<___;
 
 .asciz	"GHASH for x86_64, CRYPTOGAMS by <appro\@openssl.org>"
 .align	64
+.previous
 ___
 
 # EXCEPTION_DISPOSITION handler (EXCEPTION_RECORD *rec,ULONG64 frame,

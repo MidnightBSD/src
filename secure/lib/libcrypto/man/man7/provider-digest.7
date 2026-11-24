@@ -58,7 +58,7 @@
 .\" ========================================================================
 .\"
 .IX Title "PROVIDER-DIGEST 7ossl"
-.TH PROVIDER-DIGEST 7ossl 2026-04-07 3.0.20 OpenSSL
+.TH PROVIDER-DIGEST 7ossl 2026-09-29 3.5.9 OpenSSL
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -80,6 +80,7 @@ provider\-digest \- The digest library <\-> provider functions
 \& void *OSSL_FUNC_digest_newctx(void *provctx);
 \& void OSSL_FUNC_digest_freectx(void *dctx);
 \& void *OSSL_FUNC_digest_dupctx(void *dctx);
+\& void OSSL_FUNC_digest_copyctx(void *voutctx, void *vinctx);
 \&
 \& /* Digest generation */
 \& int OSSL_FUNC_digest_init(void *dctx, const OSSL_PARAM params[]);
@@ -135,10 +136,11 @@ For example, the "function" \fBOSSL_FUNC_digest_newctx()\fR has these:
 \&\fBOSSL_DISPATCH\fR\|(3) arrays are indexed by numbers that are provided as
 macros in \fBopenssl\-core_dispatch.h\fR\|(7), as follows:
 .PP
-.Vb 3
+.Vb 4
 \& OSSL_FUNC_digest_newctx               OSSL_FUNC_DIGEST_NEWCTX
 \& OSSL_FUNC_digest_freectx              OSSL_FUNC_DIGEST_FREECTX
 \& OSSL_FUNC_digest_dupctx               OSSL_FUNC_DIGEST_DUPCTX
+\& OSSL_FUNC_digest_copyctx              OSSL_FUNC_DIGEST_COPYCTX
 \&
 \& OSSL_FUNC_digest_init                 OSSL_FUNC_DIGEST_INIT
 \& OSSL_FUNC_digest_update               OSSL_FUNC_DIGEST_UPDATE
@@ -156,7 +158,8 @@ macros in \fBopenssl\-core_dispatch.h\fR\|(7), as follows:
 .PP
 A digest algorithm implementation may not implement all of these functions.
 In order to be usable all or none of OSSL_FUNC_digest_newctx, OSSL_FUNC_digest_freectx,
-OSSL_FUNC_digest_init, OSSL_FUNC_digest_update and OSSL_FUNC_digest_final should be implemented.
+OSSL_FUNC_digest_init, OSSL_FUNC_digest_update, OSSL_FUNC_digest_final
+and OSSL_FUNC_digest_get_params should be implemented.
 All other functions are optional.
 .SS "Context Management Functions"
 .IX Subsection "Context Management Functions"
@@ -173,6 +176,14 @@ This function should free any resources associated with that context.
 .PP
 \&\fBOSSL_FUNC_digest_dupctx()\fR should duplicate the provider side digest context in the
 \&\fIdctx\fR parameter and return the duplicate copy.
+.PP
+\&\fBOSSL_FUNC_digest_copyctx()\fR should copy the provider side digest context in the
+\&\fIvinctx\fR parameter to the \fIvoutctx\fR parameter which is the another provider side
+context.
+The OSSL_FUNC_digest_copyctx function is used in the EVP_MD_CTX_copy_ex function to
+speed up HMAC operations in the PBKDF2.
+This function is optional, and dupctx will be used if there is no EVP_MD_CTX_copy_ex
+function.
 .SS "Digest Generation Functions"
 .IX Subsection "Digest Generation Functions"
 \&\fBOSSL_FUNC_digest_init()\fR initialises a digest operation given a newly created
@@ -215,7 +226,7 @@ provider side digest context \fIdctx\fR to \fIparams\fR.
 Any parameter settings are additional to any that were previously set.
 Passing NULL for \fIparams\fR should return true.
 .PP
-\&\fBOSSL_FUNC_digest_get_ctx_params()\fR gets digest operation details details from
+\&\fBOSSL_FUNC_digest_get_ctx_params()\fR gets digest operation details from
 the given provider side digest context \fIdctx\fR and stores them in \fIparams\fR.
 Passing NULL for \fIparams\fR should return true.
 .PP
@@ -251,8 +262,7 @@ Diverse flags that describe exceptional behaviour for the digest:
 This digest method can only handle one block of input.
 .IP \fBEVP_MD_FLAG_XOF\fR 4
 .IX Item "EVP_MD_FLAG_XOF"
-This digest method is an extensible\-output function (XOF) and supports
-setting the \fBOSSL_DIGEST_PARAM_XOFLEN\fR parameter.
+This digest method is an extensible\-output function (XOF).
 .IP \fBEVP_MD_FLAG_DIGALGID_NULL\fR 4
 .IX Item "EVP_MD_FLAG_DIGALGID_NULL"
 When setting up a DigestAlgorithmIdentifier, this flag will have the
@@ -286,6 +296,12 @@ See \fBOSSL_PARAM\fR\|(3) for further details on the parameters structure.
 values associated with the give provider side digest context \fIdctx\fR
 and stores them in \fIparams\fR.
 See \fBOSSL_PARAM\fR\|(3) for further details on the parameters structure.
+.PP
+The OpenSSL FIPS provider supports the following gettable context parameter:
+.IP """fips\-indicator"" (\fBOSSL_DIGEST_PARAM_FIPS_APPROVED_INDICATOR\fR) <integer>" 4
+.IX Item """fips-indicator"" (OSSL_DIGEST_PARAM_FIPS_APPROVED_INDICATOR) <integer>"
+Returns 1 if the operation is FIPS approved, or 0 otherwise.
+See "FIPS indicators" in \fBfips_module\fR\|(7) for more information.
 .SH "RETURN VALUES"
 .IX Header "RETURN VALUES"
 \&\fBOSSL_FUNC_digest_newctx()\fR and \fBOSSL_FUNC_digest_dupctx()\fR should return the newly created
@@ -311,16 +327,18 @@ produces larger digests is unusable with those API calls.
 \&\fBEVP_MD\-common\fR\|(7), \fBEVP_MD\-BLAKE2\fR\|(7), \fBEVP_MD\-MD2\fR\|(7),
 \&\fBEVP_MD\-MD4\fR\|(7), \fBEVP_MD\-MD5\fR\|(7), \fBEVP_MD\-MD5\-SHA1\fR\|(7),
 \&\fBEVP_MD\-MDC2\fR\|(7), \fBEVP_MD\-RIPEMD160\fR\|(7), \fBEVP_MD\-SHA1\fR\|(7),
-\&\fBEVP_MD\-SHA2\fR\|(7), \fBEVP_MD\-SHA3\fR\|(7), \fBEVP_MD\-SHAKE\fR\|(7),
-\&\fBEVP_MD\-SM3\fR\|(7), \fBEVP_MD\-WHIRLPOOL\fR\|(7),
+\&\fBEVP_MD\-SHA2\fR\|(7), \fBEVP_MD\-SHA3\fR\|(7), \fBEVP_MD\-KECCAK\fR\|(7)
+\&\fBEVP_MD\-SHAKE\fR\|(7), \fBEVP_MD\-SM3\fR\|(7), \fBEVP_MD\-WHIRLPOOL\fR\|(7),
 \&\fBEVP_MD\-NULL\fR\|(7),
 \&\fBlife_cycle\-digest\fR\|(7), \fBEVP_DigestInit\fR\|(3)
 .SH HISTORY
 .IX Header "HISTORY"
 The provider DIGEST interface was introduced in OpenSSL 3.0.
+\&\fBOSSL_FUNC_digest_copyctx()\fR was added in 3.5 version.
+The "fips\-indicator" context parameter was added in OpenSSL 3.5.9.
 .SH COPYRIGHT
 .IX Header "COPYRIGHT"
-Copyright 2019\-2023 The OpenSSL Project Authors. All Rights Reserved.
+Copyright 2019\-2026 The OpenSSL Project Authors. All Rights Reserved.
 .PP
 Licensed under the Apache License 2.0 (the "License").  You may not use
 this file except in compliance with the License.  You can obtain a copy

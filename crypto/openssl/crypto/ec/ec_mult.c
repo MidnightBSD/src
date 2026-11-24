@@ -1,5 +1,5 @@
 /*
- * Copyright 2001-2021 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2001-2026 The OpenSSL Project Authors. All Rights Reserved.
  * Copyright (c) 2002, Oracle and/or its affiliates. All rights reserved
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
@@ -45,7 +45,6 @@ struct ec_pre_comp_st {
                         * objects followed by a NULL */
     size_t num; /* numblocks * 2^(w-1) */
     CRYPTO_REF_COUNT references;
-    CRYPTO_RWLOCK *lock;
 };
 
 static EC_PRE_COMP *ec_pre_comp_new(const EC_GROUP *group)
@@ -56,19 +55,14 @@ static EC_PRE_COMP *ec_pre_comp_new(const EC_GROUP *group)
         return NULL;
 
     ret = OPENSSL_zalloc(sizeof(*ret));
-    if (ret == NULL) {
-        ERR_raise(ERR_LIB_EC, ERR_R_MALLOC_FAILURE);
+    if (ret == NULL)
         return ret;
-    }
 
     ret->group = group;
     ret->blocksize = 8; /* default */
     ret->w = 4; /* default */
-    ret->references = 1;
 
-    ret->lock = CRYPTO_THREAD_lock_new();
-    if (ret->lock == NULL) {
-        ERR_raise(ERR_LIB_EC, ERR_R_MALLOC_FAILURE);
+    if (!CRYPTO_NEW_REF(&ret->references, 1)) {
         OPENSSL_free(ret);
         return NULL;
     }
@@ -79,7 +73,7 @@ EC_PRE_COMP *EC_ec_pre_comp_dup(EC_PRE_COMP *pre)
 {
     int i;
     if (pre != NULL)
-        CRYPTO_UP_REF(&pre->references, &i, pre->lock);
+        CRYPTO_UP_REF(&pre->references, &i);
     return pre;
 }
 
@@ -90,8 +84,8 @@ void EC_ec_pre_comp_free(EC_PRE_COMP *pre)
     if (pre == NULL)
         return;
 
-    CRYPTO_DOWN_REF(&pre->references, &i, pre->lock);
-    REF_PRINT_COUNT("EC_ec", pre);
+    CRYPTO_DOWN_REF(&pre->references, &i);
+    REF_PRINT_COUNT("EC_ec", i, pre);
     if (i > 0)
         return;
     REF_ASSERT_ISNT(i < 0);
@@ -103,7 +97,7 @@ void EC_ec_pre_comp_free(EC_PRE_COMP *pre)
             EC_POINT_free(*pts);
         OPENSSL_free(pre->points);
     }
-    CRYPTO_THREAD_lock_free(pre->lock);
+    CRYPTO_FREE_REF(&pre->references);
     OPENSSL_free(pre);
 }
 
@@ -172,7 +166,7 @@ int ossl_ec_scalar_mul_ladder(const EC_GROUP *group, EC_POINT *r,
 
     if (((p = EC_POINT_new(group)) == NULL)
         || ((s = EC_POINT_new(group)) == NULL)) {
-        ERR_raise(ERR_LIB_EC, ERR_R_MALLOC_FAILURE);
+        ERR_raise(ERR_LIB_EC, ERR_R_EC_LIB);
         goto err;
     }
 
@@ -196,7 +190,7 @@ int ossl_ec_scalar_mul_ladder(const EC_GROUP *group, EC_POINT *r,
     lambda = BN_CTX_get(ctx);
     k = BN_CTX_get(ctx);
     if (k == NULL) {
-        ERR_raise(ERR_LIB_EC, ERR_R_MALLOC_FAILURE);
+        ERR_raise(ERR_LIB_EC, ERR_R_BN_LIB);
         goto err;
     }
 
@@ -219,6 +213,17 @@ int ossl_ec_scalar_mul_ladder(const EC_GROUP *group, EC_POINT *r,
         goto err;
     }
 
+    /*
+     * Constant-timeness of this copy depends on the caller: BN_copy() moves
+     * scalar->top words unless |scalar| is flagged BN_FLG_CONSTTIME (in which
+     * case scalar->dmax words are moved).  Secret scalars are therefore
+     * expected to arrive either BN_FLG_CONSTTIME or fixed-top, so that their
+     * top is a public, value-independent width and the copy length does not
+     * leak their magnitude.  ECDSA satisfies this via
+     * ossl_bn_priv_rand_range_fixed_top().  The fixed-top pinning below makes
+     * the subsequent arithmetic constant time regardless, but cannot
+     * retroactively fix the copy length here.
+     */
     if (!BN_copy(k, scalar)) {
         ERR_raise(ERR_LIB_EC, ERR_R_BN_LIB);
         goto err;
@@ -237,7 +242,33 @@ int ossl_ec_scalar_mul_ladder(const EC_GROUP *group, EC_POINT *r,
         }
     }
 
+    /*
+     * |k| may still carry a top that depends on the value of the secret
+     * scalar: callers pass either a fixed-top BIGNUM (e.g. the ECDSA nonce)
+     * or a minimal-top one (e.g. SM2), and BN_copy() above preserves that
+     * top.  Pin |k| to a fixed number of words (matching the group
+     * cardinality) so that the additions below run in constant time,
+     * independently of the bit length of the scalar.  Otherwise the work
+     * done by BN_add()/BN_uadd() depends on the operand tops and leaks the
+     * magnitude of the secret scalar.
+     */
+    if (!bn_set_top_fixed(k, group_top)) {
+        ERR_raise(ERR_LIB_EC, ERR_R_BN_LIB);
+        goto err;
+    }
+
     if (!BN_add(lambda, k, cardinality)) {
+        ERR_raise(ERR_LIB_EC, ERR_R_BN_LIB);
+        goto err;
+    }
+    /*
+     * |lambda| = scalar + cardinality may or may not have produced a carry
+     * into an extra word depending on the secret scalar.  Pin its top to one
+     * word above the group top so that the second addition, which consumes
+     * |lambda|, is likewise constant time and so that the BN_is_bit_set()
+     * below always inspects a defined word.
+     */
+    if (!bn_set_top_fixed(lambda, group_top + 1)) {
         ERR_raise(ERR_LIB_EC, ERR_R_BN_LIB);
         goto err;
     }
@@ -518,10 +549,8 @@ int ossl_ec_wNAF_mul(const EC_GROUP *group, EC_POINT *r, const BIGNUM *scalar,
     if (wNAF != NULL)
         wNAF[0] = NULL; /* preliminary pivot */
 
-    if (wsize == NULL || wNAF_len == NULL || wNAF == NULL || val_sub == NULL) {
-        ERR_raise(ERR_LIB_EC, ERR_R_MALLOC_FAILURE);
+    if (wsize == NULL || wNAF_len == NULL || wNAF == NULL || val_sub == NULL)
         goto err;
-    }
 
     /*
      * num_val will be the total number of temporarily precomputed points
@@ -630,7 +659,6 @@ int ossl_ec_wNAF_mul(const EC_GROUP *group, EC_POINT *r, const BIGNUM *scalar,
                     wNAF[i + 1] = NULL;
                     wNAF[i] = OPENSSL_malloc(wNAF_len[i]);
                     if (wNAF[i] == NULL) {
-                        ERR_raise(ERR_LIB_EC, ERR_R_MALLOC_FAILURE);
                         OPENSSL_free(tmp_wNAF);
                         goto err;
                     }
@@ -658,10 +686,8 @@ int ossl_ec_wNAF_mul(const EC_GROUP *group, EC_POINT *r, const BIGNUM *scalar,
      * subarray of 'pre_comp->points' if we already have precomputation.
      */
     val = OPENSSL_malloc((num_val + 1) * sizeof(val[0]));
-    if (val == NULL) {
-        ERR_raise(ERR_LIB_EC, ERR_R_MALLOC_FAILURE);
+    if (val == NULL)
         goto err;
-    }
     val[num_val] = NULL; /* pivot element */
 
     /* allocate points for precomputation */
@@ -888,23 +914,21 @@ int ossl_ec_wNAF_precompute_mult(EC_GROUP *group, BN_CTX *ctx)
                                              * and store */
 
     points = OPENSSL_malloc(sizeof(*points) * (num + 1));
-    if (points == NULL) {
-        ERR_raise(ERR_LIB_EC, ERR_R_MALLOC_FAILURE);
+    if (points == NULL)
         goto err;
-    }
 
     var = points;
     var[num] = NULL; /* pivot */
     for (i = 0; i < num; i++) {
         if ((var[i] = EC_POINT_new(group)) == NULL) {
-            ERR_raise(ERR_LIB_EC, ERR_R_MALLOC_FAILURE);
+            ERR_raise(ERR_LIB_EC, ERR_R_EC_LIB);
             goto err;
         }
     }
 
     if ((tmp_point = EC_POINT_new(group)) == NULL
         || (base = EC_POINT_new(group)) == NULL) {
-        ERR_raise(ERR_LIB_EC, ERR_R_MALLOC_FAILURE);
+        ERR_raise(ERR_LIB_EC, ERR_R_EC_LIB);
         goto err;
     }
 

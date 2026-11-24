@@ -58,7 +58,7 @@
 .\" ========================================================================
 .\"
 .IX Title "OSSL_CMP_MSG_GET0_HEADER 3ossl"
-.TH OSSL_CMP_MSG_GET0_HEADER 3ossl 2026-04-07 3.0.20 OpenSSL
+.TH OSSL_CMP_MSG_GET0_HEADER 3ossl 2026-09-29 3.5.9 OpenSSL
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -66,6 +66,7 @@
 .SH NAME
 OSSL_CMP_MSG_get0_header,
 OSSL_CMP_MSG_get_bodytype,
+OSSL_CMP_MSG_get0_certreq_publickey,
 OSSL_CMP_MSG_update_transactionID,
 OSSL_CMP_MSG_update_recipNonce,
 OSSL_CMP_CTX_setup_CRM,
@@ -81,6 +82,7 @@ i2d_OSSL_CMP_MSG_bio
 \&
 \&  OSSL_CMP_PKIHEADER *OSSL_CMP_MSG_get0_header(const OSSL_CMP_MSG *msg);
 \&  int OSSL_CMP_MSG_get_bodytype(const OSSL_CMP_MSG *msg);
+\&  X509_PUBKEY *OSSL_CMP_MSG_get0_certreq_publickey(const OSSL_CMP_MSG *msg);
 \&  int OSSL_CMP_MSG_update_transactionID(OSSL_CMP_CTX *ctx, OSSL_CMP_MSG *msg);
 \&  int OSSL_CMP_MSG_update_recipNonce(OSSL_CMP_CTX *ctx, OSSL_CMP_MSG *msg);
 \&  OSSL_CRMF_MSG *OSSL_CMP_CTX_setup_CRM(OSSL_CMP_CTX *ctx, int for_KUR, int rid);
@@ -94,6 +96,9 @@ i2d_OSSL_CMP_MSG_bio
 \&\fBOSSL_CMP_MSG_get0_header()\fR returns the header of the given CMP message.
 .PP
 \&\fBOSSL_CMP_MSG_get_bodytype()\fR returns the body type of the given CMP message.
+.PP
+\&\fBOSSL_CMP_MSG_get0_certreq_publickey()\fR expects that \fImsg\fR is a certificate request
+message and returns the public key in its certificate template if present.
 .PP
 \&\fBOSSL_CMP_MSG_update_transactionID()\fR updates the transactionID field
 in the header of the given message according to the CMP_CTX.
@@ -160,13 +165,15 @@ It assigns a pointer to the new structure to \fI*msg\fR if \fImsg\fR is not NULL
 to BIO \fIbio\fR.
 .SH NOTES
 .IX Header "NOTES"
-CMP is defined in RFC 4210.
+CMP is defined in RFC 9810.
 .SH "RETURN VALUES"
 .IX Header "RETURN VALUES"
 \&\fBOSSL_CMP_MSG_get0_header()\fR returns the intended pointer value as described above
 or NULL if the respective entry does not exist and on error.
 .PP
 \&\fBOSSL_CMP_MSG_get_bodytype()\fR returns the body type or \-1 on error.
+.PP
+\&\fBOSSL_CMP_MSG_get0_certreq_publickey()\fR returns a public key or NULL on error.
 .PP
 \&\fBOSSL_CMP_CTX_setup_CRM()\fR returns a pointer to a \fBOSSL_CRMF_MSG\fR on success,
 NULL on error.
@@ -193,9 +200,11 @@ return 1 on success, 0 on error.
 The OpenSSL CMP support was added in OpenSSL 3.0.
 .PP
 \&\fBOSSL_CMP_MSG_update_recipNonce()\fR was added in OpenSSL 3.0.9.
+.PP
+\&\fBOSSL_CMP_MSG_get0_certreq_publickey()\fR was added in OpenSSL 3.3.
 .SH COPYRIGHT
 .IX Header "COPYRIGHT"
-Copyright 2007\-2023 The OpenSSL Project Authors. All Rights Reserved.
+Copyright 2007\-2024 The OpenSSL Project Authors. All Rights Reserved.
 .PP
 Licensed under the Apache License 2.0 (the "License").  You may not use
 this file except in compliance with the License.  You can obtain a copy

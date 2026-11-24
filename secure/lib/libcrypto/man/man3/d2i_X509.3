@@ -58,7 +58,7 @@
 .\" ========================================================================
 .\"
 .IX Title "D2I_X509 3ossl"
-.TH D2I_X509 3ossl 2026-04-07 3.0.20 OpenSSL
+.TH D2I_X509 3ossl 2026-09-29 3.5.9 OpenSSL
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -144,21 +144,62 @@ d2i_OCSP_REVOKEDINFO,
 d2i_OCSP_SERVICELOC,
 d2i_OCSP_SIGNATURE,
 d2i_OCSP_SINGLERESP,
+d2i_OSSL_AA_DIST_POINT,
+d2i_OSSL_ALLOWED_ATTRIBUTES_CHOICE,
+d2i_OSSL_ALLOWED_ATTRIBUTES_ITEM,
+d2i_OSSL_ALLOWED_ATTRIBUTES_SYNTAX,
+d2i_OSSL_ATAV,
+d2i_OSSL_ATTRIBUTE_DESCRIPTOR,
+d2i_OSSL_ATTRIBUTE_MAPPING,
+d2i_OSSL_ATTRIBUTE_MAPPINGS,
+d2i_OSSL_ATTRIBUTE_TYPE_MAPPING,
+d2i_OSSL_ATTRIBUTE_VALUE_MAPPING,
+d2i_OSSL_ATTRIBUTES_SYNTAX,
+d2i_OSSL_AUTHORITY_ATTRIBUTE_ID_SYNTAX,
+d2i_OSSL_BASIC_ATTR_CONSTRAINTS,
+d2i_OSSL_CMP_ATAVS,
 d2i_OSSL_CMP_MSG,
 d2i_OSSL_CMP_PKIHEADER,
 d2i_OSSL_CMP_PKISI,
 d2i_OSSL_CRMF_CERTID,
 d2i_OSSL_CRMF_CERTTEMPLATE,
+d2i_OSSL_CRMF_ENCRYPTEDKEY,
 d2i_OSSL_CRMF_ENCRYPTEDVALUE,
 d2i_OSSL_CRMF_MSG,
 d2i_OSSL_CRMF_MSGS,
 d2i_OSSL_CRMF_PBMPARAMETER,
 d2i_OSSL_CRMF_PKIPUBLICATIONINFO,
 d2i_OSSL_CRMF_SINGLEPUBINFO,
+d2i_OSSL_DAY_TIME,
+d2i_OSSL_DAY_TIME_BAND,
+d2i_OSSL_HASH,
+d2i_OSSL_IETF_ATTR_SYNTAX,
+d2i_OSSL_INFO_SYNTAX,
+d2i_OSSL_INFO_SYNTAX_POINTER,
+d2i_OSSL_ISSUER_SERIAL,
+d2i_OSSL_NAMED_DAY,
+d2i_OSSL_OBJECT_DIGEST_INFO,
+d2i_OSSL_PRIVILEGE_POLICY_ID,
+d2i_OSSL_ROLE_SPEC_CERT_ID,
+d2i_OSSL_ROLE_SPEC_CERT_ID_SYNTAX,
+d2i_OSSL_TARGET_CERT,
+d2i_OSSL_TARGET,
+d2i_OSSL_TARGETING_INFORMATION,
+d2i_OSSL_TARGETS,
+d2i_OSSL_TIME_PERIOD,
+d2i_OSSL_TIME_SPEC,
+d2i_OSSL_TIME_SPEC_ABSOLUTE,
+d2i_OSSL_TIME_SPEC_DAY,
+d2i_OSSL_TIME_SPEC_MONTH,
+d2i_OSSL_TIME_SPEC_TIME,
+d2i_OSSL_TIME_SPEC_WEEKS,
+d2i_OSSL_TIME_SPEC_X_DAY_OF,
+d2i_OSSL_USER_NOTICE_SYNTAX,
 d2i_OTHERNAME,
 d2i_PBE2PARAM,
 d2i_PBEPARAM,
 d2i_PBKDF2PARAM,
+d2i_PBMAC1PARAM,
 d2i_PKCS12,
 d2i_PKCS12_BAGS,
 d2i_PKCS12_MAC_DATA,
@@ -212,6 +253,9 @@ d2i_USERNOTICE,
 d2i_X509,
 d2i_X509_bio,
 d2i_X509_fp,
+d2i_X509_ACERT,
+d2i_X509_ACERT_bio,
+d2i_X509_ACERT_fp,
 d2i_X509_ALGOR,
 d2i_X509_ALGORS,
 d2i_X509_ATTRIBUTE,
@@ -315,21 +359,62 @@ i2d_OCSP_REVOKEDINFO,
 i2d_OCSP_SERVICELOC,
 i2d_OCSP_SIGNATURE,
 i2d_OCSP_SINGLERESP,
+i2d_OSSL_AA_DIST_POINT,
+i2d_OSSL_ALLOWED_ATTRIBUTES_CHOICE,
+i2d_OSSL_ALLOWED_ATTRIBUTES_ITEM,
+i2d_OSSL_ALLOWED_ATTRIBUTES_SYNTAX,
+i2d_OSSL_ATAV,
+i2d_OSSL_ATTRIBUTE_DESCRIPTOR,
+i2d_OSSL_ATTRIBUTE_MAPPING,
+i2d_OSSL_ATTRIBUTE_MAPPINGS,
+i2d_OSSL_ATTRIBUTE_TYPE_MAPPING,
+i2d_OSSL_ATTRIBUTE_VALUE_MAPPING,
+i2d_OSSL_ATTRIBUTES_SYNTAX,
+i2d_OSSL_AUTHORITY_ATTRIBUTE_ID_SYNTAX,
+i2d_OSSL_BASIC_ATTR_CONSTRAINTS,
+i2d_OSSL_CMP_ATAVS,
 i2d_OSSL_CMP_MSG,
 i2d_OSSL_CMP_PKIHEADER,
 i2d_OSSL_CMP_PKISI,
 i2d_OSSL_CRMF_CERTID,
 i2d_OSSL_CRMF_CERTTEMPLATE,
+i2d_OSSL_CRMF_ENCRYPTEDKEY,
 i2d_OSSL_CRMF_ENCRYPTEDVALUE,
 i2d_OSSL_CRMF_MSG,
 i2d_OSSL_CRMF_MSGS,
 i2d_OSSL_CRMF_PBMPARAMETER,
 i2d_OSSL_CRMF_PKIPUBLICATIONINFO,
 i2d_OSSL_CRMF_SINGLEPUBINFO,
+i2d_OSSL_HASH,
+i2d_OSSL_DAY_TIME,
+i2d_OSSL_DAY_TIME_BAND,
+i2d_OSSL_IETF_ATTR_SYNTAX,
+i2d_OSSL_INFO_SYNTAX,
+i2d_OSSL_INFO_SYNTAX_POINTER,
+i2d_OSSL_ISSUER_SERIAL,
+i2d_OSSL_NAMED_DAY,
+i2d_OSSL_OBJECT_DIGEST_INFO,
+i2d_OSSL_PRIVILEGE_POLICY_ID,
+i2d_OSSL_ROLE_SPEC_CERT_ID,
+i2d_OSSL_ROLE_SPEC_CERT_ID_SYNTAX,
+i2d_OSSL_TARGET_CERT,
+i2d_OSSL_TARGET,
+i2d_OSSL_TARGETING_INFORMATION,
+i2d_OSSL_TARGETS,
+i2d_OSSL_TIME_PERIOD,
+i2d_OSSL_TIME_SPEC,
+i2d_OSSL_TIME_SPEC_ABSOLUTE,
+i2d_OSSL_TIME_SPEC_DAY,
+i2d_OSSL_TIME_SPEC_MONTH,
+i2d_OSSL_TIME_SPEC_TIME,
+i2d_OSSL_TIME_SPEC_WEEKS,
+i2d_OSSL_TIME_SPEC_X_DAY_OF,
+i2d_OSSL_USER_NOTICE_SYNTAX,
 i2d_OTHERNAME,
 i2d_PBE2PARAM,
 i2d_PBEPARAM,
 i2d_PBKDF2PARAM,
+i2d_PBMAC1PARAM,
 i2d_PKCS12,
 i2d_PKCS12_BAGS,
 i2d_PKCS12_MAC_DATA,
@@ -386,6 +471,9 @@ i2d_USERNOTICE,
 i2d_X509,
 i2d_X509_bio,
 i2d_X509_fp,
+i2d_X509_ACERT,
+i2d_X509_ACERT_bio,
+i2d_X509_ACERT_fp,
 i2d_X509_ALGOR,
 i2d_X509_ALGORS,
 i2d_X509_ATTRIBUTE,
@@ -436,21 +524,29 @@ encoding.  Unlike the C structures which can have pointers to sub\-objects
 within, the DER is a serialized encoding, suitable for sending over the
 network, writing to a file, and so on.
 .PP
-\&\fBd2i_\fR\f(BITYPE\fR() attempts to decode \fIlen\fR bytes at \fI*ppin\fR. If successful a
-pointer to the \fB\fR\f(BITYPE\fR\fB\fR structure is returned and \fI*ppin\fR is incremented to
-the byte following the parsed data.  If \fIa\fR is not NULL then a pointer
-to the returned structure is also written to \fI*a\fR.  If an error occurred
-then NULL is returned. The caller retains ownership of the
-returned object and needs to free it when it is no longer needed, e.g.
-using \fBX509_free()\fR for X509 objects or \fBDSA_SIG_free()\fR for DSA_SIG objects.
+\&\fBd2i_\fR\f(BITYPE\fR() attempts to decode \fIlen\fR bytes at \fI*ppin\fR.
+When there is no error, a pointer to a \fB\fR\f(BITYPE\fR\fB\fR object is returned and \fI*ppin\fR is
+incremented to the byte following the parsed data.
+The caller owns the returned object and needs to free it when it is no longer needed, 
+e.g., via \fBX509_free()\fR for \fBX509\fR objects.
 .PP
-On a successful return, if \fI*a\fR is not NULL then it is assumed that \fI*a\fR
-contains a valid \fR\f(BITYPE\fR\fB\fR structure and an attempt is made to reuse it.
-For \fB\fR\f(BITYPE\fR\fB\fR structures where it matters it is possible to set up a library
-context on the decoded structure this way (see the \fBEXAMPLES\fR section).
-However using the "reuse" capability for other purposes is \fBstrongly
-discouraged\fR (see \fBBUGS\fR below, and the discussion in the \fBRETURN VALUES\fR
-section).
+If either \fIa\fR or \fI*a\fR is NULL, then fresh storage is allocated for the
+returned object, and if \fIa\fR is not NULL then \fI*a\fR is set equal to the
+returned pointer.
+.PP
+When both \fIa\fR and \fI*a\fR are not NULL, \fI*a\fR MUST be a pointer to an
+existing \fITYPE\fR object, which is reused to hold the decoded result.
+On error (NULL return value), the object is freed and \fI*a\fR is set to NULL.
+.PP
+From OpenSSL 3.x onwards, reuse is only supported when \fI*a\fR points to a newly
+allocated, and not otherwise modified, \fITYPE\fR object.
+Allocation can be via one of the various \fB_ex()\fR routines, which make it possible
+to associate the allocated object with a chosen \fIlibctx\fR (library context)
+or \fIpropq\fR (property query), see the \fBEXAMPLES\fR section.
+No other reuse is supported (see \fBBUGS\fR below, and the discussion in the
+\&\fBRETURN VALUES\fR section).
+The returned object is not suitable for another reuse: each reuse attempt MUST
+start with a newly allocated object.
 .PP
 \&\fBd2i_\fR\f(BITYPE\fR\fB_bio\fR() is similar to \fBd2i_\fR\f(BITYPE\fR() except it attempts
 to parse data from BIO \fIbp\fR.
@@ -542,6 +638,10 @@ value if an error occurs.
 \&\fBi2d_\fR\f(BITYPE\fR\fB_bio\fR() and \fBi2d_\fR\f(BITYPE\fR\fB_fp\fR(),
 as well as \fBi2d_ASN1_bio_stream()\fR,
 return 1 for success and 0 if an error occurs.
+.PP
+On error, these functions may record the error in the OpenSSL error queue.
+That error queue can be inspected with the \fBERR\fR family of functions, such as
+\&\fBERR_print_errors\fR\|(3) and \fBERR_peek_last_error_all\fR\|(3).
 .SH EXAMPLES
 .IX Header "EXAMPLES"
 Allocate and encode the DER encoding of an X509 structure:
@@ -663,9 +763,58 @@ Any function which encodes a structure (\fBi2d_\fR\f(BITYPE\fR(),
 structure has been modified after deserialization or previous
 serialization. This is because some objects cache the encoding for
 efficiency reasons.
+.SH "SEE ALSO"
+.IX Header "SEE ALSO"
+\&\fBERR_print_errors\fR\|(3), \fBERR_peek_last_error_all\fR\|(3)
+.SH HISTORY
+.IX Header "HISTORY"
+\&\fBd2i_OSSL_ATTRIBUTES_SYNTAX()\fR, \fBd2i_OSSL_BASIC_ATTR_CONSTRAINTS()\fR,
+\&\fBd2i_OSSL_CMP_ATAVS()\fR, \fBd2i_OSSL_IETF_ATTR_SYNTAX()\fR,
+\&\fBd2i_OSSL_TARGET()\fR, \fBd2i_OSSL_TARGETING_INFORMATION()\fR,
+\&\fBd2i_OSSL_TARGETS()\fR, \fBd2i_OSSL_USER_NOTICE_SYNTAX()\fR,
+\&\fBd2i_PBMAC1PARAM()\fR, \fBd2i_X509_ACERT()\fR, \fBd2i_X509_ACERT_bio()\fR,
+\&\fBd2i_X509_ACERT_fp()\fR, \fBi2d_OSSL_ATTRIBUTES_SYNTAX()\fR,
+\&\fBi2d_OSSL_BASIC_ATTR_CONSTRAINTS()\fR, \fBi2d_OSSL_CMP_ATAVS()\fR,
+\&\fBi2d_OSSL_IETF_ATTR_SYNTAX()\fR, \fBi2d_OSSL_TARGET()\fR,
+\&\fBi2d_OSSL_TARGETING_INFORMATION()\fR, \fBi2d_OSSL_TARGETS()\fR,
+\&\fBi2d_OSSL_USER_NOTICE_SYNTAX()\fR, \fBi2d_PBMAC1PARAM()\fR, \fBi2d_X509_ACERT()\fR,
+\&\fBi2d_X509_ACERT_bio()\fR, \fBi2d_X509_ACERT_fp()\fR
+were added in OpenSSL 3.4.
+.PP
+\&\fBd2i_OSSL_AA_DIST_POINT()\fR,
+\&\fBd2i_OSSL_ALLOWED_ATTRIBUTES_CHOICE()\fR, \fBd2i_OSSL_ALLOWED_ATTRIBUTES_ITEM()\fR,
+\&\fBd2i_OSSL_ALLOWED_ATTRIBUTES_SYNTAX()\fR,
+\&\fBd2i_OSSL_ATAV()\fR, \fBd2i_OSSL_ATTRIBUTE_DESCRIPTOR()\fR, \fBd2i_OSSL_ATTRIBUTE_MAPPING()\fR,
+\&\fBd2i_OSSL_ATTRIBUTE_MAPPINGS()\fR, \fBd2i_OSSL_ATTRIBUTE_TYPE_MAPPING()\fR,
+\&\fBd2i_OSSL_ATTRIBUTE_VALUE_MAPPING()\fR, \fBd2i_OSSL_AUTHORITY_ATTRIBUTE_ID_SYNTAX()\fR,
+\&\fBd2i_OSSL_HASH()\fR, \fBd2i_OSSL_INFO_SYNTAX()\fR,
+\&\fBd2i_OSSL_INFO_SYNTAX_POINTER()\fR, \fBd2i_OSSL_PRIVILEGE_POLICY_ID()\fR,
+\&\fBd2i_OSSL_ROLE_SPEC_CERT_ID()\fR, \fBd2i_OSSL_ROLE_SPEC_CERT_ID_SYNTAX()\fR,
+\&\fBi2d_OSSL_AA_DIST_POINT()\fR,
+\&\fBi2d_OSSL_ALLOWED_ATTRIBUTES_CHOICE()\fR, \fBi2d_OSSL_ALLOWED_ATTRIBUTES_ITEM()\fR,
+\&\fBi2d_OSSL_ALLOWED_ATTRIBUTES_SYNTAX()\fR,
+\&\fBi2d_OSSL_ATAV()\fR, \fBi2d_OSSL_ATTRIBUTE_DESCRIPTOR()\fR, \fBi2d_OSSL_ATTRIBUTE_MAPPING()\fR,
+\&\fBi2d_OSSL_ATTRIBUTE_MAPPINGS()\fR, \fBi2d_OSSL_ATTRIBUTE_TYPE_MAPPING()\fR,
+\&\fBi2d_OSSL_ATTRIBUTE_VALUE_MAPPING()\fR, \fBi2d_OSSL_AUTHORITY_ATTRIBUTE_ID_SYNTAX()\fR,
+\&\fBi2d_OSSL_HASH()\fR, \fBi2d_OSSL_INFO_SYNTAX()\fR,
+\&\fBi2d_OSSL_INFO_SYNTAX_POINTER()\fR, \fBi2d_OSSL_PRIVILEGE_POLICY_ID()\fR,
+\&\fBi2d_OSSL_ROLE_SPEC_CERT_ID()\fR, \fBi2d_OSSL_ROLE_SPEC_CERT_ID_SYNTAX()\fR,
+\&\fBd2i_OSSL_CRMF_ENCRYPTEDKEY()\fR, \fBi2d_OSSL_CRMF_ENCRYPTEDKEY()\fR,
+\&\fBd2i_OSSL_DAY_TIME()\fR, \fBd2i_OSSL_DAY_TIME_BAND()\fR, \fBd2i_OSSL_NAMED_DAY()\fR,
+\&\fBd2i_OSSL_TIME_PERIOD()\fR, \fBd2i_OSSL_TIME_SPEC()\fR,
+\&\fBd2i_OSSL_TIME_SPEC_ABSOLUTE()\fR, \fBd2i_OSSL_TIME_SPEC_DAY()\fR,
+\&\fBd2i_OSSL_TIME_SPEC_MONTH()\fR, \fBd2i_OSSL_TIME_SPEC_TIME()\fR,
+\&\fBd2i_OSSL_TIME_SPEC_WEEKS()\fR, \fBd2i_OSSL_TIME_SPEC_X_DAY_OF()\fR,
+\&\fBi2d_OSSL_DAY_TIME()\fR, \fBi2d_OSSL_DAY_TIME_BAND()\fR,
+\&\fBi2d_OSSL_NAMED_DAY()\fR, \fBi2d_OSSL_TIME_PERIOD()\fR,
+\&\fBi2d_OSSL_TIME_SPEC()\fR, \fBi2d_OSSL_TIME_SPEC_ABSOLUTE()\fR,
+\&\fBi2d_OSSL_TIME_SPEC_DAY()\fR, \fBi2d_OSSL_TIME_SPEC_MONTH()\fR,
+\&\fBi2d_OSSL_TIME_SPEC_TIME()\fR, \fBi2d_OSSL_TIME_SPEC_WEEKS()\fR,
+\&\fBi2d_OSSL_TIME_SPEC_X_DAY_OF()\fR
+were added in OpenSSL 3.5.
 .SH COPYRIGHT
 .IX Header "COPYRIGHT"
-Copyright 1998\-2025 The OpenSSL Project Authors. All Rights Reserved.
+Copyright 1998\-2026 The OpenSSL Project Authors. All Rights Reserved.
 .PP
 Licensed under the Apache License 2.0 (the "License").  You may not use
 this file except in compliance with the License.  You can obtain a copy
