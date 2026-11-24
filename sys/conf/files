@@ -1881,6 +1881,7 @@ dev/gpio/gpio_if.m		optional gpio
 dev/gpio/gpiobus_if.m		optional gpio
 dev/gpio/gpiopps.c		optional gpiopps fdt
 dev/gpio/ofw_gpiobus.c		optional fdt gpio
+dev/hid/appleir.c		optional appleir
 dev/hid/bcm5974.c		optional bcm5974
 dev/hid/hconf.c			optional hconf
 dev/hid/hcons.c			optional hcons
@@ -1891,6 +1892,7 @@ dev/hid/hidbus.c		optional hidbus
 dev/hid/hidmap.c		optional hidmap
 dev/hid/hidquirk.c		optional hid
 dev/hid/hidraw.c		optional hidraw
+dev/hid/hidwacom.c		optional hidwacom
 dev/hid/hkbd.c			optional hkbd
 dev/hid/hms.c			optional hms
 dev/hid/hmt.c			optional hmt hconf
@@ -1898,6 +1900,7 @@ dev/hid/hpen.c			optional hpen
 dev/hid/hsctrl.c		optional hsctrl
 dev/hid/ietp.c			optional ietp
 dev/hid/ps4dshock.c		optional ps4dshock
+dev/hid/ps5dsense.c		optional ps5dsense
 dev/hid/xb360gp.c		optional xb360gp
 dev/hifn/hifn7751.c		optional hifn
 dev/hptiop/hptiop.c		optional hptiop scbus
@@ -2509,6 +2512,7 @@ dev/mii/gentbi.c		optional miibus | gentbi
 dev/mii/icsphy.c		optional miibus | icsphy
 dev/mii/ip1000phy.c		optional miibus | ip1000phy
 dev/mii/jmphy.c			optional miibus | jmphy
+dev/mii/lan867xphy.c		optional miibus | lan867xphy
 dev/mii/lxtphy.c		optional miibus | lxtphy
 dev/mii/micphy.c		optional miibus fdt | micphy fdt
 dev/mii/mii.c			optional miibus | mii
@@ -2974,6 +2978,17 @@ dev/rtwn/rtl8188e/pci/r88ee_init.c	optional rtwn_pci pci
 dev/rtwn/rtl8188e/pci/r88ee_rx.c	optional rtwn_pci pci
 dev/rtwn/rtl8188e/usb/r88eu_attach.c	optional rtwn_usb
 dev/rtwn/rtl8188e/usb/r88eu_init.c	optional rtwn_usb
+
+# RTL8188F
+dev/rtwn/rtl8188f/r88f_calib.c	optional rtwn
+dev/rtwn/rtl8188f/r88f_chan.c	optional rtwn
+dev/rtwn/rtl8188f/r88f_fw.c	optional rtwn
+dev/rtwn/rtl8188f/r88f_init.c	optional rtwn
+dev/rtwn/rtl8188f/r88f_rom.c	optional rtwn
+dev/rtwn/rtl8188f/r88f_rx.c	optional rtwn
+dev/rtwn/rtl8188f/usb/r88fu_attach.c	optional rtwn_usb
+dev/rtwn/rtl8188f/usb/r88fu_init.c	optional rtwn_usb
+
 # RTL8192C
 dev/rtwn/rtl8192c/r92c_attach.c	optional rtwn
 dev/rtwn/rtl8192c/r92c_beacon.c	optional rtwn
@@ -3008,6 +3023,17 @@ dev/rtwn/rtl8192e/r92e_rom.c	optional rtwn
 dev/rtwn/rtl8192e/r92e_rx.c	optional rtwn
 dev/rtwn/rtl8192e/usb/r92eu_attach.c	optional rtwn_usb
 dev/rtwn/rtl8192e/usb/r92eu_init.c	optional rtwn_usb
+# RTL8723B
+dev/rtwn/rtl8723b/r23b_calib.c	optional rtwn
+dev/rtwn/rtl8723b/r23b_fw.c	optional rtwn
+dev/rtwn/rtl8723b/r23b_init.c	optional rtwn
+dev/rtwn/rtl8723b/r23b_led.c	optional rtwn
+dev/rtwn/rtl8723b/r23b_rf.c	optional rtwn
+dev/rtwn/rtl8723b/r23b_rom.c	optional rtwn
+dev/rtwn/rtl8723b/r23b_rx.c	optional rtwn
+dev/rtwn/rtl8723b/usb/r23bu_attach.c	optional rtwn_usb
+dev/rtwn/rtl8723b/usb/r23bu_init.c	optional rtwn_usb
+dev/rtwn/rtl8723b/usb/r23bu_rom.c	optional rtwn_usb
 # RTL8812A
 dev/rtwn/rtl8812a/r12a_beacon.c	optional rtwn
 dev/rtwn/rtl8812a/r12a_calib.c	optional rtwn
@@ -3064,6 +3090,34 @@ rtwn-rtl8188eufw.fw		optional rtwn-rtl8188eufw | rtwnfw	\
 	compile-with	"${NORMAL_FW}"					\
 	no-obj no-implicit-rule						\
 	clean		"rtwn-rtl8188eufw.fw"
+rtwn-rtl8188fufw.c		optional rtwn-rtl8188fufw | rtwnfw	\
+	compile-with	"${AWK} -f $S/tools/fw_stub.awk rtwn-rtl8188fufw.fw:rtwn-rtl8188fufw:111 -mrtwn-rtl8188fufw -c${.TARGET}" \
+	no-ctfconvert no-implicit-rule before-depend local		\
+	clean		"rtwn-rtl8188fufw.c"
+rtwn-rtl8188fufw.fwo		optional rtwn-rtl8188fufw | rtwnfw	\
+	dependency	"rtwn-rtl8188fufw.fw"				\
+	compile-with	"${NORMAL_FWO}"					\
+	no-implicit-rule						\
+	clean		"rtwn-rtl8188fufw.fwo"
+rtwn-rtl8188fufw.fw		optional rtwn-rtl8188fufw | rtwnfw	\
+	dependency	"$S/contrib/dev/rtwn/rtwn-rtl8188fufw.fw.uu"	\
+	compile-with	"${NORMAL_FW}"					\
+	no-obj no-implicit-rule						\
+	clean		"rtwn-rtl8188fufw.fw"
+rtwn-rtl8723bufw.c		optional rtwn-rtl8723bufw | rtwnfw	\
+	compile-with	"${AWK} -f $S/tools/fw_stub.awk rtwn-rtl8723bufw.fw:rtwn-rtl8723bufw:111 -mrtwn-rtl8723bufw -c${.TARGET}" \
+	no-ctfconvert no-implicit-rule before-depend local		\
+	clean		"rtwn-rtl8723bufw.c"
+rtwn-rtl8723bufw.fwo		optional rtwn-rtl8723bufw | rtwnfw	\
+	dependency	"rtwn-rtl8723bufw.fw"				\
+	compile-with	"${NORMAL_FWO}"					\
+	no-implicit-rule						\
+	clean		"rtwn-rtl8723bufw.fwo"
+rtwn-rtl8723bufw.fw		optional rtwn-rtl8723bufw | rtwnfw	\
+	dependency	"$S/contrib/dev/rtwn/rtwn-rtl8723bufw.fw.uu"	\
+	compile-with	"${NORMAL_FW}"					\
+	no-obj no-implicit-rule						\
+	clean		"rtwn-rtl8723bufw.fw"
 rtwn-rtl8192cfwE.c		optional rtwn-rtl8192cfwE | rtwnfw	\
 	compile-with	"${AWK} -f $S/tools/fw_stub.awk rtwn-rtl8192cfwE.fw:rtwn-rtl8192cfwE:111 -mrtwn-rtl8192cfwE -c${.TARGET}" \
 	no-ctfconvert no-implicit-rule before-depend local		\
@@ -3402,6 +3456,7 @@ dev/usb/net/if_muge.c		optional muge
 dev/usb/net/if_rue.c		optional rue
 dev/usb/net/if_smsc.c		optional smsc
 dev/usb/net/if_udav.c		optional udav
+dev/usb/net/if_umb.c		optional umb inet
 dev/usb/net/if_ure.c		optional ure
 dev/usb/net/if_usie.c		optional usie
 dev/usb/net/if_urndis.c		optional urndis
@@ -3428,6 +3483,7 @@ rsu-rtl8712fw.fw		optional rsu-rtl8712.fw | rsufw		\
 	compile-with	"${NORMAL_FW}"					\
 	no-obj no-implicit-rule						\
 	clean		"rsu-rtl8712fw.fw"
+dev/usb/wlan/if_mtw.c		optional mtw usb wlan
 dev/usb/wlan/if_rum.c		optional rum
 dev/usb/wlan/if_run.c		optional run
 runfw.c				optional runfw							\
@@ -3480,6 +3536,7 @@ dev/usb/serial/usb_serial.c 	optional ucom | u3g | uark | ubsa | ubser | \
 # USB misc drivers
 #
 dev/usb/misc/cp2112.c		optional cp2112
+dev/usb/misc/i2ctinyusb.c	optional i2ctinyusb usb iicbus
 dev/usb/misc/udbp.c		optional udbp
 dev/usb/misc/ugold.c		optional ugold
 dev/usb/misc/uled.c		optional uled
@@ -3519,9 +3576,12 @@ dev/usb/template/usb_template_cdceem.c	optional usb_template
 # USB video drivers
 #
 dev/usb/video/udl.c			optional udl
+dev/usb/video/uvideo.c			optional uvideo video
 #
 # USB END
 #
+dev/video/video.c			optional video
+dev/video/video_if.m			optional video
 dev/videomode/videomode.c		optional videomode
 dev/videomode/edid.c			optional videomode
 dev/videomode/pickmode.c		optional videomode

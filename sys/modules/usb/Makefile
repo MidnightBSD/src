@@ -45,13 +45,18 @@ MAKE+=" DEBUG_FLAGS+=-DUSB_REQ_DEBUG"
 SUBDIR = usb
 SUBDIR += ${_dwc_otg} ehci ${_musb} ohci uhci xhci ${_uss820dci} \
 	  ${_atmegadci} ${_avr32dci} ${_rsu} ${_rsufw} ${_saf1761otg}
-SUBDIR += ${_rum} ${_run} ${_runfw} ${_uath} upgt usie ural ${_zyd} ${_urtw} 
+SUBDIR += mtw ${_rum} ${_run} ${_runfw} ${_uath} upgt usie ural ${_zyd} ${_urtw}
 SUBDIR += atp cfumass uhid uhid_snes ukbd ums udbp uep wmt wsp ugold uled \
 	  usbhid
 SUBDIR += ucom u3g uark ubsa ubser uchcom ucycom ufoma uftdi ugensa uipaq ulpt \
 	  umct umcs umodem umoscom uplcom uslcom uvisor uvscom
-SUBDIR += cp2112
+.if (defined(KERN_OPTS) && !empty(KERN_OPTS:MINET)) || \
+    (!defined(KERN_OPTS) && ${MK_INET_SUPPORT} != "no")
+SUBDIR += umb
+.endif
+SUBDIR += cp2112 i2ctinyusb
 SUBDIR += udl
+SUBDIR += uvideo
 SUBDIR += uether aue axe axge cdce cdceem cue ${_kue} mos rue smsc udav uhso \
 	  ipheth
 SUBDIR += muge

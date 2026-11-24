@@ -1130,6 +1130,8 @@ lacp_compose_key(struct lacp_port *lp)
 		case IFM_10_5:
 		case IFM_10_STP:
 		case IFM_10_FL:
+		case IFM_10_T1S:
+		case IFM_10_T1L:
 			key = IFM_10_T;
 			break;
 		case IFM_100_TX:

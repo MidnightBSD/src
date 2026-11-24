@@ -49,6 +49,7 @@ MAN=	aac.4 \
 	an.4 \
 	${_aout.4} \
 	${_apic.4} \
+	appleir.4 \
 	arcmsr.4 \
 	${_asmc.4} \
 	at45d.4 \
@@ -191,6 +192,7 @@ MAN=	aac.4 \
 	hidbus.4 \
 	hidquirk.4 \
 	hidraw.4 \
+	hidwacom.4 \
 	hifn.4 \
 	hkbd.4 \
 	hms.4 \
@@ -229,6 +231,7 @@ MAN=	aac.4 \
 	iic.4 \
 	iic_gpiomux.4 \
 	iicbb.4 \
+	i2ctinyusb.4 \
 	iicbus.4 \
 	iichid.4 \
 	iicmux.4 \
@@ -334,6 +337,7 @@ MAN=	aac.4 \
 	mpt.4 \
 	mrsas.4 \
 	msk.4 \
+	mtw.4 \
 	mt76.4 \
 	mtio.4 \
 	multicast.4 \
@@ -464,6 +468,7 @@ MAN=	aac.4 \
 	procdesc.4 \
 	proto.4 \
 	ps4dshock.4 \
+	ps5dsense.4 \
 	psm.4 \
 	pst.4 \
 	pt.4 \
@@ -594,6 +599,7 @@ MAN=	aac.4 \
 	vge.4 \
 	viapm.4 \
 	${_viawd.4} \
+	video.4 \
 	virtio.4 \
 	virtio_balloon.4 \
 	virtio_blk.4 \
@@ -1055,6 +1061,7 @@ MAN+=	\
 	umct.4 \
 	umodem.4 \
 	umoscom.4 \
+	umb.4 \
 	ums.4 \
 	unix.4 \
 	upgt.4 \
@@ -1070,6 +1077,7 @@ MAN+=	\
 	usfs.4 \
 	uslcom.4 \
 	uvisor.4 \
+	uvideo.4 \
 	uvscom.4 \
 	zyd.4
 

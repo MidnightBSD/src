@@ -402,6 +402,7 @@ SUBDIR=	\
 	unionfs \
 	usb \
 	${_vesa} \
+	video \
 	virtio \
 	vge \
 	${_viawd} \
