@@ -269,6 +269,7 @@ typedef struct fkeyarg	fkeyarg_t;
 #define	FKEY		0x02000000	/* function key marker 		*/
 #define	MKEY		0x04000000	/* meta key marker (prepend ESC)*/
 #define	BKEY		0x08000000	/* backtab (ESC [ Z)		*/
+#define	SHIFTKEY	0x10000000	/* shifted function key (opt-in) */
 
 #define	SPCLKEY		0x80000000	/* special key			*/
 #define	RELKEY		0x40000000	/* key released			*/

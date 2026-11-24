@@ -206,6 +206,8 @@ void	teken_set_winsize_noreset(teken_t *, const teken_pos_t *);
 #define	TKEY_F10	0x13
 #define	TKEY_F11	0x14
 #define	TKEY_F12	0x15
+
+#define	TKEY_SHIFT	0x20	/* Modifier for arrow keys. */
 const char *teken_get_sequence(const teken_t *, unsigned int);
 
 /* Legacy features. */

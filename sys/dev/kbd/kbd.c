@@ -357,6 +357,7 @@ kbd_release(keyboard_t *kbd, void *id)
 		error = EPERM;
 	} else {
 		kbd->kb_token = NULL;
+		kbd->kb_flags &= ~KB_REPORT_SHIFT;
 		KBD_UNBUSY(kbd);
 		kbd->kb_callback.kc_func = NULL;
 		kbd->kb_callback.kc_arg = NULL;
@@ -1425,8 +1426,18 @@ genkbd_keyaction(keyboard_t *kbd, int keycode, int up, int *shiftstate,
 					*accents = 0;
 					return (ERRKEY);
 				}
-				if (action >= F_FN && action <= L_FN)
+				if (action >= F_FN && action <= L_FN) {
+					/*
+					 * Only tag an unchanged binding. A lock
+					 * key alone can also select column 1.
+					 */
+					if ((kbd->kb_flags & KB_REPORT_SHIFT) &&
+					    i == 1 && (state & SHIFTS) &&
+					    (key->spcl & 0x80) &&
+					    key->map[0] == action)
+						action |= SHIFTKEY;
 					action |= FKEY;
+				}
 				/* XXX: return fkey string for the FKEY? */
 				return (SPCLKEY | action);
 			}
