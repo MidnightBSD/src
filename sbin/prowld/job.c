@@ -338,28 +338,14 @@ job_save_mask(const job_t *job, bool masked)
 }
 
 /*
- * Check whether a single dependency is satisfied.
- * A dependency on "name" is satisfied if any loaded job that provides
- * "name" is in the RUNNING or COMPLETED state.
+ * Is the dependency satisfied by this one provider? It is when the provider
+ * is RUNNING or COMPLETED, or when its state does not hold the job back.
  */
-bool
-job_dep_satisfied(const job_t *job, const dep_entry_t *dep)
+static bool
+dep_provider_satisfied(const job_t *job, const dep_entry_t *dep,
+    const job_t *provider)
 {
-	job_t *provider;
 	job_state_t state;
-
-	/* "?name service": nothing to wait for unless the variable holds */
-	if (dep->cond[0] != '\0' && !prowl_cond_holds(job->rc_name, dep->cond))
-		return (true);
-
-	provider = job_find_by_provides(dep->name);
-	if (provider == NULL) {
-		/*
-		 * Soft dep: missing provider is OK.  rcorder(8) also ignores
-		 * a REQUIRE that nothing provides, so rc-shims follow suit.
-		 */
-		return (!dep->hard || job->type == JOB_TYPE_RCSHIM);
-	}
 
 	state = job_reported_state(provider);
 	if (state == JOB_STATE_RUNNING || state == JOB_STATE_COMPLETED)
@@ -382,6 +368,38 @@ job_dep_satisfied(const job_t *job, const dep_entry_t *dep)
 		return (true);
 
 	return (false);
+}
+
+/*
+ * Check whether a single dependency is satisfied.  Every job that provides
+ * the name must be done: scripts such as ccd, gbde and geli all provide
+ * "disks", and rcorder(8) runs the dependents after all of them.
+ */
+bool
+job_dep_satisfied(const job_t *job, const dep_entry_t *dep)
+{
+	const job_t *provider;
+	bool found = false;
+
+	/* "?name service": nothing to wait for unless the variable holds */
+	if (dep->cond[0] != '\0' && !prowl_cond_holds(job->rc_name, dep->cond))
+		return (true);
+
+	TAILQ_FOREACH(provider, &g_jobs, entries) {
+		if (!job_provides(provider, dep->name))
+			continue;
+		found = true;
+		if (!dep_provider_satisfied(job, dep, provider))
+			return (false);
+	}
+	if (!found) {
+		/*
+		 * Soft dep: missing provider is OK.  rcorder(8) also ignores
+		 * a REQUIRE that nothing provides, so rc-shims follow suit.
+		 */
+		return (!dep->hard || job->type == JOB_TYPE_RCSHIM);
+	}
+	return (true);
 }
 
 /*
