@@ -873,8 +873,11 @@ static int
 vt_processkey(keyboard_t *kbd, struct vt_device *vd, int c)
 {
 	struct vt_window *vw = vd->vd_curwindow;
+	unsigned int modifier;
 
 	random_harvest_queue(&c, sizeof(c), RANDOM_KEYBOARD);
+	modifier = (c & SHIFTKEY) ? TKEY_SHIFT : 0;
+	c &= ~SHIFTKEY;
 #if VT_ALT_TO_ESC_HACK
 	if (c & RELKEY) {
 		switch (c & ~RELKEY) {
@@ -960,22 +963,26 @@ vt_processkey(keyboard_t *kbd, struct vt_device *vd, int c)
 			terminal_input_special(vw->vw_terminal, TKEY_HOME);
 			break;
 		case FKEY | F(50): /* Arrow up. */
-			terminal_input_special(vw->vw_terminal, TKEY_UP);
+			terminal_input_special(vw->vw_terminal,
+			    TKEY_UP | modifier);
 			break;
 		case FKEY | F(51): /* Page up. */
 			terminal_input_special(vw->vw_terminal, TKEY_PAGE_UP);
 			break;
 		case FKEY | F(53): /* Arrow left. */
-			terminal_input_special(vw->vw_terminal, TKEY_LEFT);
+			terminal_input_special(vw->vw_terminal,
+			    TKEY_LEFT | modifier);
 			break;
 		case FKEY | F(55): /* Arrow right. */
-			terminal_input_special(vw->vw_terminal, TKEY_RIGHT);
+			terminal_input_special(vw->vw_terminal,
+			    TKEY_RIGHT | modifier);
 			break;
 		case FKEY | F(57): /* End key. */
 			terminal_input_special(vw->vw_terminal, TKEY_END);
 			break;
 		case FKEY | F(58): /* Arrow down. */
-			terminal_input_special(vw->vw_terminal, TKEY_DOWN);
+			terminal_input_special(vw->vw_terminal,
+			    TKEY_DOWN | modifier);
 			break;
 		case FKEY | F(59): /* Page down. */
 			terminal_input_special(vw->vw_terminal, TKEY_PAGE_DOWN);
@@ -1081,6 +1088,7 @@ vt_allocate_keyboard(struct vt_device *vd)
 		}
 		k0 = kbd_get_keyboard(idx0);
 	}
+	k0->kb_flags |= KB_REPORT_SHIFT;
 	vd->vd_keyboard = k0;
 	DPRINTF(20, "%s: vd_keyboard = %d\n", __func__,
 	    vd->vd_keyboard->kb_index);
@@ -1918,7 +1926,7 @@ vtterm_cngetc(struct terminal *tm)
 
 	/* Switch the keyboard to polling to make it work here. */
 	kbdd_poll(kbd, TRUE);
-	c = kbdd_read_char(kbd, 0);
+	c = kbdd_read_char(kbd, 0) & ~SHIFTKEY;
 	kbdd_poll(kbd, FALSE);
 	if (c & RELKEY)
 		return (-1);
@@ -2919,6 +2927,7 @@ skip_thunk:
 					kbd_release(kbd, (void *)vd);
 				}
 				kbd = vd->vd_keyboard = kbd_get_keyboard(i);
+				kbd->kb_flags |= KB_REPORT_SHIFT;
 
 				vt_update_kbd_mode(vd->vd_curwindow, kbd);
 				vt_update_kbd_state(vd->vd_curwindow, kbd);

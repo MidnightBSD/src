@@ -715,6 +715,10 @@ static const char * const special_strings_ckeys[] = {
 static const char * const special_strings_normal[] = {
 	[TKEY_UP] = "\x1B[A",		[TKEY_DOWN] = "\x1B[B",
 	[TKEY_LEFT] = "\x1B[D",		[TKEY_RIGHT] = "\x1B[C",
+	[TKEY_UP | TKEY_SHIFT] = "\x1B[1;2A",
+	[TKEY_DOWN | TKEY_SHIFT] = "\x1B[1;2B",
+	[TKEY_LEFT | TKEY_SHIFT] = "\x1B[1;2D",
+	[TKEY_RIGHT | TKEY_SHIFT] = "\x1B[1;2C",
 
 	[TKEY_HOME] = "\x1B[H",		[TKEY_END] = "\x1B[F",
 	[TKEY_INSERT] = "\x1B[2~",	[TKEY_DELETE] = "\x1B[3~",

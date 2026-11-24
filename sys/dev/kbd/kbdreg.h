@@ -123,6 +123,7 @@ struct keyboard {
 #define KB_REGISTERED	(1 << 20)	/* device registered to kbdio */
 #define KB_BUSY		(1 << 21)	/* device used by a client */
 #define KB_POLLED	(1 << 22)	/* device is polled */
+#define KB_REPORT_SHIFT	(1 << 23)	/* report Shift on function keys */
 	int		kb_active;	/* 0: inactive */
 	void		*kb_token;	/* id of the current client */
 	keyboard_callback_t kb_callback;/* callback function */
