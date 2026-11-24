@@ -58,7 +58,7 @@
 .\" ========================================================================
 .\"
 .IX Title "OPENSSL-ENV 7ossl"
-.TH OPENSSL-ENV 7ossl 2026-04-07 3.0.20 OpenSSL
+.TH OPENSSL-ENV 7ossl 2026-09-29 3.5.9 OpenSSL
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -114,6 +114,12 @@ This output usually makes sense only if you know OpenSSL internals well.
 .Sp
 The value of this environment variable is a comma\-separated list of names,
 with the following available:
+.IP \fBOPENSSL_RUNNING_UNIT_TESTS\fR 4
+.IX Item "OPENSSL_RUNNING_UNIT_TESTS"
+This environment variable is used to flag the fact that unit tests are being run
+(i.e. \`make test\`).  It is used to detect when the OpenSSL should behave in a special
+manner during unit tests (i.e. when unit tests are being run on fuzzing builds).  It should
+generally not be set by users.
 .RS 4
 .IP \fBTRACE\fR 4
 .IX Item "TRACE"
@@ -191,21 +197,41 @@ See \fBRAND_load_file\fR\|(3).
 .IP "\fBSSL_CERT_DIR\fR, \fBSSL_CERT_FILE\fR" 4
 .IX Item "SSL_CERT_DIR, SSL_CERT_FILE"
 Specify the default directory or file containing CA certificates.
+\&\fBSSL_CERT_DIR\fR can contain multiple directories separated by colons
+(or semicolons on Windows).
 See \fBSSL_CTX_load_verify_locations\fR\|(3).
 .IP \fBTSGET\fR 4
 .IX Item "TSGET"
 Additional arguments for the \fBtsget\fR\|(1) command.
-.IP "\fBOPENSSL_ia32cap\fR, \fBOPENSSL_sparcv9cap\fR, \fBOPENSSL_ppccap\fR, \fBOPENSSL_armcap\fR, \fBOPENSSL_s390xcap\fR" 4
-.IX Item "OPENSSL_ia32cap, OPENSSL_sparcv9cap, OPENSSL_ppccap, OPENSSL_armcap, OPENSSL_s390xcap"
+.IP "\fBOPENSSL_ia32cap\fR, \fBOPENSSL_sparcv9cap\fR, \fBOPENSSL_ppccap\fR, \fBOPENSSL_armcap\fR, \fBOPENSSL_s390xcap\fR, \fBOPENSSL_riscvcap\fR" 4
+.IX Item "OPENSSL_ia32cap, OPENSSL_sparcv9cap, OPENSSL_ppccap, OPENSSL_armcap, OPENSSL_s390xcap, OPENSSL_riscvcap"
 OpenSSL supports a number of different algorithm implementations for
 various machines and, by default, it determines which to use based on the
 processor capabilities and run time feature enquiry.  These environment
 variables can be used to exert more control over this selection process.
-See \fBOPENSSL_ia32cap\fR\|(3), \fBOPENSSL_s390xcap\fR\|(3).
+See \fBOPENSSL_armcap\fR\|(3), \fBOPENSSL_ia32cap\fR\|(3), \fBOPENSSL_ppccap\fR\|(3),
+\&\fBOPENSSL_riscvcap\fR\|(3) and \fBOPENSSL_s390xcap\fR\|(3).
 .IP "\fBNO_PROXY\fR, \fBHTTPS_PROXY\fR, \fBHTTP_PROXY\fR" 4
 .IX Item "NO_PROXY, HTTPS_PROXY, HTTP_PROXY"
 Specify a proxy hostname.
 See \fBOSSL_HTTP_parse_url\fR\|(3).
+.IP \fBQLOGDIR\fR 4
+.IX Item "QLOGDIR"
+Specifies a QUIC qlog output directory. See \fBopenssl\-qlog\fR\|(7).
+.IP \fBOSSL_QFILTER\fR 4
+.IX Item "OSSL_QFILTER"
+Used to set a QUIC qlog filter specification. See \fBopenssl\-qlog\fR\|(7).
+.IP \fBSSLKEYLOGFILE\fR 4
+.IX Item "SSLKEYLOGFILE"
+Used to produce the standard format output file for SSL key logging.  Optionally
+set this variable to a filename to log all secrets produced by SSL connections.
+Note, use of the environment variable is predicated on configuring OpenSSL at
+build time with the enable\-sslkeylog feature.  The file format standard can be
+found at <https://datatracker.ietf.org/doc/draft\-ietf\-tls\-keylogfile/>.
+Note: the use of \fBSSLKEYLOGFILE\fR poses an explicit security risk.  By recording
+the exchanged keys during an SSL session, it allows any available party with
+read access to the file to decrypt application traffic sent over that session.
+Use of this feature should be restricted to test and debug environments only.
 .SH COPYRIGHT
 .IX Header "COPYRIGHT"
 Copyright 2019\-2026 The OpenSSL Project Authors. All Rights Reserved.

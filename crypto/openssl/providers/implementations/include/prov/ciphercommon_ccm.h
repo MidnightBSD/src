@@ -7,6 +7,10 @@
  * https://www.openssl.org/source/license.html
  */
 
+#ifndef OSSL_PROV_CIPHERCOMMON_CCM_H
+#define OSSL_PROV_CIPHERCOMMON_CCM_H
+#pragma once
+
 #include "ciphercommon_aead.h"
 
 typedef struct prov_ccm_hw_st PROV_CCM_HW;
@@ -85,3 +89,5 @@ int ossl_ccm_generic_auth_encrypt(PROV_CCM_CTX *ctx, const unsigned char *in,
 int ossl_ccm_generic_auth_decrypt(PROV_CCM_CTX *ctx, const unsigned char *in,
     unsigned char *out, size_t len,
     unsigned char *expected_tag, size_t taglen);
+
+#endif

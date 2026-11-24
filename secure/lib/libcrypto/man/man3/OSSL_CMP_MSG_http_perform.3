@@ -58,7 +58,7 @@
 .\" ========================================================================
 .\"
 .IX Title "OSSL_CMP_MSG_HTTP_PERFORM 3ossl"
-.TH OSSL_CMP_MSG_HTTP_PERFORM 3ossl 2026-04-07 3.0.20 OpenSSL
+.TH OSSL_CMP_MSG_HTTP_PERFORM 3ossl 2026-09-29 3.5.9 OpenSSL
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -76,11 +76,21 @@ OSSL_CMP_MSG_http_perform
 .Ve
 .SH DESCRIPTION
 .IX Header "DESCRIPTION"
-\&\fBOSSL_CMP_MSG_http_perform()\fR sends the given PKIMessage \fIreq\fR
-to the CMP server specified in \fIctx\fR via \fBOSSL_CMP_CTX_set1_server\fR\|(3)
-and optionally \fBOSSL_CMP_CTX_set_serverPort\fR\|(3), using
-any "CMP alias" optionally specified via \fBOSSL_CMP_CTX_set1_serverPath\fR\|(3).
-The default port is 80 for HTTP and 443 for HTTPS; the default path is "/".
+\&\fBOSSL_CMP_MSG_http_perform()\fR sends the given PKIMessage \fIreq\fR to the
+CMP server specified in \fIctx\fR and returns the result obtained from it.
+.PP
+If \fBOSSL_CMP_CTX_set_transfer_cb_arg\fR\|(3) has been used to set the transfer
+callback argument then the provided pointer \fIbios\fR is taken as
+a two\-element \fBBIO\fR array to use for the exchange with the server
+as described for the \fIbio\fR and \fIrbio\fR parameters of \fBOSSL_HTTP_open\fR\|(3).
+For instance, the two BIO pointers may be equal and refer to a TLS connection,
+such as in BRSKI\-AE where a pre\-established TLS channel is reused for CMP.
+.PP
+Otherwise the server specified via \fBOSSL_CMP_CTX_set1_server\fR\|(3)
+and optionally \fBOSSL_CMP_CTX_set_serverPort\fR\|(3) is contacted,
+where the default port is 80 for HTTP and 443 for HTTPS.
+The HTTP path (aka "CMP alias" in this context) to use is by default \f(CW\*(C`/\*(C'\fR,
+otherwise the string specified via \fBOSSL_CMP_CTX_set1_serverPath\fR\|(3).
 On success the function returns the server\*(Aqs response PKIMessage.
 .PP
 The function makes use of any HTTP callback function
@@ -94,20 +104,23 @@ while using a proxy for HTTPS connections requires a suitable callback function
 such as \fBOSSL_HTTP_proxy_connect\fR\|(3).
 .SH NOTES
 .IX Header "NOTES"
-CMP is defined in RFC 4210.
-HTTP transfer for CMP is defined in RFC 6712.
+CMP is defined in RFC 9810.
+HTTP transfer for CMP is defined in RFC 9811.
 .SH "RETURN VALUES"
 .IX Header "RETURN VALUES"
-\&\fBOSSL_CMP_MSG_http_perform()\fR returns a CMP message on success, else NULL.
+\&\fBOSSL_CMP_MSG_http_perform()\fR
+returns the received CMP response message on success, else NULL.
 .SH "SEE ALSO"
 .IX Header "SEE ALSO"
-\&\fBOSSL_CMP_CTX_new\fR\|(3), \fBOSSL_HTTP_proxy_connect\fR\|(3).
+\&\fBOSSL_CMP_CTX_new\fR\|(3), \fBOSSL_HTTP_open\fR\|(3), and \fBOSSL_HTTP_proxy_connect\fR\|(3).
 .SH HISTORY
 .IX Header "HISTORY"
 The OpenSSL CMP support was added in OpenSSL 3.0.
+.PP
+The \fBOSSL_CMP_MSG_http_perform()\fR use of transfer_cb_arg was added in OpenSSL 3.5.
 .SH COPYRIGHT
 .IX Header "COPYRIGHT"
-Copyright 2007\-2021 The OpenSSL Project Authors. All Rights Reserved.
+Copyright 2007\-2025 The OpenSSL Project Authors. All Rights Reserved.
 .PP
 Licensed under the Apache License 2.0 (the "License").  You may not use
 this file except in compliance with the License.  You can obtain a copy

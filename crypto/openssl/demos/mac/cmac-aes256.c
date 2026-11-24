@@ -63,14 +63,14 @@ static const char *propq = NULL;
 
 int main(void)
 {
-    int rv = EXIT_FAILURE;
+    int ret = EXIT_FAILURE;
     OSSL_LIB_CTX *library_context = NULL;
     EVP_MAC *mac = NULL;
     EVP_MAC_CTX *mctx = NULL;
     unsigned char *out = NULL;
     size_t out_len = 0;
     OSSL_PARAM params[4], *p = params;
-    char cipher_name[] = "aes256";
+    char cipher_name[] = "AES-256-CBC";
 
     library_context = OSSL_LIB_CTX_new();
     if (library_context == NULL) {
@@ -139,14 +139,14 @@ int main(void)
         goto end;
     }
 
-    rv = EXIT_SUCCESS;
+    ret = EXIT_SUCCESS;
 end:
-    if (rv != EXIT_SUCCESS)
+    if (ret != EXIT_SUCCESS)
         ERR_print_errors_fp(stderr);
     /* OpenSSL free functions will ignore NULL arguments */
     OPENSSL_free(out);
     EVP_MAC_CTX_free(mctx);
     EVP_MAC_free(mac);
     OSSL_LIB_CTX_free(library_context);
-    return rv;
+    return ret;
 }

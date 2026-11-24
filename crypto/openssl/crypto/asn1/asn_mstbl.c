@@ -110,7 +110,7 @@ err:
         rv = ASN1_STRING_TABLE_add(nid, tbl_min, tbl_max,
             tbl_mask, tbl_flags);
         if (!rv)
-            ERR_raise(ERR_LIB_ASN1, ERR_R_MALLOC_FAILURE);
+            ERR_raise(ERR_LIB_ASN1, ERR_R_ASN1_LIB);
     }
     sk_CONF_VALUE_pop_free(lst, X509V3_conf_free);
     return rv;
