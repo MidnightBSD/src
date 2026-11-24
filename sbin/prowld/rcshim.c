@@ -658,7 +658,7 @@ rcconf_service_file(const char *path, const char *varname, char *buf, size_t sz)
 			prowl_log(LOG_WARNING, "rc.conf: skipping %s: %m", path);
 		return (false);
 	}
-	count = fdscandir(dirfd, &entries, rcconf_fragment, alphasort);
+	count = scandirat(dirfd, ".", &entries, rcconf_fragment, alphasort);
 	if (count == -1) {
 		prowl_log(LOG_WARNING, "rc.conf: scanning %s: %m", path);
 		close(dirfd);
