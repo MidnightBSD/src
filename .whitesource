@@ -2,7 +2,7 @@
   "scanSettings": {
     "baseBranches": ["master", "stable/4.1", "stable/4.0"],
     "excludes": [
-      "**/vendor/**",
+      "**/vendor/**"
     ]
   },
   "checkRunSettings": {
