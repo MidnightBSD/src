@@ -2431,6 +2431,7 @@ device		hmt		# HID multitouch (MS-compatible)
 device		hpen		# Generic pen driver
 device		hsctrl		# System controls
 device		ps4dshock	# Sony PS4 DualShock 4 gamepad driver
+device		ps5dsense	# Sony PS5 DualSense gamepad driver
 device		xb360gp		# XBox 360 gamepad driver
 
 #####################################################################
@@ -2549,6 +2550,9 @@ device		mos
 # HSxPA devices from Option N.V
 device		uhso
 
+# MediaTek MT7601U USB wireless driver
+device		mtw
+#
 # Realtek RTL8188SU/RTL8191SU/RTL8192SU wireless driver
 device		rsu
 #

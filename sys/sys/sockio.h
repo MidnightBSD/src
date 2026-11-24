@@ -146,4 +146,8 @@
 
 #define	SIOCGIFDOWNREASON	_IOWR('i', 154, struct ifdownreason)
 
+#define	SIOCGUMBINFO	_IOWR('i', 157, struct ifreq)	/* get MBIM info */
+#define	SIOCSUMBPARAM	 _IOW('i', 158, struct ifreq)	/* set MBIM param */
+#define	SIOCGUMBPARAM	_IOWR('i', 159, struct ifreq)	/* get MBIM param */
+
 #endif /* !_SYS_SOCKIO_H_ */

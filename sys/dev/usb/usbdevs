@@ -714,6 +714,8 @@ vendor DISPLAYLINK	0x17e9	DisplayLink
 vendor LENOVO		0x17ef	Lenovo
 vendor WAVESENSE	0x17f4	WaveSense
 vendor VAISALA		0x1843	Vaisala
+vendor K2L		0x184f	K2L GmbH
+vendor VERBATIM		0x18a5	Verbatim
 vendor E3C		0x18b4	E3C Technologies
 vendor AMIT		0x18c5	AMIT
 vendor GOOGLE		0x18d1	Google
@@ -779,6 +781,7 @@ vendor TRIPPLITE	0x2478	Tripp-Lite
 vendor NORELSYS	0x2537	NOREL Systems Ltd.
 vendor TENDA2		0x2604	Tenda
 vendor HIROSE		0x2631	Hirose Electric
+vendor XIAOMI		0x2717	Xiaomi
 vendor NHJ		0x2770	NHJ
 vendor THINGM		0x27b8	ThingM
 vendor PERASO		0x2932	Peraso Technologies, Inc.
@@ -1620,6 +1623,7 @@ product CORSAIR STRAFE2		0x1b44	Corsair STRAFE Gaming keyboard
 product CREATIVE NOMAD_II	0x1002	Nomad II MP3 player
 product CREATIVE NOMAD_IIMG	0x4004	Nomad II MG
 product CREATIVE NOMAD		0x4106	Nomad
+product CREATIVE STAGE_SE_MINI	0x3295	Stage SE mini
 product CREATIVE2 VOIP_BLASTER	0x0258	Voip Blaster
 product CREATIVE3 OPTICAL_MOUSE	0x0001	Notebook Optical Mouse
 
@@ -1747,6 +1751,7 @@ product DLINK DWA182C1		0x3315	DWA-182 rev C1
 product DLINK DWA180A1		0x3316	DWA-180 rev A1
 product DLINK DWA172A1		0x3318	DWA-172 rev A1
 product DLINK DWA131E1		0x3319	DWA-131 rev E1
+product DLINK DWA121B1		0x331b	DWA-121 rev B1
 product DLINK DWA182D1		0x331c	DWA-182 rev D1
 product DLINK DWL122		0x3700	DWL-122
 product DLINK DWLG120		0x3701	DWL-G120
@@ -1787,6 +1792,7 @@ product DLINK DWM222_CD		0xab00	DWM-222 CD-ROM Mode
 product DLINK DWM222_CD_2	0xac01	DWM-222 CD-ROM Mode
 product DLINK DSB650		0xabc1	10/100 Ethernet
 product DLINK DUBH7		0xf103	DUB-H7 USB 2.0 7-Port Hub
+product DLINK DUBE1312		0xb301	DUB-E1312 USB Ethernet
 product DLINK2 RTL8192SU_1	0x3300	RTL8192SU
 product DLINK2 RTL8192SU_2	0x3302	RTL8192SU
 product DLINK2 DWA131A1		0x3303	DWA-131 A1
@@ -1864,12 +1870,14 @@ product EDIMAX EW7318USG	0x7318	USB Wireless dongle
 product EDIMAX RTL8192SU_1	0x7611	RTL8192SU
 product EDIMAX RTL8192SU_2	0x7612	RTL8192SU
 product EDIMAX EW7622UMN	0x7622	EW-7622UMn
+product EDIMAX MT7601U		0x7710	MT7601U
 product EDIMAX RT2870_1		0x7711	RT2870
 product EDIMAX EW7717		0x7717	EW-7717
 product EDIMAX EW7718		0x7718	EW-7718
 product EDIMAX EW7733UND	0x7733	EW-7733UnD
 product EDIMAX EW7811UN		0x7811	EW-7811Un
 product	EDIMAX RTL8192CU	0x7822	RTL8192CU
+product EDIMAX EW7611ULB	0xa611	EW-7611ULB
 product EDIMAX EW7811UTC_1	0xa811	EW-7811UTC
 product EDIMAX EW7811UTC_2	0xa812	EW-7811UTC
 product EDIMAX EW7822UAC	0xa822	EW-7822UAC
@@ -1906,6 +1914,7 @@ product ELECOM LDUSB20		0x4010	LD-USB20
 product ELECOM UCSGT		0x5003	UC-SGT
 product ELECOM UCSGT0		0x5004	UC-SGT
 product ELECOM LDUSBTX3		0xabc1	LD-USB/TX
+product ELECOM EDCQUA3C		0x4017	EDC-QUA3C
 
 /* Elektor products */
 product ELEKTOR FT323R		0x0005	FTDI compatible adapter
@@ -2718,6 +2727,9 @@ product JVC MP_PRX1		0x3008	MP-PRX1 Ethernet
 /* JRC products */
 product JRC AH_J3001V_J3002V	0x0001	AirH PHONE AH-J3001V/J3002V
 
+/* K2L products */
+product K2L EVB_LAN8670_USB	0x0051	Microchip EVB-LAN8670-USB 10BASE-T1S
+
 /* Kamstrrup products */
 product KAMSTRUP OPTICALEYE	0x0001	Optical Eye/3-wire
 product KAMSTRUP MBUS_250D	0x0005	M-Bus Master MultiPort 250D
@@ -3331,6 +3343,8 @@ product MICROSOFT NATURAL4000	0x00db	Natural Ergonomic Keyboard 4000
 product MICROSOFT WLNOTEBOOK2	0x00e1	Wireless Optical Mouse 3000 (Model 1056)
 product MICROSOFT XBOX360	0x0292	XBOX 360 WLAN
 product MICROSOFT WINDEVETH	0x0c5e	Windows Dev Kit 2023 Ethernet
+product MICROSOFT SURFETH1	0x07ab	Surface USB Ethernet
+product MICROSOFT SURFETH2	0x07c6	Surface USB Ethernet
 
 /* Microtech products */
 product MICROTECH SCSIDB25	0x0004	USB-SCSI-DB25
@@ -4010,6 +4024,7 @@ product QUECTEL EC25		0x0125	LTE modem
 product QUECTEL EM05		0x0127	LTE modem
 product QUECTEL EP06_E		0x0306	LTE modem
 product QUECTEL EM12_G          0x0512  LTE modem
+product QUECTEL EM060K		0x6008	Quectel EM060K
 
 /* Quickshot products */
 product QUICKSHOT STRIKEPAD	0x6238	USB StrikePad
@@ -4055,6 +4070,7 @@ product RATOC REXUSB60F		0xb020	USB serial adapter REX-USB60F
 product REALTEK DUMMY		0x0000	Dummy product
 product REALTEK USB20CRW	0x0158	USB20CRW Card Reader
 product REALTEK RTL8188ETV	0x0179	RTL8188ETV
+product REALTEK RTL8188FTV	0xf179	RTL8188FTV
 product REALTEK RTL8188CTV      0x018a  RTL8188CTV
 product REALTEK RTL8821AU_2	0x0811	RTL8821AU
 product REALTEK RTW8821CU_CD	0x1a2b	RTW8821CU_CD
@@ -4095,6 +4111,8 @@ product REALTEK RTL8821AU_1	0xa811	RTL8821AU
 product REALTEK RTL8723BU	0xb720	RTL8723BU
 product REALTEK RTL8192SU	0xc512	RTL8192SU
 product REALTEK RTW8821CU	0xc811	RTW8821CU
+product REALTEK RTL8050		0x8050	RTL8050 USB Ethernet
+product REALTEK RTL8053		0x8053	RTL8053 USB Ethernet
 
 /* RedOctane products */
 product REDOCTANE DUMMY		0x0000	Dummy product
@@ -4135,6 +4153,7 @@ product ROLAND UA700		0x002b	UA-700 Audio I/F
 product ROLAND PCR300		0x0033  EDIROL PCR-300 MIDI I/F
 product ROLAND UA25EX_AD	0x00e6  EDIROL UA-25EX (Advanced Driver)
 product ROLAND UA25EX_CC	0x00e7  EDIROL UA-25EX (Class Compliant)
+product ROLAND UA33		0x0132	UA-33 Audio I/F
 
 /* Rockfire products */
 product ROCKFIRE GAMEPAD	0x2033	gamepad 203USB
@@ -4159,6 +4178,7 @@ product SAMSUNG YP_U2		0x5050	YP-U2 MP3 Player
 product SAMSUNG YP_U4		0x5092	YP-U4 MP3 Player
 product SAMSUNG I500		0x6601	I500 Palm USB Phone
 product SAMSUNG I330		0x8001	I330 phone cradle
+product SAMSUNG RTL8153		0xa101	USB Ethernet
 product SAMSUNG2 RT2870_1	0x2018	RT2870
 
 /* Samsung Techwin products */
@@ -4371,6 +4391,7 @@ product SIERRA EM7455		0x9078	Sierra Wireless EM7455 Qualcomm Snapdragon X7 LTE-
 product SIERRA EM7455_2		0x9079	Sierra Wireless EM7455 Qualcomm Snapdragon X7 LTE-A
 product SIERRA EM7565		0x9090	Sierra Wireless EM7565 Qualcomm Snapdragon X7 LTE-A
 product SIERRA EM7565_2		0x9091	Sierra Wireless EM7565 Qualcomm Snapdragon X7 LTE-A
+product SIERRA EM7590		0xc081	Sierra Wireless EM7590 Qualcomm Snapdragon X7 LTE-A
 
 /* Sigmatel products */
 product SIGMATEL WBT_3052	0x4200	WBT-3052 IrDA/USB Bridge
@@ -4730,6 +4751,8 @@ product TELEX MIC1		0x0001	Enhanced USB Microphone
 /* Telit products */
 product TELIT UC864E		0x1003	UC864E 3G modem
 product TELIT UC864G		0x1004	UC864G 3G modem
+product TELIT LM960		0x1040	LM960A18 LTE modem (RNDIS)
+product TELIT LM960_ECM		0x1042	LM960A18 LTE modem (ECM)
 
 /* Ten X Technology, Inc. */
 product TENX UAUDIO0		0xf211	USB audio headset
@@ -4781,6 +4804,7 @@ product TPLINK T2UNANO		0x011e	Archer T2U Nano
 product TPLINK T2UV3		0x011f	Archer T2U ver 3
 product TPLINK T2UPLUS		0x0120	Archer T2U Plus
 product TPLINK RTL8153		0x0601	RTL8153 USB 10/100/1000 LAN
+product TPLINK RTL8153_2	0x0602	RTL8153 USB 10/100/1000 LAN
 
 /* Trek Technology products */
 product TREK THUMBDRIVE		0x1111	ThumbDrive
@@ -4823,6 +4847,12 @@ product UBIQUAM UALL		0x3100	CDMA 1xRTT USB Modem (U-100/105/200/300/520)
 
 /* u-blox products */
 product UBLOX XPLR_M9		0x0501	M9 GNSS Explorer Kit
+product UBLOX LARA_L6_1		0x1341	LARA-L6
+product UBLOX LARA_L6_2		0x1342	LARA-L6
+product UBLOX LARA_L6_3		0x1343	LARA-L6
+product UBLOX LARA_L6_4		0x1349	LARA-L6
+product UBLOX LARA_L6_5		0x134A	LARA-L6
+product UBLOX LARA_L6_6		0x134B	LARA-L6
 
 /* Ultima products */
 product ULTIMA 1200UBPLUS	0x4002	1200 UB Plus scanner
@@ -4869,6 +4899,9 @@ product VIALABS VL701		0x0701	VL701 USB 3.0 SATA Bridge
 /* Vaisala products */
 product VAISALA CABLE		0x0200	USB Interface cable
 
+/* Verbatim products */
+product VERBATIM STORENGO	0x0243	Verbatim Store N Go
+
 /* Vertex products */
 product VERTEX VW110L		0x0100	Vertex VW110L modem
 
@@ -4895,6 +4928,7 @@ product VTECH RT2570		0x3012	RT2570
 product VTECH ZD1211B		0x3014	ZD1211B
 
 /* Wacom products */
+product WACOM EXPRESSKEY_REMOTE	0x0331	ExpressKey Remote
 product WACOM CT0405U		0x0000	CT-0405-U Tablet
 product WACOM GRAPHIRE		0x0010	Graphire
 product WACOM GRAPHIRE3_4X5	0x0013	Graphire 3 4x5
@@ -4911,9 +4945,12 @@ product WAVESENSE JAZZ		0xaaaa	Jazz blood glucose meter
 product WCH CH341SER		0x5523	CH341/CH340 USB-Serial Bridge
 product WCH2 DUMMY		0x0000	Dummy product
 product WCH2 CH341SER_2		0x5523	CH341/CH340 USB-Serial Bridge
+product WCH2 CH343SER		0x55d3	CH343 USB Serial
+product WCH2 CH9102SER		0x55d4	CH9102 USB Serial
 product WCH2 CH341SER_3		0x7522	CH341/CH340 USB-Serial Bridge
 product WCH2 CH341SER		0x7523	CH341/CH340 USB-Serial Bridge
 product WCH2 U2M		0X752d	CH345 USB2.0-MIDI
+product WCH2 WCHLINK		0x8010	WCH-Link Serial Bridge
 
 /* West Mountain Radio products */
 product WESTMOUNTAIN RIGBLASTER_ADVANTAGE	0x0003	RIGblaster Advantage
@@ -4975,6 +5012,9 @@ product WISTRONNEWEB AR5523_2_NF	0x0829	AR5523 (no firmware)
 
 /* Xerox products */
 product XEROX WCM15		0xffef	WorkCenter M15
+
+/* Xiaomi products */
+product XIAOMI MT7601U		0x4106	MT7601U
 
 /* Xirlink products */
 product XIRLINK PCCAM		0x8080	IBM PC Camera

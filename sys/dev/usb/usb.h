@@ -503,6 +503,11 @@ typedef struct usb_interface_assoc_descriptor usb_interface_assoc_descriptor_t;
 #define	UICLASS_SMARTCARD	0x0b
 #define	UICLASS_FIRM_UPD	0x0c
 #define	UICLASS_SECURITY	0x0d
+#define	UICLASS_VIDEO		0x0e	/* video */
+#define	UISUBCLASS_VIDEOCONTROL	1
+#define	UISUBCLASS_VIDEOSTREAMING	2
+#define	UISUBCLASS_VIDEO_IFACE_COLL	3
+
 #define	UICLASS_DIAGNOSTIC	0xdc
 #define	UICLASS_WIRELESS	0xe0
 #define	UISUBCLASS_RF			0x01
