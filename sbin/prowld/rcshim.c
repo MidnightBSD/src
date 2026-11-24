@@ -332,10 +332,23 @@ rcshim_parse_script(int fd, const char *path, const char *scriptname)
 			return (NULL);
 		}
 	}
-	if (job_find_by_provides(provides_raw[0]) != NULL) {
-		prowl_log(LOG_DEBUG, "rcshim: native unit covers %s, "
-		    "skipping %s", provides_raw[0], path);
-		return (NULL);
+	/*
+	 * Only a native unit displaces a script. Several scripts may share
+	 * a PROVIDE (ccd, gbde and geli all provide "disks"); rcorder(8)
+	 * runs each of them, so every one gets a shim.
+	 */
+	{
+		job_t *other;
+
+		TAILQ_FOREACH(other, &g_jobs, entries) {
+			if (other->type != JOB_TYPE_RCSHIM &&
+			    job_provides(other, provides_raw[0])) {
+				prowl_log(LOG_DEBUG, "rcshim: native unit "
+				    "covers %s, skipping %s", provides_raw[0],
+				    path);
+				return (NULL);
+			}
+		}
 	}
 
 	/*

@@ -927,6 +927,36 @@ shim_pidfile_status_cleanup()
 	stop_prowld
 }
 
+atf_test_case shared_provide cleanup
+shared_provide_head()
+{
+	atf_set descr "rc scripts that PROVIDE the same name each get a shim"
+	atf_set require.user root
+	atf_set require.progs "chroot"
+}
+shared_provide_body()
+{
+	mkdir -p root/etc/rc.d root/run
+	cp "${PROWLD}" root/prowld
+	for s in disks_a disks_b; do
+		printf '#!/bin/sh\n# PROVIDE: disks\nname=%s\n' "$s" \
+		    >root/etc/rc.d/$s
+		chmod 755 root/etc/rc.d/$s
+	done
+	chroot root /prowld -d -s /run >prowld.log 2>&1 &
+	echo $! >prowld.pid
+	for i in $(jot 50); do
+		[ -S root/run/prowld.sock ] && break
+		sleep 0.2
+	done
+	atf_check -o match:'org.midnightbsd.rc.disks_a' "${PROWLCTL}" -s root/run list
+	atf_check -o match:'org.midnightbsd.rc.disks_b' "${PROWLCTL}" -s root/run list
+}
+shared_provide_cleanup()
+{
+	stop_prowld
+}
+
 atf_test_case pre_post cleanup
 pre_post_head()
 {
@@ -1641,6 +1671,7 @@ atf_init_test_cases()
 	atf_add_test_case forking_launch_identity
 	atf_add_test_case forking_pidfile
 	atf_add_test_case shim_pidfile_status
+	atf_add_test_case shared_provide
 	atf_add_test_case expansion
 	atf_add_test_case actions
 	atf_add_test_case oneshot_stop
