@@ -165,6 +165,55 @@ efi_do_vmap(EFI_MEMORY_DESCRIPTOR *mm, UINTN sz, UINTN mmsz, UINT32 mmver)
 	return (ret);
 }
 
+/*
+ * Firmware may place the EFI System Resource Table in EfiBootServicesData,
+ * which the kernel reuses as ordinary memory once boot services have exited,
+ * so by the time anything asks /dev/efi for it the table has been overwritten.
+ * Copy it into EfiRuntimeServicesData, which the kernel leaves alone, and
+ * point the configuration table at the copy.
+ */
+#define	ESRT_FIRMWARE_RESOURCE_VERSION	1
+#define	ESRT_ENTRY_SIZE			40
+#define	ESRT_MAX_ENTRIES		(0x800000 / ESRT_ENTRY_SIZE)
+
+struct esrt_header {
+	UINT32	fw_resource_count;
+	UINT32	fw_resource_count_max;
+	UINT64	fw_resource_version;
+};
+
+static void
+efi_preserve_esrt(void)
+{
+	static EFI_GUID esrt_guid = ESRT_TABLE_GUID;
+	struct esrt_header *esrt;
+	EFI_STATUS status;
+	UINTN len;
+	void *copy;
+
+	esrt = efi_get_table(&esrt_guid);
+	if (esrt == NULL)
+		return;
+	if (esrt->fw_resource_version != ESRT_FIRMWARE_RESOURCE_VERSION ||
+	    esrt->fw_resource_count > ESRT_MAX_ENTRIES)
+		return;
+	len = sizeof(*esrt) + (UINTN)esrt->fw_resource_count * ESRT_ENTRY_SIZE;
+
+	status = BS->AllocatePool(EfiRuntimeServicesData, len, &copy);
+	if (EFI_ERROR(status)) {
+		printf("%s: AllocatePool error %lu\n", __func__,
+		    EFI_ERROR_CODE(status));
+		return;
+	}
+	memcpy(copy, esrt, len);
+	status = BS->InstallConfigurationTable(&esrt_guid, copy);
+	if (EFI_ERROR(status)) {
+		printf("%s: InstallConfigurationTable error %lu\n", __func__,
+		    EFI_ERROR_CODE(status));
+		BS->FreePool(copy);
+	}
+}
+
 static int
 bi_load_efi_data(struct preloaded_file *kfp, bool exit_bs)
 {
@@ -228,6 +277,10 @@ bi_load_efi_data(struct preloaded_file *kfp, bool exit_bs)
 	 * memory into two, so that one is marked as being loader
 	 * data.
 	 */
+
+	/* Must run before the memory map is read: it allocates memory. */
+	if (exit_bs)
+		efi_preserve_esrt();
 
 	sz = 0;
 	mm = NULL;
