@@ -36,6 +36,7 @@
 #include <sys/kernel.h>
 #include <sys/linker.h>
 #include <sys/lock.h>
+#include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
 #include <sys/clock.h>
@@ -45,6 +46,7 @@
 #include <sys/sched.h>
 #include <sys/sysctl.h>
 #include <sys/systm.h>
+#include <sys/uio.h>
 #include <sys/vmmeter.h>
 
 #include <machine/fpu.h>
@@ -57,6 +59,8 @@
 #include <vm/vm_map.h>
 
 static struct efi_systbl *efi_systbl;
+#define	EFI_TABLE_ALLOC_MAX	0x800000
+
 static eventhandler_tag efi_shutdown_tag;
 /*
  * The following pointers point to tables in the EFI runtime service data pages.
@@ -92,6 +96,11 @@ static int efi_status2err[25] = {
 	EPROTO,		/* EFI_ICMP_ERROR */
 	EPROTO,		/* EFI_TFTP_ERROR */
 	EPROTO		/* EFI_PROTOCOL_ERROR */
+};
+
+enum efi_table_type {
+	TYPE_ESRT = 0,
+	TYPE_PROP
 };
 
 static int efi_enter(void);
@@ -337,6 +346,110 @@ efi_get_table(struct uuid *uuid, void **ptr)
 
 	efi_leave();
 	return (ENOENT);
+}
+
+/*
+ * Find a configuration table the kernel knows how to size, and return its
+ * physical address and length.  The length comes from the table's own header,
+ * so it is bounded before anything is allocated from it.
+ */
+static int
+get_table_length(enum efi_table_type type, size_t *table_len, void **taddr)
+{
+	switch (type) {
+	case TYPE_ESRT:
+	{
+		struct uuid uuid = EFI_TABLE_ESRT;
+		struct efi_esrt_table esrt;
+		void *pa;
+		int error;
+
+		error = efi_get_table(&uuid, &pa);
+		if (error != 0)
+			return (error);
+		error = physcopyout((vm_paddr_t)(uintptr_t)pa, &esrt,
+		    sizeof(esrt));
+		if (error != 0)
+			return (error);
+		if (esrt.fw_resource_version != ESRT_FIRMWARE_RESOURCE_VERSION)
+			return (ENODEV);
+		if (esrt.fw_resource_count > (EFI_TABLE_ALLOC_MAX -
+		    sizeof(esrt)) / sizeof(struct efi_esrt_entry_v1))
+			return (ENOMEM);
+		*table_len = sizeof(esrt) + (size_t)esrt.fw_resource_count *
+		    sizeof(struct efi_esrt_entry_v1);
+		*taddr = pa;
+		return (0);
+	}
+	case TYPE_PROP:
+	{
+		struct uuid uuid = EFI_PROPERTIES_TABLE;
+		struct efi_prop_table prop;
+		void *pa;
+		int error;
+
+		error = efi_get_table(&uuid, &pa);
+		if (error != 0)
+			return (error);
+		error = physcopyout((vm_paddr_t)(uintptr_t)pa, &prop,
+		    sizeof(prop));
+		if (error != 0)
+			return (error);
+		if (prop.length < sizeof(prop))
+			return (ENODEV);
+		if (prop.length > EFI_TABLE_ALLOC_MAX)
+			return (ENOMEM);
+		*table_len = prop.length;
+		*taddr = pa;
+		return (0);
+	}
+	}
+	return (ENOENT);
+}
+
+/*
+ * Copy a known configuration table into a new M_TEMP buffer.  With buf NULL,
+ * only the table length is returned.  On success *buf must be freed by the
+ * caller; on failure nothing is left allocated.
+ */
+int
+efi_copy_table(struct uuid *uuid, void **buf, size_t buf_len __unused,
+    size_t *table_len)
+{
+	static const struct known_table {
+		struct uuid uuid;
+		enum efi_table_type type;
+	} tables[] = {
+		{ EFI_TABLE_ESRT,	TYPE_ESRT },
+		{ EFI_PROPERTIES_TABLE,	TYPE_PROP }
+	};
+	size_t table_idx;
+	void *taddr, *tbuf;
+	int error;
+
+	for (table_idx = 0; table_idx < nitems(tables); table_idx++) {
+		if (!bcmp(&tables[table_idx].uuid, uuid, sizeof(*uuid)))
+			break;
+	}
+	if (table_idx == nitems(tables))
+		return (EINVAL);
+
+	error = get_table_length(tables[table_idx].type, table_len, &taddr);
+	if (error != 0)
+		return (error);
+
+	/* Only the length was asked for. */
+	if (buf == NULL)
+		return (0);
+
+	tbuf = malloc(*table_len, M_TEMP, M_WAITOK);
+	error = physcopyout((vm_paddr_t)(uintptr_t)taddr, tbuf, *table_len);
+	if (error != 0) {
+		free(tbuf, M_TEMP);
+		return (error);
+	}
+	*buf = tbuf;
+	return (0);
 }
 
 static int efi_rt_handle_faults = EFI_RT_HANDLE_FAULTS_DEFAULT;

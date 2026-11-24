@@ -24,7 +24,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd August 12, 2018
+.Dd November 23, 2026
 .Dt EFIDEV 4
 .Os
 .Sh NAME
@@ -69,11 +69,32 @@ with supplemental structures and constants defined in
 .In sys/efi.h :
 .Bl -tag -width indent
 .It Dv EFIIOC_GET_TABLE Pq Vt "struct efi_get_table_ioc"
-Get a table by uuid from the UEFI system table.
+Copy the UEFI configuration table specified by the
+.Va uuid
+field into the buffer pointed to by the
+.Va buf
+field.
+Only tables the kernel knows how to size are supported:
+the EFI System Resource Table
+.Pq Dv EFI_TABLE_ESRT
+and the EFI Properties Table
+.Pq Dv EFI_PROPERTIES_TABLE .
+Passing a
+.Dv NULL
+.Va buf
+stores the size of the table in
+.Va table_len
+without copying it.
+The size of the buffer must be given in
+.Va buf_len ;
+if it is smaller than the table, the ioctl fails with
+.Er EINVAL .
 .Bd -literal -offset indent
 struct efi_get_table_ioc {
+	void *buf;
 	struct uuid uuid;
-	void *ptr;
+	size_t table_len;
+	size_t buf_len;
 };
 .Ed
 .It Dv EFIIOC_GET_TIME Pq Vt "struct efi_tm"
