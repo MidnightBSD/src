@@ -63,7 +63,7 @@ To upgrade to a new version:
    new lib sources and run them briefly.
 
 Branch policy: master and stable/4.1 follow upstream releases.
-stable/4.0 stays on zstd 1.5.2.
+stable/4.0 received zstd 1.6.0 as a security update.
 
 Local patches applied on top of upstream:
 
