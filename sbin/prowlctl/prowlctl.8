@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd April 18, 2026
+.Dd November 22, 2026
 .Dt PROWLCTL 8
 .Os
 .Sh NAME
@@ -170,6 +170,11 @@ in
 via
 .Xr sysrc 8 .
 For unit jobs that do not have an rc_name the job's label is used.
+The daemon processes enable and disable writes in order.
+If
+.Xr sysrc 8
+fails, the command reports an error and the job retains its previous
+enable setting in memory.
 .It Cm disable Ar label
 Mark a job to not start at boot by setting
 .Va \*(Lt rc_name \*(Gt _enable=NO
@@ -178,15 +183,27 @@ in
 Does not stop a currently running instance.
 .It Cm mask Ar label
 Unconditionally prevent a job from starting even as a dependency.
-Creates a placeholder file in
-.Pa /var/db/prowld/masked.d/ .
-A masked job cannot be started with
-.Cm start
-until it is unmasked.
+For the system daemon, this creates a mask in
+.Pa /etc/prowld/masks.d/ ,
+where it is available during early boot.
+Masking stops a running job, closes its activation sockets, and
+prevents manual, dependency, and timer starts while the mask is present.
+.Xr prowld 8
+also honors existing masks in
+.Pa /var/db/prowld/masked.d/
+once that directory is accessible.
+To preserve early-boot masking on the first boot after an upgrade,
+copy existing mask symlinks into
+.Pa /etc/prowld/masks.d/
+before rebooting.
+Once the updated daemon is running,
+.Cm prowlctl mask Ar label
+also creates the new marker for an already masked job.
 .It Cm unmask Ar label
-Remove a mask created by
-.Cm mask .
-The job must then be explicitly enabled or started if desired.
+Remove the mask.
+For the system daemon, this removes it from both the current and legacy
+directories.
+The job becomes eligible for its configured activation sources again.
 .It Cm show Ar label
 Dump the effective configuration of a job as a JSON object.
 The output reflects all parsed unit-file fields and runtime defaults.
@@ -196,7 +213,13 @@ Rescan all unit directories and
 .Xr rc.d 8
 script directories for new or changed files,
 then rebuild the dependency graph.
-Running jobs are not stopped or restarted.
+An idle native job takes its updated definition on the rescan.
+A running job keeps its current process and stop command.
+If its replacement policy is valid,
+.Cm restart
+stops the old process and starts the service with the new definition.
+If the native policy is rejected, correct it and rescan before requesting
+a new start or service action.
 Equivalent to sending
 .Dv SIGHUP
 to
@@ -249,8 +272,29 @@ output is Graphviz DOT format suitable for rendering with
 .Xr dot 1 .
 .It Cm logs Ar label Op Fl \-follow Op Fl \-lines Ns = Ns Ar N
 Display the captured log output for a job.
-Only available for jobs that write stdout or stderr to
-.Pa /var/log/prowld/jobs/ Ns Ar label Ns Pa .log .
+Only available for jobs whose unit sets
+.Va standard_out_path
+or
+.Va standard_error_path
+to
+.Pa /var/log/prowld/jobs/ Ns Ar label Ns Pa .log ;
+see
+.Xr prowl-unit 5 .
+None of the units in the base system do.
+.Pp
+.Ar label
+may be the full label or any name the other commands accept, such as
+.Dq sshd
+or
+.Dq dhclient@em0 ;
+.Nm
+asks
+.Xr prowld 8
+for the full label.
+A name
+.Xr prowld 8
+does not know is used as given, so the log of a job that has been
+removed can still be read.
 .Pp
 .Fl \-follow
 tails the file continuously, similar to
@@ -282,6 +326,12 @@ is not running or not responding on the control socket.
 gives up when
 .Xr prowld 8
 has not answered for 30 seconds.
+For
+.Cm check , reload ,
+and
+.Cm resync ,
+the client waits up to 40 seconds so that the daemon can return the
+result of its 30-second action timeout.
 The operation may still be carried out.
 .El
 .Sh EXAMPLES
@@ -376,9 +426,14 @@ If prowld was started with
 the socket is at
 .Pa Ar rundir Ns /prowld.sock
 instead.
-.It Pa /var/db/prowld/masked.d/
+.It Pa /etc/prowld/masks.d/
 Directory of mask files created by
 .Cm prowlctl mask .
+.It Pa /var/db/prowld/masked.d/
+Legacy system mask directory.
+.It Pa Ar rundir Ns /db/masked.d/
+Private mask directory when the daemon is started with
+.Fl s Ar rundir .
 .It Pa /var/log/prowld/jobs/ Ns Ar label Ns Pa .log
 Per-job log file, read by
 .Cm prowlctl logs .
@@ -395,6 +450,7 @@ via
 .Xr su 1 ,
 .Xr tail 1 ,
 .Xr dot 1 ,
+.Xr prowl-unit 5 ,
 .Xr rc 8 ,
 .Xr service 8 ,
 .Xr sysrc 8 ,

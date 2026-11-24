@@ -31,6 +31,7 @@
 
 #include <sys/types.h>
 #include <sys/queue.h>
+#include <sys/time.h>
 #include <sys/resource.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -70,12 +71,11 @@ typedef struct prowl_cmd {
 #define TIMER_BOOT_DELAY 5UL
 #define TIMER_CALENDAR_TICK 6UL
 
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-#include <assert.h>
-/* Ensure the tagging trick is safe for this architecture */
-static_assert((__alignof__(struct job) & TIMER_MASK) == 0,
-    "struct job alignment insufficient for timer tagging");
-#endif
+/* EVFILT_READ udata uses aligned pointers for service events. */
+#define READ_EVENT_MASK		3UL
+#define READ_EVENT_SOCKET	1UL
+#define READ_EVENT_CLIENT	2UL
+#define READ_EVENT_ACTION	3UL
 
 /* String size limits */
 #define PROWL_LABEL_MAX		256
@@ -106,7 +106,8 @@ static_assert((__alignof__(struct job) & TIMER_MASK) == 0,
 #define PROWLD_RUN_DIR		"/var/run/prowld"
 #define PROWLD_NOTIFY_DIR	"/var/run/prowld/notify"
 #define PROWLD_CONF_PATH	"/etc/prowld/prowld.conf"
-#define PROWLD_MASK_DIR		"/var/db/prowld/masked.d"
+#define PROWLD_MASK_DIR		"/etc/prowld/masks.d"
+#define PROWLD_LEGACY_MASK_DIR	"/var/db/prowld/masked.d"
 #define PROWLD_DB_DIR		"/var/db/prowld"
 #define PROWLD_TIMER_STATE_PATH	"/var/db/prowld/timers.state"
 #define PROWLD_LOG_DIR		"/var/log/prowld"
@@ -141,7 +142,6 @@ static_assert((__alignof__(struct job) & TIMER_MASK) == 0,
 #define PROWL_ADOPT_TRIES	50	/* looks for a forked daemon */
 #define PROWL_ADOPT_MS		200	/* between those looks */
 #define PROWL_PIDNAME_LEN	32	/* process name of a forked daemon */
-#define PROWL_SKIP_MAX		16	/* same-named processes ignored */
 #define DEFAULT_EXIT_TIMEOUT	20	/* seconds */
 
 /* IPC */
@@ -190,9 +190,16 @@ struct prowl_socket {
 	int	socktype;                  /* SOCK_STREAM or SOCK_DGRAM */
 	int	family;                    /* AF_UNIX, AF_INET, AF_INET6 */
 	int	backlog;                   /* listen backlog (0 = SOMAXCONN) */
+	uid_t	owner;
+	gid_t	group;
+	mode_t	mode;
+	bool	mode_set;
 	int	fd;                        /* bound fd; -1 = not yet bound */
 	job_t  *job;                       /* owning job (back-pointer) */
 };
+
+_Static_assert((__alignof__(struct prowl_socket) & READ_EVENT_MASK) == 0,
+    "struct prowl_socket alignment insufficient for event tagging");
 
 /* Calendar schedule (cron-like) */
 typedef struct calendar_schedule {
@@ -289,6 +296,8 @@ struct job {
 
 	/* Lifecycle */
 	bool		run_at_load;
+	bool		is_getty;	/* generated from /etc/ttys by PID 1 */
+	bool		interactive;	/* reads the console while PID 1 boots */
 	keep_alive_t	keep_alive;
 	int		throttle_interval;
 	int		exit_timeout;
@@ -312,8 +321,9 @@ struct job {
 	char		pid_file[PROWL_PATH_MAX];
 	char		pid_name[PROWL_PIDNAME_LEN];
 	int		stop_signal;
-	pid_t		skip_pids[PROWL_SKIP_MAX];	/* there before start */
-	int		skip_count;
+	int		launch_stop_signal;
+	int		launch_fd;	/* private reaper result socket */
+	struct timeval	adopted_start;	/* birth time of supervised daemon */
 
 	/* Files that must be readable before the job is started */
 	char		required_files[PROWL_REQFILES_MAX][PROWL_PATH_MAX];
@@ -334,6 +344,7 @@ struct job {
 	notify_type_t	notify_type;
 	int		watchdog_sec;
 	int		notify_fd;
+	uid_t		notify_uid;	/* launch identity for this socket */
 
 	/* mDNS Discovery */
 	mdns_config_t	mdns;
@@ -349,6 +360,12 @@ struct job {
 
 	/* Runtime state */
 	job_state_t	state;
+	bool		masked;		/* administrative mask */
+	bool		policy_blocked;	/* selected native policy supersedes this job */
+	bool		reload_on_exit;	/* install changed unit after the process stops */
+	bool		restart_after_reload;	/* explicit restart of superseded job */
+	char		*template_instance;
+	unsigned char	*unit_config;	/* effective native unit, for reload comparison */
 	pid_t		pid;
 	int		last_exit_status;
 	int		restart_count;
@@ -360,6 +377,7 @@ struct job {
 	bool		enabled;
 
 	/* DAG bookkeeping */
+	bool		start_pending;	/* owns a scheduler start slot */
 	int		dag_indegree;
 	bool		dag_visited;
 	bool		dag_in_stack;
@@ -372,12 +390,14 @@ struct job {
 	bool		throttle_timer_active;
 	bool		restart_hold;	/* waiting out a restart back-off */
 	bool		launcher;	/* pid forks the daemon */
-	bool		adopting;	/* looking for the forked daemon */
-	int		adopt_tries;
+	bool		launch_ready;	/* READY arrived before adoption */
+	bool		adopted;	/* pid identifies a forked daemon */
 	bool		rc_stopping;	/* rc-shim running its "stop" */
+	bool		stop_after_start; /* run stop when a masked wrapper exits */
 	bool		restart_after_stop;	/* restart: start once stopped */
 	int		quick_fails;	/* consecutive short runs */
 	bool		stop_timer_active;
+	uintptr_t	stop_timer_generation;
 	bool		watchdog_timer_active;
 	time_t		watchdog_last_ping;
 
@@ -393,6 +413,13 @@ struct job {
 	TAILQ_ENTRY(job) entries;
 };
 
+_Static_assert((__alignof__(struct job) & READ_EVENT_MASK) == 0,
+    "struct job alignment insufficient for event tagging");
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert((__alignof__(struct job) & TIMER_MASK) == 0,
+    "struct job alignment insufficient for timer tagging");
+#endif
+
 TAILQ_HEAD(job_list, job);
 
 /* IPC client state */
@@ -401,8 +428,13 @@ typedef struct ipc_client {
 	char		buf[IPC_MSG_MAX];
 	size_t		buf_used;
 	bool		active;
-	uid_t		peer_uid;	/* from getpeereid(2) at accept time */
-	gid_t		peer_gid;
+	uid_t		peer_uid;	/* connection-time effective UID */
+	bool		peer_wheel;
+	bool		completed_request;
+	time_t		frame_started;
+	uintptr_t	event_tag;
+	uintptr_t	action_tag;
+	char		action_id[512];
 	
 	/* Subscriptions */
 	bool		is_subscriber;
@@ -417,6 +449,7 @@ typedef struct ipc_client {
 	size_t		out_len;	/* bytes queued in out */
 	size_t		out_off;	/* bytes of out already sent */
 	bool		want_write;	/* EVFILT_WRITE registered */
+	bool		read_eof;	/* drain queued output before closing */
 } ipc_client_t;
 
 /* Prowld daemon configuration */
@@ -434,6 +467,7 @@ extern volatile bool	 g_shutdown;
 extern volatile bool	 g_reload;
 extern int		 g_current_starts;
 extern bool		 g_is_init;		/* running as PID 1 */
+extern bool		 g_multi_user;		/* PID 1 finished boot startup */
 extern bool		 g_jailed;		/* running inside a jail */
 extern bool		 g_reaper;		/* orphaned descendants are ours */
 extern bool		 g_rundown;		/* rc.shutdown is running */
@@ -451,6 +485,7 @@ extern char		 g_sock_path[PROWL_PATH_MAX];
 extern char		 g_pid_path[PROWL_PATH_MAX];
 extern char		 g_db_dir[PROWL_PATH_MAX];
 extern char		 g_mask_dir[PROWL_PATH_MAX];
+extern const char	*g_legacy_mask_dir;
 extern char		 g_log_dir[PROWL_PATH_MAX];
 extern char		 g_job_log_dir[PROWL_PATH_MAX];
 extern char		 g_generated_dir[PROWL_PATH_MAX];
@@ -468,9 +503,13 @@ job_t		*job_find_instance(const char *);
 job_t		*job_find_by_provides(const char *);
 bool		 job_provides(const job_t *, const char *);
 void		 job_set_state(job_t *, job_state_t);
+void		 job_set_masked(job_t *, bool);
+bool		 job_launch_blocked(const job_t *);
+void		 job_replace(job_t *, job_t *);
+job_state_t	 job_reported_state(const job_t *);
 const char	*job_state_str(job_state_t);
 const char	*job_type_str(job_type_t);
-bool		 job_is_masked(const job_t *);
+int		 job_save_mask(const job_t *, bool);
 bool		 job_dep_satisfied(const job_t *, const dep_entry_t *);
 bool		 job_all_deps_satisfied(const job_t *);
 bool		 job_activations_pending(const job_t *);
@@ -481,12 +520,20 @@ bool		 prowl_is_cond(const char *);
 pid_t		 supervisor_shim_pid(const job_t *);
 
 /* ---- unit.c ---- */
-int	unit_load_dir(const char *);
-int	unit_load_file(const char *);
+struct ucl_parser;
+bool	trusted_ucl_add_fd(struct ucl_parser *, int, const char *);
+int	trusted_open_dir(const char *);
+int	trusted_open_file(const char *, bool);
+int	trusted_open_file_at(int, const char *, bool);
+void	unit_load_all(void);
+void	supervisor_replace_unit(job_t *, job_t *);
+bool	unit_provider_rejected(const char *);
+bool	unit_label_reserved(const char *);
 job_t	*unit_instantiate(const char *);
 
 /* ---- rcshim.c ---- */
 int	rcshim_scan_dir(const char *);
+int	rcshim_exec(char *const *, char *const *);
 bool	rcconf_is_enabled(const char *, bool);
 bool	rcconf_var_is_enabled(const char *, bool);
 bool	rcconf_var_get(const char *, char *, size_t);
@@ -500,6 +547,7 @@ void	pid1_mount_devfs(bool);
 void	pid1_open_console(void);
 void	pid1_shutdown(int) __dead2;
 void	pid1_single_user(void) __dead2;
+void	pid1_raise_securelevel(void);
 int	pid1_load_ttys(void);
 int	boot_run_rundown(const char *);
 void	pid1_init_exec(void);
@@ -522,11 +570,17 @@ void	timer_state_load(void);
 void	timer_state_save(void);
 int	supervisor_start(job_t *);
 int	supervisor_stop(job_t *, bool);
+int	supervisor_mask(job_t *);
+void	supervisor_unmask(job_t *);
+void	supervisor_load_masks(void);
 int	supervisor_signal(job_t *, int);
-int	supervisor_run_action(job_t *, int, char *, size_t, int *);
+int	supervisor_start_action(job_t *, int, uintptr_t);
+void	supervisor_read_action(int, uintptr_t);
+void	supervisor_action_timeout(struct timespec *);
+void	supervisor_cancel_actions(void);
 void	supervisor_reap(pid_t, int);
 void	supervisor_handle_throttle(job_t *);
-void	supervisor_handle_stop_timeout(job_t *);
+void	supervisor_handle_stop_timeout(job_t *, uintptr_t);
 void	supervisor_handle_watchdog(job_t *);
 void	supervisor_handle_notify(job_t *);
 void	supervisor_handle_notify_timeout(job_t *);
@@ -552,9 +606,13 @@ void	socket_close_all(job_t *);
 int	ipc_init(void);
 void	ipc_shutdown(void);
 void	ipc_accept(void);
-void	ipc_read_client(int);
-void	ipc_write_ready(int);
+void	ipc_expire_clients(void);
+void	ipc_start_sysrc(void);
+bool	ipc_sysrc_reap(pid_t, int);
+void	ipc_read_client(int, uintptr_t, bool);
+void	ipc_write_ready(int, uintptr_t);
 void	ipc_close_client(int);
+void	ipc_action_complete(uintptr_t, int, const char *);
 void	ipc_broadcast_event(const char *, const char *, const char *);
 
 /* ---- logger ---- */

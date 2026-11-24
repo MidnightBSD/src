@@ -48,7 +48,7 @@
 #include <netinet/in.h>
 
 #include <errno.h>
-#include <fcntl.h>
+#include <libgen.h>
 #include <stdio.h>
 #include <string.h>
 #include <syslog.h>
@@ -57,30 +57,86 @@
 #include "prowld.h"
 
 /*
+ * Changing or removing a pathname is safe only under a trusted parent.
+ * A fresh legacy bind needs no pathname mutation: bind fails on collision.
+ */
+static int
+bind_unix_socket(int fd, prowl_socket_t *sock)
+{
+	struct sockaddr_un sun = { .sun_family = AF_UNIX };
+	struct stat sb;
+	char path[PROWL_PATH_MAX];
+	mode_t mask, mode;
+	int dfd, error, rc;
+	bool access_set;
+
+	if (strlcpy(sun.sun_path, sock->path, sizeof(sun.sun_path)) >=
+	    sizeof(sun.sun_path) || sun.sun_path[0] == '\0') {
+		errno = EINVAL;
+		return (-1);
+	}
+	access_set = sock->mode_set || sock->owner != (uid_t)-1 ||
+	    sock->group != (gid_t)-1;
+	if (!access_set) {
+		rc = bind(fd, (struct sockaddr *)&sun, sizeof(sun));
+		if (rc == 0 || errno != EADDRINUSE)
+			return (rc);
+	}
+	strlcpy(path, sock->path, sizeof(path));
+	dfd = trusted_open_dir(dirname(path));
+	if (dfd == -1)
+		return (-1);
+	close(dfd);
+	if (lstat(sock->path, &sb) == 0) {
+		if (!S_ISSOCK(sb.st_mode)) {
+			errno = EEXIST;
+			return (-1);
+		}
+		if (unlink(sock->path) == -1)
+			return (-1);
+	} else if (errno != ENOENT)
+		return (-1);
+	if (!access_set)
+		return (bind(fd, (struct sockaddr *)&sun, sizeof(sun)));
+
+	mask = umask(0777);
+	rc = bind(fd, (struct sockaddr *)&sun, sizeof(sun));
+	error = errno;
+	(void)umask(mask);
+	if (rc == -1) {
+		errno = error;
+		return (-1);
+	}
+	mode = sock->mode_set ? sock->mode : (0777 & ~mask);
+	if ((sock->owner != (uid_t)-1 || sock->group != (gid_t)-1) &&
+	    lchown(sock->path, sock->owner, sock->group) == -1)
+		goto fail;
+	if (chmod(sock->path, mode) == 0)
+		return (0);
+fail:
+	error = errno;
+	(void)unlink(sock->path);
+	errno = error;
+	return (-1);
+}
+
+/*
  * Bind and listen on a single socket entry.
  * Sets sock->fd on success.  Returns 0 on success, -1 on failure.
  */
 static int
 socket_bind_one(prowl_socket_t *sock)
 {
-	struct sockaddr_un	sun;
 	struct sockaddr_in	sin;
 	struct sockaddr_in6	sin6;
-	struct sockaddr		*sa;
-	socklen_t		salen;
-	int			fd, on;
+	int			fd, on, rc;
 
-	fd = socket(sock->family, sock->socktype | SOCK_NONBLOCK, 0);
+	fd = socket(sock->family,
+	    sock->socktype | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
 	if (fd == -1) {
 		prowl_log(LOG_WARNING, "socket_bind_one socket: %m");
 		return (-1);
 	}
-
-	/*
-	 * Set FD_CLOEXEC so this fd is not inherited by non-socket-activated
-	 * children.  We explicitly dup2 it to 3+ in socket-activated children.
-	 */
-	fcntl(fd, F_SETFD, FD_CLOEXEC);
 
 	on = 1;
 	if (sock->family != AF_UNIX)
@@ -88,12 +144,7 @@ socket_bind_one(prowl_socket_t *sock)
 
 	switch (sock->family) {
 	case AF_UNIX:
-		unlink(sock->path);
-		memset(&sun, 0, sizeof(sun));
-		sun.sun_family = AF_UNIX;
-		strlcpy(sun.sun_path, sock->path, sizeof(sun.sun_path));
-		sa    = (struct sockaddr *)&sun;
-		salen = sizeof(sun);
+		rc = bind_unix_socket(fd, sock);
 		break;
 
 	case AF_INET:
@@ -119,8 +170,7 @@ socket_bind_one(prowl_socket_t *sock)
 		} else {
 			sin.sin_addr.s_addr = INADDR_ANY;
 		}
-		sa    = (struct sockaddr *)&sin;
-		salen = sizeof(sin);
+		rc = bind(fd, (struct sockaddr *)&sin, sizeof(sin));
 		break;
 
 	case AF_INET6:
@@ -138,8 +188,7 @@ socket_bind_one(prowl_socket_t *sock)
 		} else {
 			sin6.sin6_addr = in6addr_any;
 		}
-		sa    = (struct sockaddr *)&sin6;
-		salen = sizeof(sin6);
+		rc = bind(fd, (struct sockaddr *)&sin6, sizeof(sin6));
 		break;
 
 	default:
@@ -147,7 +196,7 @@ socket_bind_one(prowl_socket_t *sock)
 		return (-1);
 	}
 
-	if (bind(fd, sa, salen) == -1) {
+	if (rc == -1) {
 		prowl_log(LOG_WARNING, "socket_bind_one bind (%s): %m",
 		    sock->name);
 		close(fd);
@@ -170,13 +219,13 @@ socket_bind_one(prowl_socket_t *sock)
 
 /*
  * Register EVFILT_READ for one socket fd.
- * udata has bit 0 set to distinguish from notify fds in the event loop.
+ * Tag udata to distinguish socket readiness from other read events.
  */
 static void
 socket_kqueue_add(prowl_socket_t *sock)
 {
 	struct kevent kev;
-	uintptr_t udata = (uintptr_t)sock | 1UL;
+	uintptr_t udata = (uintptr_t)sock | READ_EVENT_SOCKET;
 
 	EV_SET(&kev, (uintptr_t)sock->fd, EVFILT_READ, EV_ADD,
 	    0, 0, (void *)udata);
@@ -210,6 +259,12 @@ socket_bind_all(job_t *job)
 {
 	int i;
 
+	if (job_launch_blocked(job))
+		return (-1);
+	/* A socket-activated child may have exited and rearmed the set. */
+	if (job->sockets_count > 0 && job->sockets[0].fd >= 0)
+		return (0);
+
 	for (i = 0; i < job->sockets_count; i++) {
 		if (socket_bind_one(&job->sockets[i]) == -1) {
 			prowl_log(LOG_ERR,
@@ -242,7 +297,8 @@ socket_handle_activation(prowl_socket_t *sock)
 	job_t *job = sock->job;
 	int i;
 
-	if (job == NULL || job->socket_activated)
+	if (job == NULL || job_launch_blocked(job) || sock->fd < 0 ||
+	    job->socket_activated)
 		return;
 
 	/* Remove EVFILT_READ for all sockets — daemon takes them all over */
@@ -263,6 +319,8 @@ socket_rearm(job_t *job)
 	int i;
 
 	job->socket_activated = false;
+	if (job_launch_blocked(job))
+		return;
 
 	for (i = 0; i < job->sockets_count; i++) {
 		if (job->sockets[i].fd >= 0)
@@ -275,7 +333,7 @@ socket_rearm(job_t *job)
 }
 
 /*
- * Deregister, close, and unlink all sockets for a job.
+ * Deregister and close all sockets for a job.
  * Called when the job is permanently stopped or freed.
  */
 void
@@ -283,6 +341,7 @@ socket_close_all(job_t *job)
 {
 	int i;
 
+	job->socket_activated = false;
 	for (i = 0; i < job->sockets_count; i++) {
 		prowl_socket_t *s = &job->sockets[i];
 
@@ -293,7 +352,5 @@ socket_close_all(job_t *job)
 			s->fd = -1;
 		}
 
-		if (s->family == AF_UNIX && s->path[0] != '\0')
-			unlink(s->path);
 	}
 }

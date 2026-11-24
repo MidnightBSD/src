@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd April 18, 2026
+.Dd November 22, 2026
 .Dt PROWLD 8
 .Os
 .Sh NAME
@@ -111,9 +111,8 @@ is received.
 The file is parsed by
 .Xr libucl 3
 and accepts UCL or JSON syntax.
-The file must be owned by root and must not be world-writable;
-.Nm
-ignores it otherwise.
+The file must meet the trust requirements described in
+.Sx CONFIGURATION TRUST .
 .Pp
 The following keys are recognised:
 .Bl -tag -width "max_concurrent_starts"
@@ -167,10 +166,10 @@ Files must have the
 .Pa .unit
 extension.
 .Pp
-Unit file directories are searched in the following order;
-a file at a higher-priority path with the same
+The following directories are listed from lowest to highest priority.
+A file at a higher-priority path with the same
 .Va label
-fully replaces the lower-priority file:
+fully replaces the lower-priority file, even when their filenames differ.
 .Bl -enum -compact
 .It
 .Pa /etc/prowld/units.d/
@@ -563,6 +562,8 @@ in the child's environment.
 The job signals readiness by sending a datagram containing
 .Dv READY=1
 to that socket.
+The kernel supplies the sending process's effective UID with each datagram.
+It must match the UID assigned to the job's notification socket at launch.
 .Pp
 The following
 .Dv KEY=value
@@ -650,32 +651,51 @@ script both claim the same
 the native unit wins and the
 .Pa rc.d
 script is skipped.
+If a known native provider is rejected during configuration validation,
+.Nm
+also skips the corresponding legacy script.
+Correct the unit or its drop-ins and run
+.Cm prowlctl reload-config
+to retry loading the provider.
 This allows incremental migration: shipping a native unit file
 automatically retires the rc.d script without any administrator action.
-.Pp
-.Sy Trust requirements for rc.d scripts .
-Because rc.d scripts are executed as root,
+.Sh CONFIGURATION TRUST
 .Nm
-applies the same ownership and writability checks to scanned scripts as
-it does to native unit files and the configuration file.
-A script is silently skipped and a
-.Dv LOG_WARNING
-message is emitted if any of the following conditions are true:
-.Bl -bullet -compact
-.It
-The directory entry is not a regular file
-.Pq symlinks are rejected .
-.It
-The file is not owned by root
-.Pq uid\ 0 .
-.It
-The file has the world-writable bit set.
-.El
-Scripts that are not executable are also skipped, as before.
-Administrators who install rc.d scripts must ensure that the scripts
-and their parent directories
-.Pq Pa /etc/rc.d , Pa /usr/local/etc/rc.d
-are owned by root and not world-writable.
+accepts only regular files owned by root with neither group nor other
+write permission as configuration files, including the
+.Xr rc.conf 5
+inputs it reads, unit files, drop-ins,
+or executable
+.Pa rc.d
+scripts.
+The immediate directory and each ancestor must be owned by root.
+The immediate directory must have neither group nor other write
+permission.
+An ancestor with group or other write permission is allowed only when
+it has the sticky bit set.
+Symbolic links are rejected in these paths.
+.Pp
+On a filesystem that advertises NFSv4 ACLs,
+.Nm
+must also be able to read the ACL on each opened file and directory.
+It rejects grants that allow a non-root principal to modify a trusted
+file, replace an entry, or change its ownership, attributes, or ACL.
+A sticky ancestor may allow entry creation, but an explicit grant of
+deletion rights still makes it unsuitable.
+.Pp
+These checks cover files opened by
+.Nm .
+Administrators using UCL includes or load macros must independently
+secure the external inputs and their parent directories.
+The same applies to configuration sourced by shell commands and
+.Pa rc.d
+scripts themselves.
+.Pp
+Each
+.Pa rc.d
+script must have an execute permission bit set.
+.Nm
+checks its file and directory permissions again before invoking it.
 .Sh READ-ONLY MEDIA
 .Nm
 is designed to operate correctly on read-only installation media
@@ -809,9 +829,21 @@ Other flags are ignored.
 .Ss Boot
 .Nm
 becomes a session leader, opens
+.Pa /dev/null
+for standard input and
 .Pa /dev/console
-as standard input, output and error, and sets the login name to
+write-only for standard output and error, and sets the login name to
 .Dq root .
+Interactive boot and shutdown scripts reopen the console for input and output
+when it is available.
+An rc.d script with
+.Dq KEYWORD: interactive
+.Pq the geli, zfskeys and firstboot scripts have it
+or a unit with
+.Va interactive
+set, also reads the console while the system is booting, so that it can
+ask for a passphrase.
+Once multi-user mode begins no service gets the console as standard input.
 It then honours the loader variables that
 .Xr init 8
 honours:
@@ -819,15 +851,36 @@ honours:
 .It Va init_exec
 Run this script in place of init.
 It is expected to end by rebooting.
+If the script cannot be launched, enter single-user recovery.
 .It Va init_script
-Run this script before the boot starts; if it exits non-zero, go to
-single-user mode.
+Run this script before the boot starts.
+If it cannot be launched or does not exit successfully, enter single-user
+recovery.
 .It Va init_chroot
 Change root to this directory before starting.
+If this fails, enter single-user recovery.
 .It Va init_shell
-The shell for single-user mode and for the scripts above
+Select the single-user shell and the shell for plain-text scripts without
+an interpreter line
 .Pq default Pa /bin/sh .
 .El
+.Pp
+Recovery after a loader configuration failure requires an explicitly secure
+console in
+.Xr ttys 5
+or successful root password authentication on a configured console.
+If
+.Va init_chroot
+succeeds after an
+.Va init_script
+failure, the new root supplies the console policy.
+.Pp
+Executable scripts run directly, using their declared interpreter when
+present.
+A readable script with no execute bits and a
+.Pa /bin/sh
+interpreter line without options can run under
+.Pa /bin/sh .
 .Pp
 The control socket, the PID file and the state directories are created only
 once the
@@ -844,7 +897,15 @@ runs a keep-alive job
 .Pq Dq org.midnightbsd.getty. Ns Ar tty
 that starts the line's getty with the line's terminal type, once the
 .Dv LOGIN
-rc.d milestone is reached.
+rc.d milestone is reached and the boot scheduler has finished starting
+the boot jobs, including a first retry of a boot job that failed
+.Pq waiting at most 30 seconds for retries .
+At that point, even on a host without gettys, PID 1 raises
+.Va kern.securelevel
+from 0 to 1 as
+.Xr init 8
+does.
+It preserves all other levels.
 Lines marked
 .Dq onifexists
 or
@@ -1032,6 +1093,14 @@ Base system unit files (do not edit; use overrides.d).
 Ports and packages unit files.
 .It Pa /etc/prowld/overrides.d/
 Local administrator overrides.
+.It Pa /etc/prowld/masks.d/
+Root-owned directory with mode 0700 for system masks.
+Each mask is a symlink to
+.Pa /dev/null
+named after the job's label.
+These masks are available before
+.Pa /var
+is mounted.
 .It Pa /var/run/prowld/
 Runtime state directory.
 Replaced by
@@ -1042,19 +1111,27 @@ is given.
 .It Pa /var/run/prowld/prowld.sock
 Control socket
 .Pq Unix domain, mode 0660, owned root:wheel .
+Four of the 32 connections are reserved for root.
+Each other authorized UID can hold up to four connections.
+The first request and subsequent partial requests have a 30-second deadline.
 .It Pa /var/run/prowld/prowld.pid
 PID file.
 .It Pa /var/run/prowld/notify/
-Per-job sd_notify datagram sockets
-.Pq mode 0700 .
+Root-owned directory with mode 0711.
+Each per-job notification socket has mode 0600 and belongs to its service UID.
 .It Pa /var/run/prowld/generated.d/
 Runtime-generated unit files
 .Pq e.g., from prowl-generator .
 .It Pa /var/db/prowld/masked.d/
-Symlinks to
-.Pa /dev/null
-for masked services.
-Each symlink is named after the job's label.
+Legacy system masks, checked when the directory is accessible.
+See
+.Xr prowlctl 8
+for updating a legacy mask before the next boot.
+.It Pa Ar rundir Ns /db/masked.d/
+Private mask directory when
+.Nm
+is started with
+.Fl s Ar rundir .
 .It Pa /var/log/prowld/
 .Nm
 own log directory.

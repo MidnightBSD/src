@@ -33,6 +33,7 @@
 
 #include <sys/param.h>
 #include <sys/event.h>
+#include <sys/procctl.h>
 #include <sys/resource.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -51,6 +52,7 @@
 #include <grp.h>
 #include <libutil.h>
 #include <limits.h>
+#include <paths.h>
 #include <poll.h>
 #include <pwd.h>
 #include <signal.h>
@@ -66,13 +68,27 @@
 
 #include "prowld.h"
 
-static void	supervisor_adopt(job_t *);
-static pid_t	find_daemon_pid(job_t *);
-static pid_t	pid_from_name(job_t *, bool);
+static pid_t	fork_launcher(job_t *);
 static bool	not_exec_yet(pid_t);
 
 static bool g_dnssd_available = true;
 static char g_dnssd_path[PROWL_PATH_MAX];
+
+#define ACTION_RUNS_MAX		8
+#define ACTION_READ_MAX		65536
+
+struct action_run {
+	uintptr_t	tag;
+	pid_t		pid;
+	int		fd;
+	int		code;
+	struct timespec	deadline;
+	char		label[PROWL_LABEL_MAX];
+	size_t		len;
+	char		out[PROWL_ACTION_OUT_MAX + 1];
+};
+
+static struct action_run action_runs[ACTION_RUNS_MAX];
 
 /* Internal prototypes */
 static void supervisor_mdns_register(job_t *job);
@@ -252,7 +268,8 @@ supervisor_handle_calendar_tick(void)
 	localtime_r(&now, &tm);
 
 	TAILQ_FOREACH(job, &g_jobs, entries) {
-		if (job->schedule.has_calendar &&
+		if (!job_launch_blocked(job) && job->state != JOB_STATE_STOPPING &&
+		    job->schedule.has_calendar &&
 		    calendar_match(&job->schedule.calendar, &tm)) {
 			prowl_log(LOG_INFO, "timer %s: calendar match",
 			    job->label);
@@ -341,12 +358,28 @@ arm_stop_timer(job_t *job)
 	if (ms <= 0)
 		ms = DEFAULT_EXIT_TIMEOUT * 1000;
 
+	/* A previous timeout may still be in the current kevent batch. */
+	job->stop_timer_generation++;
 	EV_SET(&kev, timer_ident(job, TIMER_STOP), EVFILT_TIMER,
-	    EV_ADD | EV_ONESHOT, NOTE_MSECONDS, ms, NULL);
+	    EV_ADD | EV_ONESHOT, NOTE_MSECONDS, ms,
+	    (void *)job->stop_timer_generation);
 	if (kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL) == -1)
 		prowl_log(LOG_WARNING, "kevent stop timer %s: %m",
 		    job->label);
 	job->stop_timer_active = true;
+}
+
+static void
+cancel_stop_timer(job_t *job)
+{
+	struct kevent kev;
+
+	if (!job->stop_timer_active)
+		return;
+	EV_SET(&kev, timer_ident(job, TIMER_STOP), EVFILT_TIMER, EV_DELETE,
+	    0, 0, NULL);
+	(void)kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL);
+	job->stop_timer_active = false;
 }
 
 /*
@@ -441,45 +474,88 @@ notify_socket_open(job_t *job)
 {
 	struct sockaddr_un sun;
 	struct kevent kev;
+	struct stat sb;
 	char path[PROWL_PATH_MAX];
-	int fd;
+	uid_t uid;
+	mode_t oldmask;
+	int dirfd, fd, on, rc, saved_errno;
 
 	if (notify_socket_path(job, path, sizeof(path)) == -1) {
 		prowl_log(LOG_WARNING,
 		    "notify socket path too long for job %s", job->label);
 		return (-1);
 	}
-
-	unlink(path);
-
-	fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_NONBLOCK, 0);
-	if (fd == -1) {
-		prowl_log(LOG_WARNING, "notify_socket_open socket: %m");
+	/* Check every path component before unlinking or creating a socket. */
+	dirfd = trusted_open_dir(g_notify_dir);
+	if (dirfd == -1) {
+		prowl_log(LOG_WARNING, "unsafe notify directory %s: %m",
+		    g_notify_dir);
+		return (-1);
+	}
+	if (fstat(dirfd, &sb) == -1 || (sb.st_mode & 0777) != 0711) {
+		prowl_log(LOG_WARNING, "notify directory %s is not usable",
+		    g_notify_dir);
+		close(dirfd);
+		return (-1);
+	}
+	if (unlinkat(dirfd, job->label, 0) == -1 && errno != ENOENT) {
+		prowl_log(LOG_WARNING, "unlink notify socket %s: %m", path);
+		close(dirfd);
 		return (-1);
 	}
 
+	fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
+	if (fd == -1) {
+		prowl_log(LOG_WARNING, "notify_socket_open socket: %m");
+		close(dirfd);
+		return (-1);
+	}
+	on = 1;
+	if (setsockopt(fd, SOL_LOCAL, LOCAL_CREDS_PERSISTENT, &on,
+	    sizeof(on)) == -1) {
+		prowl_log(LOG_WARNING, "notify credentials: %m");
+		close(fd);
+		close(dirfd);
+		return (-1);
+	}
 	memset(&sun, 0, sizeof(sun));
 	sun.sun_family = AF_UNIX;
 	strlcpy(sun.sun_path, path, sizeof(sun.sun_path));
-
-	if (bind(fd, (struct sockaddr *)&sun, sizeof(sun)) == -1) {
+	oldmask = umask(0177);
+	rc = bind(fd, (struct sockaddr *)&sun, sizeof(sun));
+	saved_errno = errno;
+	(void)umask(oldmask);
+	if (rc == -1) {
+		errno = saved_errno;
 		prowl_log(LOG_WARNING, "notify_socket_open bind %s: %m", path);
 		close(fd);
+		close(dirfd);
 		return (-1);
 	}
+	uid = (job->run_priv_set && job->run_uid != (uid_t)-1) ?
+	    job->run_uid : 0;
+	if (fchownat(dirfd, job->label, uid, (gid_t)-1,
+	    AT_SYMLINK_NOFOLLOW) == -1 ||
+	    fchmodat(dirfd, job->label, 0600, 0) == -1) {
+		prowl_log(LOG_WARNING, "notify socket permissions %s: %m",
+		    path);
+		goto fail;
+	}
 
-	fchmod(fd, 0600);
-
-	/* udata = job pointer so the event loop knows which job to notify */
 	EV_SET(&kev, (uintptr_t)fd, EVFILT_READ, EV_ADD, 0, 0, (void *)job);
 	if (kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL) == -1) {
 		prowl_log(LOG_WARNING, "notify_socket_open kevent: %m");
-		close(fd);
-		unlink(path);
-		return (-1);
+		goto fail;
 	}
-
+	job->notify_uid = uid;
+	close(dirfd);
 	return (fd);
+
+fail:
+	(void)unlinkat(dirfd, job->label, 0);
+	close(dirfd);
+	close(fd);
+	return (-1);
 }
 
 /*
@@ -527,27 +603,20 @@ prowl_reset_signals(void)
 	(void)sigprocmask(SIG_SETMASK, &set, NULL);
 }
 
-/*
- * Redirect a standard file descriptor to a path.
- * Called in the child after fork(), before the new program is loaded.
- * Must be async-signal-safe: no malloc, no printf.
- */
+/* Redirect a standard file descriptor in the child before exec. */
 static void
-redirect_fd(int stdfd, const char *path, int flags)
+child_redirect_fd(const job_t *job, int stdfd, const char *path, int flags)
 {
 	int fd;
 
-	if (path == NULL || path[0] == '\0')
-		return;
-
 	fd = open(path, flags, 0644);
-	if (fd == -1)
-		return;
-
-	if (fd != stdfd) {
-		dup2(fd, stdfd);
-		close(fd);
+	if (fd == -1 || (fd != stdfd && dup2(fd, stdfd) == -1)) {
+		syslog(LOG_ERR, "prowld: %s: cannot redirect fd %d to %s: %m",
+		    job->label, stdfd, path);
+		_exit(1);
 	}
+	if (fd != stdfd)
+		close(fd);
 }
 
 /*
@@ -555,51 +624,61 @@ redirect_fd(int stdfd, const char *path, int flags)
  * getpwnam/getgrnam/getgrouplist are not async-signal-safe; calling them
  * here ensures the child only uses the safe setgroups/setgid/setuid calls.
  */
-static void
+static bool
 resolve_job_privileges(job_t *job)
 {
 	struct passwd *pw;
 	struct group *gr;
+	uid_t uid;
+	gid_t gid, groups[PROWL_GROUPS_MAX];
 	int ngroups;
 
-	job->run_priv_set = false;
-	job->run_uid = (uid_t)-1;
-	job->run_gid = (gid_t)-1;
-	job->run_ngroups = 0;
+	if (job->user[0] == '\0' && job->group[0] == '\0') {
+		job->run_priv_set = false;
+		return (true);
+	}
 
-	if (job->user[0] == '\0' && job->group[0] == '\0')
-		return;
-
+	uid = (uid_t)-1;
+	gid = (gid_t)-1;
+	ngroups = 0;
 	if (job->group[0] != '\0') {
 		gr = getgrnam(job->group);
-		if (gr == NULL) {
-			prowl_log(LOG_WARNING, "job %s: group '%s' not found",
+		if (gr == NULL || gr->gr_gid == (gid_t)-1) {
+			prowl_log(LOG_WARNING, "job %s: cannot resolve group '%s'",
 			    job->label, job->group);
-			return;
+			return (false);
 		}
-		job->run_gid = gr->gr_gid;
+		gid = gr->gr_gid;
 	}
 
 	if (job->user[0] != '\0') {
 		pw = getpwnam(job->user);
-		if (pw == NULL) {
-			prowl_log(LOG_WARNING, "job %s: user '%s' not found",
+		if (pw == NULL || pw->pw_uid == (uid_t)-1 ||
+		    (gid == (gid_t)-1 && pw->pw_gid == (gid_t)-1)) {
+			prowl_log(LOG_WARNING, "job %s: cannot resolve user '%s'",
 			    job->label, job->user);
-			return;
+			return (false);
 		}
-		job->run_uid = pw->pw_uid;
-		if (job->group[0] == '\0')
-			job->run_gid = pw->pw_gid;
-
+		uid = pw->pw_uid;
+		if (gid == (gid_t)-1)
+			gid = pw->pw_gid;
 		ngroups = PROWL_GROUPS_MAX;
-		getgrouplist(pw->pw_name, job->run_gid,
-		    job->run_groups, &ngroups);
-		if (ngroups < 1)
-			ngroups = 1;
-		job->run_ngroups = ngroups;
+		if (getgrouplist(pw->pw_name, gid, groups, &ngroups) != 0 ||
+		    ngroups < 1 || ngroups > PROWL_GROUPS_MAX ||
+		    groups[0] != gid) {
+			prowl_log(LOG_WARNING, "job %s: cannot resolve group "
+			    "list for user '%s' (limit %d)", job->label,
+			    job->user, PROWL_GROUPS_MAX);
+			return (false);
+		}
+		memcpy(job->run_groups, groups, ngroups * sizeof(groups[0]));
 	}
 
+	job->run_uid = uid;
+	job->run_gid = gid;
+	job->run_ngroups = ngroups;
 	job->run_priv_set = true;
+	return (true);
 }
 
 /*
@@ -615,12 +694,10 @@ drop_privileges(const job_t *job)
 	if (!job->run_priv_set)
 		return;
 
-	if (job->run_ngroups > 0) {
-		if (setgroups((size_t)job->run_ngroups,
-		    job->run_groups) == -1) {
-			syslog(LOG_ERR, "prowld: setgroups failed: %m");
-			_exit(1);
-		}
+	if (setgroups(job->run_ngroups,
+	    job->run_ngroups == 0 ? NULL : job->run_groups) == -1) {
+		syslog(LOG_ERR, "prowld: setgroups failed: %m");
+		_exit(1);
 	}
 	if (job->run_gid != (gid_t)-1) {
 		if (setgid(job->run_gid) == -1) {
@@ -797,6 +874,13 @@ child_setup_and_exec(job_t *job)
 	}
 
 	/*
+	 * PID 1 supplies a read-only null descriptor. Other invocations
+	 * must set up default input before entering a unit's chroot.
+	 */
+	if (!g_is_init && job->stdin_path[0] == '\0')
+		child_redirect_fd(job, STDIN_FILENO, _PATH_DEVNULL, O_RDONLY);
+
+	/*
 	 * chroot(2) must be called as root before drop_privileges().
 	 * After chroot we always chdir("/") to ensure the process cannot
 	 * access paths outside the new root via a lingering CWD reference.
@@ -846,18 +930,34 @@ child_setup_and_exec(job_t *job)
 		setrlimit(RLIMIT_NPROC, &rl);
 	}
 
-	/* Standard I/O */
+	/*
+	 * Standard I/O.  Only while PID 1 is still booting does an
+	 * interactive job get the console on standard input, so that a
+	 * script such as geli(8) attach or zfskeys can ask for a
+	 * passphrase.  The console is never offered once multi-user mode
+	 * begins: a service started later must not read what is typed at
+	 * a login prompt.
+	 */
 	if (job->stdin_path[0] != '\0')
-		redirect_fd(STDIN_FILENO, job->stdin_path, O_RDONLY);
-	else
-		redirect_fd(STDIN_FILENO, "/dev/null", O_RDONLY);
+		child_redirect_fd(job, STDIN_FILENO, job->stdin_path, O_RDONLY);
+	else if (job->interactive && g_is_init && !g_multi_user &&
+	    job->action == PROWL_ACTION_NONE)
+		child_redirect_fd(job, STDIN_FILENO, _PATH_CONSOLE,
+		    O_RDONLY | O_NOCTTY);
 
-	if (job->stdout_path[0] != '\0')
-		redirect_fd(STDOUT_FILENO, job->stdout_path,
+	/*
+	 * A reload, check or resync command already has standard output
+	 * and standard error on the pipe that supervisor_read_action()
+	 * reads, so that prowlctl can show what it printed.
+	 */
+	if (job->action == PROWL_ACTION_NONE &&
+	    job->stdout_path[0] != '\0')
+		child_redirect_fd(job, STDOUT_FILENO, job->stdout_path,
 		    O_WRONLY | O_CREAT | O_APPEND);
 
-	if (job->stderr_path[0] != '\0')
-		redirect_fd(STDERR_FILENO, job->stderr_path,
+	if (job->action == PROWL_ACTION_NONE &&
+	    job->stderr_path[0] != '\0')
+		child_redirect_fd(job, STDERR_FILENO, job->stderr_path,
 		    O_WRONLY | O_CREAT | O_APPEND);
 
 	/*
@@ -903,7 +1003,7 @@ child_setup_and_exec(job_t *job)
 			argv[1] = (char *)(uintptr_t)(g_boot_mode ?
 			    "faststart" : "start");
 		argv[2] = NULL;
-		execve(argv[0], argv, envp);
+		rcshim_exec(argv, envp);
 		_exit(127);
 	}
 
@@ -1037,14 +1137,30 @@ child_setup_and_exec(job_t *job)
 	_exit(127);
 }
 
+static void
+release_start_slot(job_t *job)
+{
+	if (job->start_pending) {
+		job->start_pending = false;
+		g_current_starts--;
+	}
+}
+
 /*
- * Fork and start a job.  Returns 0 on success, -1 on fork failure.
+ * Fork and start a job.  Returns 0 on success, -1 if the job cannot start.
  */
 int
 supervisor_start(job_t *job)
 {
 	pid_t pid;
 	bool use_notify;
+
+	if (job_launch_blocked(job) || job->state == JOB_STATE_STOPPING)
+		return (-1);
+
+	/* Leave even an explicit start queued until PID 1 finishes boot. */
+	if (job->is_getty && !g_multi_user)
+		return (0);
 
 	if (job->state == JOB_STATE_RUNNING ||
 	    job->state == JOB_STATE_STARTING)
@@ -1065,12 +1181,15 @@ supervisor_start(job_t *job)
 		}
 	}
 
+	if (!resolve_job_privileges(job)) {
+		job_set_state(job, JOB_STATE_FAILED);
+		return (-1);
+	}
+
 	prowl_log(LOG_NOTICE, "starting %s", job->label);
 	job->started_at = time(NULL);
 	job->restart_hold = false;
 	job_set_state(job, JOB_STATE_STARTING);
-
-	resolve_job_privileges(job);
 
 	/*
 	 * Create the notify socket before fork so it exists when the child
@@ -1082,34 +1201,25 @@ supervisor_start(job_t *job)
 		job->notify_fd = notify_socket_open(job);
 		if (job->notify_fd >= 0)
 			use_notify = true;
-		else
-			prowl_log(LOG_WARNING,
-			    "job %s: notify socket failed, "
-			    "falling back to throttle timer", job->label);
+		else {
+			prowl_log(LOG_WARNING, "job %s: notify socket failed",
+			    job->label);
+			job_set_state(job, JOB_STATE_FAILED);
+			return (-1);
+		}
 	}
 
-	/*
-	 * A forking daemon: forget a pidfile left by an earlier run, so
-	 * only the new daemon's is believed.
-	 */
-	job->launcher = false;
-	job->adopting = false;
-	job->adopt_tries = 0;
-	if (job->pid_file[0] != '\0' || job->pid_name[0] != '\0') {
-		job->launcher = true;
-		if (job->pid_file[0] != '\0')
-			(void)unlink(job->pid_file);
-		else
-			(void)pid_from_name(job, true);
-	}
+	/* A pidfile is a hint; the private reaper verifies the launch. */
+	job->adopted = false;
+	job->launch_ready = false;
+	job->launch_stop_signal = 0;
+	job->launcher = job->pid_file[0] != '\0' || job->pid_name[0] != '\0';
 
-	pid = fork();
+	pid = job->launcher ? fork_launcher(job) : fork();
 	if (pid == -1) {
 		prowl_log(LOG_ERR, "fork %s: %m", job->label);
 		notify_socket_close(job);
 		job_set_state(job, JOB_STATE_FAILED);
-		if (g_current_starts > 0)
-			g_current_starts--;
 		return (-1);
 	}
 
@@ -1126,6 +1236,8 @@ supervisor_start(job_t *job)
 
 	/* Parent */
 	job->pid = pid;
+	job->start_pending = true;
+	g_current_starts++;
 	watch_child(pid, job);
 
 	if (use_notify) {
@@ -1166,6 +1278,9 @@ supervisor_rc_stop(job_t *job)
 {
 	pid_t pid;
 
+	if (!resolve_job_privileges(job))
+		return (-1);
+
 	if (job->type == JOB_TYPE_RCSHIM)
 		prowl_log(LOG_NOTICE, "stopping %s via %s stop", job->label,
 		    job->rcshim_path);
@@ -1173,7 +1288,6 @@ supervisor_rc_stop(job_t *job)
 		prowl_log(LOG_NOTICE, "stopping %s via its stop command",
 		    job->label);
 	job->rc_stopping = true;
-	resolve_job_privileges(job);
 
 	pid = fork();
 	if (pid == -1) {
@@ -1195,112 +1309,207 @@ supervisor_rc_stop(job_t *job)
 	return (0);
 }
 
+/* Keep a killed child's slot until SIGCHLD reaps it. */
+static void
+action_finish(struct action_run *run, int code, bool reply)
+{
+	uintptr_t tag = run->tag;
+
+	if (run->fd >= 0) {
+		close(run->fd);
+		run->fd = -1;
+	}
+	if (run->pid > 0 && kill(run->pid, SIGKILL) == -1 && errno != ESRCH)
+		prowl_log(LOG_WARNING, "kill action for %s: %m", run->label);
+	run->tag = 0;
+	if (reply)
+		ipc_action_complete(tag, code, run->out);
+}
+
+static void
+action_complete_if_ready(struct action_run *run)
+{
+	struct timespec now;
+
+	if (run->fd >= 0 || run->pid > 0)
+		return;
+	if (clock_gettime(CLOCK_MONOTONIC, &now) == -1)
+		action_finish(run, -1, true);
+	else if (timespeccmp(&now, &run->deadline, >=))
+		action_finish(run, 124, true);
+	else
+		action_finish(run, run->code, true);
+}
+
 /*
- * Run one of a unit's reload, check or resync commands and wait for it,
- * keeping the first PROWL_ACTION_OUT_MAX bytes of what it prints (standard
- * output and standard error together) in out.  *exitp is its exit status,
- * 128 plus the signal if a signal ended it, or 124 if it ran longer than
- * PROWL_ACTION_TIMEOUT seconds and was killed.  These are administrator
- * commands that finish quickly; prowld does nothing else while it waits.
- * Returns -1 if the command could not be started.
+ * Fork an action using the unit's normal credentials and environment. The
+ * pipe is watched independently of SIGCHLD: either can finish first.
+ * Return 0 on success, EBUSY for this unit, EAGAIN at capacity, or -1.
  */
 int
-supervisor_run_action(job_t *job, int action, char *out, size_t outsz,
-    int *exitp)
+supervisor_start_action(job_t *job, int action, uintptr_t tag)
 {
-	struct pollfd pfd;
-	char buf[1024];
-	time_t deadline, now;
-	size_t len = 0;
-	ssize_t n;
+	struct action_run *run = NULL;
+	struct timespec deadline;
+	struct kevent kev;
+	int fds[2];
 	pid_t pid;
-	int fds[2], st = 0, r;
-	bool timed_out = false;
 
-	if (outsz == 0)
-		return (-1);
-	out[0] = '\0';
-	*exitp = -1;
-
-	if (action <= PROWL_ACTION_NONE || action >= PROWL_ACTION_MAX ||
-	    job->action_argc[action] == 0)
+	if (g_shutdown || action <= PROWL_ACTION_NONE ||
+	    action >= PROWL_ACTION_MAX || job->action_argc[action] == 0)
 		return (-1);
 
-	if (pipe(fds) == -1) {
+	for (size_t i = 0; i < nitems(action_runs); i++) {
+		struct action_run *active = &action_runs[i];
+
+		if (active->tag == 0 && active->pid == 0) {
+			if (run == NULL)
+				run = active;
+		} else if (strcmp(active->label, job->label) == 0)
+			return (EBUSY);
+	}
+	if (run == NULL)
+		return (EAGAIN);
+	if (!resolve_job_privileges(job))
+		return (-1);
+
+	if (pipe2(fds, O_CLOEXEC) == -1) {
 		prowl_log(LOG_ERR, "pipe %s: %m", job->label);
 		return (-1);
 	}
-	resolve_job_privileges(job);
-
+	EV_SET(&kev, (uintptr_t)fds[0], EVFILT_READ, EV_ADD, 0, 0,
+	    (void *)tag);
+	if (fcntl(fds[0], F_SETFL, O_NONBLOCK) == -1 ||
+	    kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL) == -1 ||
+	    clock_gettime(CLOCK_MONOTONIC, &deadline) == -1) {
+		prowl_log(LOG_ERR, "action setup for %s: %m", job->label);
+		goto fail;
+	}
+	deadline.tv_sec += PROWL_ACTION_TIMEOUT;
 	pid = fork();
 	if (pid == -1) {
 		prowl_log(LOG_ERR, "fork %s: %m", job->label);
-		close(fds[0]);
-		close(fds[1]);
-		return (-1);
+		goto fail;
 	}
 	if (pid == 0) {
 		close(fds[0]);
-		if (g_kqueue_fd >= 0)
-			close(g_kqueue_fd);
-		if (dup2(fds[1], STDOUT_FILENO) == -1 ||
+		close(g_kqueue_fd);
+		if (fcntl(fds[1], F_SETFD, 0) == -1 ||
+		    dup2(fds[1], STDOUT_FILENO) == -1 ||
 		    dup2(fds[1], STDERR_FILENO) == -1)
 			_exit(127);
 		if (fds[1] > STDERR_FILENO)
 			close(fds[1]);
 		job->action = action;
 		child_setup_and_exec(job);
-		/* NOTREACHED */
 		_exit(127);
 	}
 	close(fds[1]);
 
-	deadline = time(NULL) + PROWL_ACTION_TIMEOUT;
-	for (;;) {
-		now = time(NULL);
-		if (now >= deadline) {
-			timed_out = true;
-			break;
-		}
-		pfd.fd = fds[0];
-		pfd.events = POLLIN;
-		pfd.revents = 0;
-		r = poll(&pfd, 1, (int)(deadline - now) * 1000);
-		if (r == -1) {
-			if (errno == EINTR)
-				continue;
-			break;
-		}
-		if (r == 0) {
-			timed_out = true;
-			break;
-		}
-		n = read(fds[0], buf, sizeof(buf));
-		if (n <= 0)
-			break;
-		if (len < outsz - 1) {
-			size_t take = (size_t)n;
+	run->tag = tag;
+	run->pid = pid;
+	run->fd = fds[0];
+	run->deadline = deadline;
+	strlcpy(run->label, job->label, sizeof(run->label));
+	run->len = 0;
+	run->out[0] = '\0';
+	return (0);
 
-			if (take > outsz - 1 - len)
-				take = outsz - 1 - len;
-			memcpy(out + len, buf, take);
-			len += take;
-			out[len] = '\0';
+fail:
+	close(fds[0]);
+	close(fds[1]);
+	return (-1);
+}
+
+void
+supervisor_read_action(int fd, uintptr_t tag)
+{
+	struct action_run *run = NULL;
+	char buf[4096];
+	size_t drained, keep;
+	ssize_t n;
+
+	for (size_t i = 0; i < nitems(action_runs); i++) {
+		if (action_runs[i].tag == tag && action_runs[i].fd == fd) {
+			run = &action_runs[i];
+			break;
 		}
 	}
-	close(fds[0]);
+	if (run == NULL)
+		return;
 
-	if (timed_out)
-		kill(pid, SIGKILL);
-	while (waitpid(pid, &st, 0) == -1 && errno == EINTR)
-		;
-	if (timed_out)
-		*exitp = 124;
-	else if (WIFEXITED(st))
-		*exitp = WEXITSTATUS(st);
-	else if (WIFSIGNALED(st))
-		*exitp = 128 + WTERMSIG(st);
-	return (0);
+	/* Drain excess output too, with bounded work per readiness event. */
+	for (drained = 0; drained < ACTION_READ_MAX; drained += (size_t)n) {
+		n = read(fd, buf, sizeof(buf));
+		if (n == -1) {
+			if (errno != EAGAIN && errno != EINTR)
+				action_finish(run, -1, true);
+			return;
+		}
+		if (n == 0) {
+			close(fd);
+			run->fd = -1;
+			action_complete_if_ready(run);
+			return;
+		}
+		keep = MIN((size_t)n, PROWL_ACTION_OUT_MAX - run->len);
+		memcpy(run->out + run->len, buf, keep);
+		run->len += keep;
+		run->out[run->len] = '\0';
+	}
+}
+
+/* Expire pending actions and shorten the next kevent wait as needed. */
+void
+supervisor_action_timeout(struct timespec *timeout)
+{
+	struct timespec now, remaining;
+	bool have_time;
+
+	have_time = clock_gettime(CLOCK_MONOTONIC, &now) == 0;
+	for (size_t i = 0; i < nitems(action_runs); i++) {
+		struct action_run *run = &action_runs[i];
+
+		if (run->tag == 0)
+			continue;
+		if (!have_time)
+			action_finish(run, -1, true);
+		else if (timespeccmp(&now, &run->deadline, >=))
+			action_finish(run, 124, true);
+		else {
+			timespecsub(&run->deadline, &now, &remaining);
+			if (timespeccmp(&remaining, timeout, <))
+				*timeout = remaining;
+		}
+	}
+}
+
+void
+supervisor_cancel_actions(void)
+{
+	for (size_t i = 0; i < nitems(action_runs); i++) {
+		if (action_runs[i].tag != 0)
+			action_finish(&action_runs[i], -1, false);
+	}
+}
+
+static bool
+action_reap(pid_t pid, int status)
+{
+	for (size_t i = 0; i < nitems(action_runs); i++) {
+		struct action_run *run = &action_runs[i];
+
+		if (run->pid != pid)
+			continue;
+		run->pid = 0;
+		if (run->tag != 0) {
+			run->code = WIFEXITED(status) ? WEXITSTATUS(status) :
+			    128 + WTERMSIG(status);
+			action_complete_if_ready(run);
+		}
+		return (true);
+	}
+	return (false);
 }
 
 /*
@@ -1316,15 +1525,25 @@ supervisor_run_list(job_t *job, int list)
 	const char *lname = list == PROWL_CMD_POST ? "stop_post" : "start_post";
 	bool ok = true;
 	const prowl_cmd_t *c;
-	time_t deadline;
+	struct timespec deadline, now;
 	pid_t pid;
 	int i, st;
 
-	resolve_job_privileges(job);
+	if (job->cmd_count[list] == 0)
+		return (true);
+	if (!resolve_job_privileges(job))
+		return (false);
 	for (i = 0; i < job->cmd_count[list]; i++) {
+		bool succeeded = false;
+
 		c = &job->cmds[list][i];
 		if (!cmd_enabled(job, c))
 			continue;
+		if (clock_gettime(CLOCK_MONOTONIC, &deadline) == -1) {
+			prowl_log(LOG_ERR, "clock_gettime for %s: %m", job->label);
+			return (false);
+		}
+		deadline.tv_sec += PROWL_ACTION_TIMEOUT;
 		pid = fork();
 		if (pid == -1) {
 			prowl_log(LOG_ERR, "fork %s: %m", job->label);
@@ -1339,30 +1558,31 @@ supervisor_run_list(job_t *job, int list)
 			_exit(127);
 		}
 
-		deadline = time(NULL) + PROWL_ACTION_TIMEOUT;
 		for (;;) {
 			struct timespec ts = { 0, 20000000L };
 			pid_t r = waitpid(pid, &st, WNOHANG);
 
-			if (r == pid)
+			if (r == pid) {
+				succeeded = WIFEXITED(st) && WEXITSTATUS(st) == 0;
 				break;
-			if (r == -1 && errno != EINTR)
+			}
+			if (r == -1 && errno != EINTR) {
+				prowl_log(LOG_ERR, "waitpid for %s: %m", job->label);
 				break;
-			if (time(NULL) >= deadline) {
+			}
+			if (clock_gettime(CLOCK_MONOTONIC, &now) == -1 ||
+			    timespeccmp(&now, &deadline, >=)) {
 				prowl_log(LOG_WARNING, "job %s: %s %s "
 				    "timed out", job->label, lname,
 				    c->argv[prowl_cmd_first(c)]);
-				kill(pid, SIGKILL);
-				while (waitpid(pid, &st, 0) == -1 &&
-				    errno == EINTR)
-					;
-				st = 0;
+				/* The main SIGCHLD handler reaps it on exit. */
+				if (kill(pid, SIGKILL) == -1 && errno != ESRCH)
+					prowl_log(LOG_ERR, "kill %s: %m", job->label);
 				break;
 			}
 			nanosleep(&ts, NULL);
 		}
-		if (c->argv[prowl_cmd_first(c)][0] != '-' &&
-		    !(WIFEXITED(st) && WEXITSTATUS(st) == 0)) {
+		if (c->argv[prowl_cmd_first(c)][0] != '-' && !succeeded) {
 			prowl_log(LOG_WARNING, "job %s: %s %s failed",
 			    job->label, lname, c->argv[prowl_cmd_first(c)]);
 			ok = false;
@@ -1386,31 +1606,6 @@ supervisor_stop(job_t *job, bool force)
 	if (job->pid <= 0 && job->state == JOB_STATE_COMPLETED &&
 	    (job->type == JOB_TYPE_RCSHIM || job->stop_argc > 0))
 		return (supervisor_rc_stop(job));
-
-	/*
-	 * Still looking for the forked daemon: take it if it is there now,
-	 * otherwise there is nothing to stop.
-	 */
-	if (job->adopting) {
-		struct kevent kev;
-		pid_t dpid = find_daemon_pid(job);
-
-		EV_SET(&kev, timer_ident(job, TIMER_THROTTLE), EVFILT_TIMER,
-		    EV_DELETE, 0, 0, NULL);
-		(void)kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL);
-		job->throttle_timer_active = false;
-		job->adopting = false;
-		if (dpid > 0) {
-			job->pid = dpid;
-			watch_child(dpid, job);
-		} else {
-			if (job->state == JOB_STATE_STARTING &&
-			    g_current_starts > 0)
-				g_current_starts--;
-			job_set_state(job, JOB_STATE_STOPPED);
-			return (0);
-		}
-	}
 
 	/* Stopping a job that is waiting to be restarted cancels the restart */
 	if (job->pid <= 0 && job->restart_hold) {
@@ -1443,15 +1638,118 @@ supervisor_stop(job_t *job, bool force)
 	job_set_state(job, JOB_STATE_STOPPING);
 	supervisor_mdns_deregister(job);
 
-	if (force) {
-		kill(job->pid, SIGKILL);
+	if (job->launch_fd >= 0) {
+		/* Keep the read side for a handoff already in flight. */
+		job->launch_stop_signal = force ? SIGKILL :
+		    (job->stop_signal > 0 ? job->stop_signal : SIGTERM);
+		(void)shutdown(job->launch_fd, SHUT_WR);
+		arm_stop_timer(job);
+	} else if (force) {
+		supervisor_signal(job, SIGKILL);
 	} else {
-		kill(job->pid, job->stop_signal > 0 ? job->stop_signal :
+		supervisor_signal(job, job->stop_signal > 0 ? job->stop_signal :
 		    SIGTERM);
 		arm_stop_timer(job);
 	}
 
 	return (0);
+}
+
+int
+supervisor_mask(job_t *job)
+{
+	int err;
+
+	job_set_masked(job, true);
+	job->restart_after_stop = false;
+	cancel_notify_timeout_timer(job);
+	notify_socket_close(job);
+	socket_close_all(job);
+	/*
+	 * A start wrapper may already have launched its daemon.  Stop the
+	 * wrapper first, then run the stop command when it has been reaped.
+	 */
+	if (job->start_pending && !job->rc_stopping &&
+	    (job->type == JOB_TYPE_RCSHIM ||
+	    (job->type == JOB_TYPE_ONESHOT && job->stop_argc > 0)))
+		job->stop_after_start = true;
+	err = supervisor_stop(job, false);
+
+	/* An idle listener has no service process to stop. */
+	if (job->pid <= 0 && job->state == JOB_STATE_RUNNING)
+		job_set_state(job, JOB_STATE_STOPPED);
+	return (err);
+}
+
+/* No child or active stop command remains when an idle unit is replaced. */
+void
+supervisor_replace_unit(job_t *job, job_t *replacement)
+{
+	static const uintptr_t kinds[] = { TIMER_THROTTLE, TIMER_STOP,
+	    TIMER_WATCHDOG, NOTIFY_TMO, TIMER_BOOT_DELAY, TIMER_PERIODIC };
+	struct kevent kev;
+
+	for (size_t i = 0; i < nitems(kinds); i++) {
+		EV_SET(&kev, timer_ident(job, kinds[i]), EVFILT_TIMER, EV_DELETE,
+		    0, 0, NULL);
+		(void)kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL);
+	}
+	notify_socket_close(job);
+	socket_close_all(job);
+	job_replace(job, replacement);
+	if (job->enabled && job->type == JOB_TYPE_TIMER) {
+		arm_periodic_timer(job);
+		arm_boot_delay_timer(job);
+	}
+}
+
+void
+supervisor_unmask(job_t *job)
+{
+	if (!job->masked)
+		return;
+
+	/* Keep supervising any process that is still stopping. */
+	if (job->state == JOB_STATE_STOPPING)
+		job->restart_after_stop = job->enabled && job->run_at_load;
+	else
+		job_set_state(job, job->enabled ? JOB_STATE_LOADED :
+		    JOB_STATE_DISABLED);
+	job_set_masked(job, false);
+}
+
+static void
+load_masks_from(const char *dir)
+{
+	struct stat sb;
+	job_t *job;
+	int fd;
+
+	fd = trusted_open_dir(dir);
+	if (fd == -1) {
+		if (errno != ENOENT)
+			prowl_log(LOG_WARNING,
+			    "cannot open mask directory %s: %m", dir);
+		return;
+	}
+	TAILQ_FOREACH(job, &g_jobs, entries) {
+		if (job->masked)
+			continue;
+		if (fstatat(fd, job->label, &sb, AT_SYMLINK_NOFOLLOW) == 0)
+			(void)supervisor_mask(job);
+		else if (errno != ENOENT)
+			prowl_log(LOG_WARNING, "cannot read mask %s/%s: %m",
+			    dir, job->label);
+	}
+	close(fd);
+}
+
+void
+supervisor_load_masks(void)
+{
+	load_masks_from(g_mask_dir);
+	if (g_legacy_mask_dir != NULL)
+		load_masks_from(g_legacy_mask_dir);
 }
 
 /*
@@ -1464,11 +1762,18 @@ supervisor_socket_activate(job_t *job)
 {
 	pid_t pid;
 
+	if (job_launch_blocked(job) || job->state == JOB_STATE_STOPPING)
+		return;
+
+	if (!resolve_job_privileges(job)) {
+		/* A pending connection would immediately retrigger a rearm. */
+		job_set_state(job, JOB_STATE_FAILED);
+		return;
+	}
+
 	prowl_log(LOG_NOTICE, "socket-activating %s", job->label);
 	job->started_at = time(NULL);
 	job_set_state(job, JOB_STATE_STARTING);
-
-	resolve_job_privileges(job);
 
 	pid = fork();
 	if (pid == -1) {
@@ -1498,17 +1803,71 @@ supervisor_socket_activate(job_t *job)
 	    job->label, (int)pid);
 }
 
+/*
+ * kinfo_proc reports start time relative to the wall clock.  Subtract the
+ * kernel's boot time so setting the clock cannot invalidate an adopted PID.
+ * Repeat the snapshot if the clock stepped while reading the process.
+ */
+static bool
+child_start_time(pid_t pid, struct timeval *start)
+{
+	int mib[] = { CTL_KERN, KERN_BOOTTIME };
+	struct timeval before, after;
+	struct kinfo_proc *kp;
+	size_t len;
+
+	for (int i = 0; i < 2; i++) {
+		len = sizeof(before);
+		if (sysctl(mib, nitems(mib), &before, &len, NULL, 0) == -1)
+			return (false);
+		kp = kinfo_getproc(pid);
+		if (kp == NULL)
+			return (false);
+		if (kp->ki_ppid != getpid() || kp->ki_stat == SZOMB ||
+		    (kp->ki_flag & (P_WEXIT | P_TRACED)) != 0) {
+			free(kp);
+			errno = ESRCH;
+			return (false);
+		}
+		*start = kp->ki_start;
+		free(kp);
+		if (sysctl(mib, nitems(mib), &after, &len, NULL, 0) == -1)
+			return (false);
+		if (timercmp(&before, &after, ==)) {
+			timersub(start, &before, start);
+			return (true);
+		}
+	}
+	errno = EAGAIN;
+	return (false);
+}
+
 int
 supervisor_signal(job_t *job, int sig)
 {
-	if (job->pid <= 0)
+	struct timeval start;
+
+	if (job->pid <= 0) {
+		errno = ESRCH;
 		return (-1);
+	}
+	if (job->adopted) {
+		if (!child_start_time(job->pid, &start))
+			return (-1);
+		if (timercmp(&start, &job->adopted_start, !=)) {
+			errno = ESRCH;
+			return (-1);
+		}
+	}
 	return (kill(job->pid, sig));
 }
 
 void
 supervisor_handle_periodic(job_t *job)
 {
+	if (job_launch_blocked(job) || job->state == JOB_STATE_STOPPING)
+		return;
+
 	prowl_log(LOG_INFO, "timer %s: periodic interval reached", job->label);
 	job->last_run = time(NULL);
 	timer_state_save();
@@ -1518,6 +1877,9 @@ supervisor_handle_periodic(job_t *job)
 void
 supervisor_handle_boot_delay(job_t *job)
 {
+	if (job_launch_blocked(job) || job->state == JOB_STATE_STOPPING)
+		return;
+
 	prowl_log(LOG_INFO, "timer %s: boot delay reached", job->label);
 	job->last_run = time(NULL);
 	timer_state_save();
@@ -1614,13 +1976,12 @@ supervisor_mdns_register(job_t *job)
 		/* Child */
 		if (g_kqueue_fd >= 0) close(g_kqueue_fd);
 		prowl_reset_signals();
-		/* Redirect output to null to avoid cluttering logs */
-		int fd = open("/dev/null", O_WRONLY);
-		if (fd >= 0) {
-			dup2(fd, STDOUT_FILENO);
-			dup2(fd, STDERR_FILENO);
-			close(fd);
-		}
+		/* Redirect output to null to avoid cluttering logs. */
+		if (!g_is_init)
+			child_redirect_fd(job, STDIN_FILENO, _PATH_DEVNULL,
+			    O_RDONLY);
+		child_redirect_fd(job, STDOUT_FILENO, _PATH_DEVNULL, O_WRONLY);
+		child_redirect_fd(job, STDERR_FILENO, _PATH_DEVNULL, O_WRONLY);
 		execve(args[0], args, (char *const *)(uintptr_t)minimal_env);
 		_exit(127);
 	}
@@ -1653,6 +2014,9 @@ supervisor_handle_throttle(job_t *job)
 {
 	job->throttle_timer_active = false;
 
+	if (job->masked)
+		return;
+
 	/* Restart hold-off over: the job may be scheduled again. */
 	if (job->restart_hold) {
 		job->restart_hold = false;
@@ -1663,23 +2027,9 @@ supervisor_handle_throttle(job_t *job)
 	if (job->state != JOB_STATE_STARTING)
 		return;
 
-	/* Waiting for the forked daemon to show up */
-	if (job->adopting) {
-		supervisor_adopt(job);
-		return;
-	}
-
 	/* The launcher itself is not a daemon that is up */
 	if (job->launcher)
 		return;
-
-	/* A forked daemon that is gone before we saw it start */
-	if (job->pid > 0 && (job->pid_file[0] != '\0' ||
-	    job->pid_name[0] != '\0') &&
-	    kill(job->pid, 0) == -1 && errno == ESRCH) {
-		supervisor_reap(job->pid, 1 << 8);
-		return;
-	}
 
 	/* Still running its start_pre commands: not up yet */
 	if (job->cmd_count[PROWL_CMD_PRE] > 0 && job->pid > 0 &&
@@ -1688,11 +2038,10 @@ supervisor_handle_throttle(job_t *job)
 		return;
 	}
 
-	if (job->pid > 0 && kill(job->pid, 0) == 0) {
+	if (job->pid > 0 && supervisor_signal(job, 0) == 0) {
 		job_set_state(job, JOB_STATE_RUNNING);
 		supervisor_mdns_register(job);
-		if (g_current_starts > 0)
-			g_current_starts--;
+		release_start_slot(job);
 		prowl_log(LOG_INFO, "job %s running (pid %d)",
 		    job->label, (int)job->pid);
 		dag_schedule_ready();
@@ -1722,8 +2071,11 @@ not_exec_yet(pid_t pid)
  * Called when the stop-timeout timer fires.  Force-kill the process.
  */
 void
-supervisor_handle_stop_timeout(job_t *job)
+supervisor_handle_stop_timeout(job_t *job, uintptr_t generation)
 {
+	if (!job->stop_timer_active ||
+	    job->stop_timer_generation != generation)
+		return;
 	job->stop_timer_active = false;
 
 	if (job->state != JOB_STATE_STOPPING)
@@ -1733,7 +2085,7 @@ supervisor_handle_stop_timeout(job_t *job)
 		prowl_log(LOG_WARNING,
 		    "job %s (pid %d) timed out; sending SIGKILL",
 		    job->label, (int)job->pid);
-		kill(job->pid, SIGKILL);
+		supervisor_signal(job, SIGKILL);
 	}
 }
 
@@ -1745,7 +2097,7 @@ supervisor_handle_stop_timeout(job_t *job)
 void
 supervisor_handle_notify_timeout(job_t *job)
 {
-	if (job->state != JOB_STATE_STARTING)
+	if (job->masked || job->state != JOB_STATE_STARTING)
 		return;
 
 	prowl_log(LOG_WARNING,
@@ -1754,8 +2106,11 @@ supervisor_handle_notify_timeout(job_t *job)
 
 	notify_socket_close(job);
 
-	if (job->pid > 0)
-		kill(job->pid, SIGKILL);
+	if (job->launch_fd >= 0) {
+		job->launch_stop_signal = SIGKILL;
+		(void)shutdown(job->launch_fd, SHUT_WR);
+	} else if (job->pid > 0)
+		(void)supervisor_signal(job, SIGKILL);
 }
 
 /*
@@ -1767,7 +2122,7 @@ supervisor_handle_watchdog(job_t *job)
 {
 	time_t now = time(NULL);
 
-	if (job->state != JOB_STATE_RUNNING)
+	if (job->masked || job->state != JOB_STATE_RUNNING)
 		return;
 
 	if (now - job->watchdog_last_ping < (time_t)job->watchdog_sec)
@@ -1824,8 +2179,7 @@ mainpid_valid(const job_t *job, pid_t new_pid)
 	 * If the job has no explicit user, prowld keeps root privileges,
 	 * so the child must also be root.
 	 */
-	expected_uid = (job->run_priv_set && job->run_uid != (uid_t)-1)
-	    ? job->run_uid : 0;
+	expected_uid = job->notify_uid;
 	if (kp.ki_uid != expected_uid) {
 		prowl_log(LOG_WARNING,
 		    "job %s: MAINPID=%d rejected: uid %u != expected %u",
@@ -1864,20 +2218,65 @@ mainpid_valid(const job_t *job, pid_t new_pid)
 void
 supervisor_handle_notify(job_t *job)
 {
+	union {
+		struct cmsghdr align;
+		char bytes[CMSG_SPACE(SOCKCRED2SIZE(CMGROUP_MAX)) +
+		    CMSG_SPACE(sizeof(int) * 16)];
+	} control;
+	struct msghdr msg;
+	struct iovec iov;
+	struct cmsghdr *cmsg;
+	struct sockcred2 *cred;
 	char buf[4096];
 	ssize_t n;
 	char *p, *end, *eq, *nl;
+	uid_t expected_uid;
+	bool authenticated, rights;
+	size_t count, i;
+	int received_fd;
 
-	if (job->notify_fd < 0)
+	if (job->masked || job->notify_fd < 0)
+		return;
+	memset(&msg, 0, sizeof(msg));
+	iov.iov_base = buf;
+	iov.iov_len = sizeof(buf) - 1;
+	msg.msg_iov = &iov;
+	msg.msg_iovlen = 1;
+	msg.msg_control = control.bytes;
+	msg.msg_controllen = sizeof(control.bytes);
+	n = recvmsg(job->notify_fd, &msg, MSG_DONTWAIT | MSG_CMSG_CLOEXEC);
+	if (n == -1)
 		return;
 
-	n = recv(job->notify_fd, buf, sizeof(buf) - 1, MSG_DONTWAIT);
-	if (n == -1) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
-			return;
-		return;
+	expected_uid = job->notify_uid;
+	authenticated = false;
+	rights = false;
+	for (cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL;
+	    cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+		if (cmsg->cmsg_len < CMSG_LEN(0) ||
+		    (char *)cmsg + cmsg->cmsg_len >
+		    (char *)msg.msg_control + msg.msg_controllen)
+			break;
+		if (cmsg->cmsg_level != SOL_SOCKET)
+			continue;
+		if (cmsg->cmsg_type == SCM_RIGHTS) {
+			rights = true;
+			count = (cmsg->cmsg_len - CMSG_LEN(0)) / sizeof(int);
+			for (i = 0; i < count; i++) {
+				memcpy(&received_fd, CMSG_DATA(cmsg) +
+				    i * sizeof(int), sizeof(received_fd));
+				close(received_fd);
+			}
+		} else if (cmsg->cmsg_type == SCM_CREDS2 &&
+		    cmsg->cmsg_len >= CMSG_LEN(sizeof(struct sockcred2))) {
+			cred = (struct sockcred2 *)(void *)CMSG_DATA(cmsg);
+			if (cred->sc_version == 0 &&
+			    cred->sc_euid == expected_uid)
+				authenticated = true;
+		}
 	}
-	if (n == 0)
+	if (n == 0 || !authenticated || rights ||
+	    (msg.msg_flags & (MSG_TRUNC | MSG_CTRUNC)) != 0)
 		return;
 	buf[n] = '\0';
 
@@ -1895,14 +2294,15 @@ supervisor_handle_notify(job_t *job)
 			const char *key = p;
 			const char *val = eq + 1;
 
-			if (strcmp(key, "READY") == 0 &&
-			    strcmp(val, "1") == 0) {
-				if (job->state == JOB_STATE_STARTING) {
+			if (strcmp(key, "READY") == 0 && strcmp(val, "1") == 0) {
+				if (job->launcher && job->state == JOB_STATE_STARTING) {
+					job->launch_ready = true;
+					cancel_notify_timeout_timer(job);
+				} else if (job->state == JOB_STATE_STARTING) {
 					cancel_notify_timeout_timer(job);
 					job_set_state(job, JOB_STATE_RUNNING);
 					supervisor_mdns_register(job);
-					if (g_current_starts > 0)
-						g_current_starts--;
+					release_start_slot(job);
 
 					prowl_log(LOG_INFO,
 					    "job %s ready (READY=1)",
@@ -1912,7 +2312,8 @@ supervisor_handle_notify(job_t *job)
 			} else if (strcmp(key, "STATUS") == 0) {
 				strlcpy(job->status_msg, val,
 				    sizeof(job->status_msg));
-			} else if (strcmp(key, "MAINPID") == 0) {
+			} else if (!job->launcher && !job->adopted &&
+			    strcmp(key, "MAINPID") == 0) {
 				pid_t new_pid = (pid_t)strtol(val, NULL, 10);
 				if (new_pid > 0 && new_pid != job->pid &&
 				    mainpid_valid(job, new_pid)) {
@@ -2037,30 +2438,62 @@ job_restart_or_fail(job_t *job, int status)
 }
 
 /*
- * Read a process id from a pidfile.  Returns -1 when the file does not hold
- * the id of a live process yet.
+ * libutil writes the decimal PID without a newline.  Other writers such
+ * as sendmail include metadata after the first line.
  */
 static pid_t
 pid_from_file(const char *path)
 {
-	char buf[32], *end;
+	struct stat sb;
+	char buf[32], *p, *end;
+	size_t len;
 	ssize_t n;
 	long v;
-	int fd;
+	int fd, pathfd;
 
-	fd = open(path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+	/* Inspect the vnode without invoking a FIFO or device open routine. */
+	pathfd = open(path, O_PATH | O_NOFOLLOW | O_CLOEXEC);
+	if (pathfd == -1)
+		return (-1);
+	fd = -1;
+	if (fstat(pathfd, &sb) == 0 && S_ISREG(sb.st_mode))
+		fd = openat(pathfd, "", O_EMPTY_PATH | O_RDONLY | O_NONBLOCK |
+		    O_CLOEXEC);
+	close(pathfd);
 	if (fd == -1)
 		return (-1);
-	n = read(fd, buf, sizeof(buf) - 1);
+	len = 0;
+	while (len < sizeof(buf)) {
+		n = read(fd, buf + len, sizeof(buf) - len);
+		if (n <= 0) {
+			if (n == -1 && errno == EINTR)
+				continue;
+			if (n == -1)
+				len = 0;
+			break;
+		}
+		end = memchr(buf + len, '\n', (size_t)n);
+		if (end != NULL) {
+			len = (size_t)(end - buf);
+			break;
+		}
+		len += (size_t)n;
+	}
 	(void)close(fd);
-	if (n <= 0)
+	if (len == 0 || len == sizeof(buf) || memchr(buf, '\0', len) != NULL)
 		return (-1);
-	buf[n] = '\0';
+	buf[len] = '\0';
 
+	p = buf;
+	while (isspace((unsigned char)*p))
+		p++;
+	if (!isdigit((unsigned char)*p))
+		return (-1);
 	errno = 0;
-	v = strtol(buf, &end, 10);
-	if (end == buf || errno != 0 || v <= 1 || v > INT_MAX ||
-	    (*end != '\0' && !isspace((unsigned char)*end)))
+	v = strtol(p, &end, 10);
+	while (isspace((unsigned char)*end))
+		end++;
+	if (errno != 0 || v <= 1 || v > INT_MAX || *end != '\0')
 		return (-1);
 	if (kill((pid_t)v, 0) == -1 && errno != EPERM)
 		return (-1);
@@ -2079,100 +2512,158 @@ supervisor_shim_pid(const job_t *job)
 	return (pid_from_file(job->shim_pidfile));
 }
 
-/*
- * Find the oldest process called job->pid_name that was left to us: a child
- * of ours, or of init when we are not a reaper.  Returns -1 if there is
- * none.  Processes noted before the start (skip_pids) are leftovers, such as
- * the workers of a master that died, and are not considered.  With note set
- * nothing is returned: the matching processes are remembered instead.
- */
-static pid_t
-pid_from_name(job_t *job, bool note)
+struct launch_result {
+	pid_t pid;
+	struct timeval start;
+};
+
+/* Only this launch can leave children with the private reaper. */
+static bool
+find_daemon(const job_t *job, struct launch_result *result)
 {
 	struct kinfo_proc *kp;
-	pid_t self, parent, best;
-	struct timeval bt;
-	int i, j, cnt;
+	pid_t pid, self;
+	int i, count;
 
-	self = getpid();
-	parent = g_reaper ? self : 1;
-	best = -1;
-	bt.tv_sec = bt.tv_usec = 0;
-	if (note)
-		job->skip_count = 0;
-
-	kp = kinfo_getallproc(&cnt);
+	if (job->pid_file[0] != '\0') {
+		pid = pid_from_file(job->pid_file);
+		if (pid < 0)
+			return (false);
+		kp = kinfo_getproc(pid);
+		count = 1;
+	} else
+		kp = kinfo_getallproc(&count);
 	if (kp == NULL)
-		return (-1);
-	for (i = 0; i < cnt; i++) {
-		if (kp[i].ki_pid == self || kp[i].ki_ppid != parent ||
-		    kp[i].ki_stat == SZOMB ||
-		    strcmp(kp[i].ki_comm, job->pid_name) != 0)
+		return (false);
+
+	result->pid = 0;
+	self = getpid();
+	for (i = 0; i < count; i++) {
+		if (kp[i].ki_ppid != self || kp[i].ki_stat == SZOMB ||
+		    (kp[i].ki_flag & (P_WEXIT | P_TRACED)) != 0 ||
+		    (job->pid_file[0] == '\0' &&
+		    strcmp(kp[i].ki_comm, job->pid_name) != 0))
 			continue;
-		if (note) {
-			if (job->skip_count < PROWL_SKIP_MAX) {
-				job->skip_pids[job->skip_count++] =
-				    kp[i].ki_pid;
-			}
-			continue;
-		}
-		for (j = 0; j < job->skip_count; j++) {
-			if (job->skip_pids[j] == kp[i].ki_pid)
-				break;
-		}
-		if (j < job->skip_count)
-			continue;
-		if (best == -1 || timercmp(&kp[i].ki_start, &bt, <)) {
-			best = kp[i].ki_pid;
-			bt = kp[i].ki_start;
+		if (result->pid == 0 ||
+		    timercmp(&kp[i].ki_start, &result->start, <)) {
+			result->pid = kp[i].ki_pid;
+			result->start = kp[i].ki_start;
 		}
 	}
 	free(kp);
-	return (best);
-}
-
-static pid_t
-find_daemon_pid(job_t *job)
-{
-	if (job->pid_file[0] != '\0')
-		return (pid_from_file(job->pid_file));
-	return (pid_from_name(job, false));
+	return (result->pid > 0 &&
+	    child_start_time(result->pid, &result->start));
 }
 
 /*
- * The process that forks the daemon has exited cleanly: find the daemon and
- * supervise that instead.  It may not have written its pidfile yet, so look
- * again every PROWL_ADOPT_MS until PROWL_ADOPT_TRIES are used up.
+ * Put a temporary reaper between prowld and the command.  A daemon can
+ * setsid, change credentials, or fork twice and still belongs to this launch.
+ * Only the trusted reaper holds the reporting socket.  On cancellation or
+ * failure it cleans up its own descendants before exiting.
  */
-static void
-supervisor_adopt(job_t *job)
+static pid_t
+fork_launcher(job_t *job)
 {
-	pid_t pid;
+	struct launch_result result = { 0 };
+	struct procctl_reaper_kill rk = { .rk_sig = SIGKILL };
+	struct pollfd control;
+	int pair[2], status, tries, fd, error, n;
+	pid_t reaper, child, waited;
 
-	pid = find_daemon_pid(job);
-	if (pid > 0) {
-		job->adopting = false;
-		job->pid = pid;
-		watch_child(pid, job);
-		arm_throttle_timer(job, PROWL_READY_DELAY);
-		prowl_log(LOG_INFO, "job %s daemon is pid %d", job->label,
-		    (int)pid);
-		return;
+	if (!g_reaper) {
+		errno = EOPNOTSUPP;
+		return (-1);
+	}
+	if (socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0, pair) == -1)
+		return (-1);
+	reaper = fork();
+	if (reaper != 0) {
+		error = errno;
+		close(pair[1]);
+		if (reaper > 0)
+			job->launch_fd = pair[0];
+		else {
+			close(pair[0]);
+			errno = error;
+		}
+		return (reaper);
 	}
 
-	if (++job->adopt_tries >= PROWL_ADOPT_TRIES) {
-		job->adopting = false;
-		prowl_log(LOG_ERR, "job %s: the daemon did not appear",
-		    job->label);
-		if (job->state == JOB_STATE_STARTING && g_current_starts > 0)
-			g_current_starts--;
-		job->exited_at = time(NULL);
-		job_restart_or_fail(job, 1 << 8);
-		return;
+	close(pair[0]);
+	if (procctl(P_PID, getpid(), PROC_REAP_ACQUIRE, NULL) == -1) {
+		prowl_log(LOG_ERR, "cannot acquire reaper for %s: %m", job->label);
+		_exit(1);
 	}
+	child = fork();
+	if (child == 0) {
+		close(pair[1]);
+		return (0);
+	}
+	if (child == -1) {
+		prowl_log(LOG_ERR, "cannot fork launcher for %s: %m", job->label);
+		_exit(1);
+	}
+	/* Keep only the control socket and the supervisor's standard streams. */
+	error = 1;
+	fd = STDERR_FILENO + 1;
+	if (dup2(pair[1], fd) == -1)
+		goto cancel;
+	closefrom(fd + 1);
+	control.fd = fd;
+	control.events = POLLIN;
+	setproctitle("adopting %s", job->label);
+	tries = 0;
+	for (;;) {
+		if (child > 0) {
+			waited = waitpid(child, &status, WNOHANG);
+			if (waited == -1 && errno != EINTR)
+				goto cancel;
+			if (waited == child) {
+				if (!WIFEXITED(status))
+					goto cancel;
+				if (WEXITSTATUS(status) != 0) {
+					error = WEXITSTATUS(status);
+					goto cancel;
+				}
+				child = -1;
+			}
+		}
+		if (child < 0) {
+			if (find_daemon(job, &result)) {
+				if (send(fd, &result, sizeof(result), MSG_NOSIGNAL) ==
+				    (ssize_t)sizeof(result))
+					_exit(0);
+				goto cancel;
+			}
+			if (++tries >= PROWL_ADOPT_TRIES)
+				goto cancel;
+		}
+		/* Shutdown of the parent's write side cancels a pending launch. */
+		n = poll(&control, 1, PROWL_ADOPT_MS);
+		if (n > 0 || (n == -1 && errno != EINTR))
+			goto cancel;
+	}
+cancel:
+	if (procctl(P_PID, getpid(), PROC_REAP_KILL, &rk) == -1 &&
+	    errno != ESRCH)
+		prowl_log(LOG_ERR, "cannot clean up launch of %s: %m", job->label);
+	_exit(error);
+}
 
-	job->adopting = true;
-	arm_throttle_timer_ms(job, PROWL_ADOPT_MS);
+static bool
+adopt_daemon(job_t *job, const struct launch_result *result)
+{
+	struct timeval start;
+
+	if (result->pid <= 1 || !child_start_time(result->pid, &start) ||
+	    timercmp(&result->start, &start, !=))
+		return (false);
+	job->pid = result->pid;
+	job->adopted = true;
+	job->adopted_start = result->start;
+	watch_child(job->pid, job);
+	prowl_log(LOG_INFO, "job %s daemon is pid %d", job->label, (int)job->pid);
+	return (true);
 }
 
 /*
@@ -2183,7 +2674,11 @@ supervisor_reap(pid_t pid, int status)
 {
 	job_t *job;
 	struct kevent kev;
-	bool was_launcher;
+	bool was_launcher, handoff;
+	struct launch_result result;
+
+	if (ipc_sysrc_reap(pid, status) || action_reap(pid, status))
+		return;
 
 	TAILQ_FOREACH(job, &g_jobs, entries) {
 		if (job->pid == pid || job->mdns_pid == pid)
@@ -2191,7 +2686,11 @@ supervisor_reap(pid_t pid, int status)
 	}
 
 	if (job == NULL) {
-		prowl_log(LOG_DEBUG, "reap: unknown pid %d", (int)pid);
+		/*
+		 * Orphans reparented to us end up here all the time; keep
+		 * them in syslog at debug level, not on the console.
+		 */
+		syslog(LOG_DEBUG, "reap: unknown pid %d", (int)pid);
 		return;
 	}
 
@@ -2203,22 +2702,40 @@ supervisor_reap(pid_t pid, int status)
 			prowl_log(LOG_NOTICE, "mdns %s (pid %d) killed by signal %d",
 			    job->label, (int)pid, WTERMSIG(status));
 		job->mdns_pid = -1;
-		
+		if (job->reload_on_exit)
+			g_reload = true;
+
 		/* Restart mdns if job is still running */
-		if (job->state == JOB_STATE_RUNNING)
+		if (!job_launch_blocked(job) && job->state == JOB_STATE_RUNNING)
 			supervisor_mdns_register(job);
 		return;
 	}
 
 	was_launcher = job->launcher;
+	handoff = false;
+	if (job->launch_fd >= 0) {
+		handoff = WIFEXITED(status) && WEXITSTATUS(status) == 0 &&
+		    recv(job->launch_fd, &result, sizeof(result), MSG_DONTWAIT) ==
+		    (ssize_t)sizeof(result);
+		close(job->launch_fd);
+		job->launch_fd = -1;
+	}
 	job->launcher = false;
+	job->adopted = false;
+	/* A successful helper exit transfers the running job and its timers. */
+	if (handoff && adopt_daemon(job, &result)) {
+		if (job->launch_stop_signal != 0 || job->masked || g_shutdown) {
+			(void)supervisor_signal(job, job->launch_stop_signal != 0 ?
+			    job->launch_stop_signal : SIGTERM);
+			if (job->state == JOB_STATE_STOPPING)
+				arm_stop_timer(job);
+		} else if (job->notify_fd < 0 || job->launch_ready)
+			arm_throttle_timer(job, PROWL_READY_DELAY);
+		return;
+	}
 	job->last_exit_status = status;
 	job->exited_at = time(NULL);
 	job->pid = -1;
-
-	/* A job that dies while STARTING still held a start slot. */
-	if (job->state == JOB_STATE_STARTING && g_current_starts > 0)
-		g_current_starts--;
 
 	/* Cancel throttle timer if still active */
 	if (job->throttle_timer_active) {
@@ -2228,6 +2745,7 @@ supervisor_reap(pid_t pid, int status)
 		job->throttle_timer_active = false;
 	}
 
+	cancel_stop_timer(job);
 	cancel_watchdog_timer(job);
 	cancel_notify_timeout_timer(job);
 	notify_socket_close(job);
@@ -2239,14 +2757,23 @@ supervisor_reap(pid_t pid, int status)
 		prowl_log(LOG_NOTICE, "job %s killed by signal %d",
 		    job->label, WTERMSIG(status));
 
-	/*
-	 * The process that forks a daemon is done: the daemon is what we
-	 * supervise from here on.
-	 */
-	if (was_launcher && !job->rc_stopping &&
-	    job->state == JOB_STATE_STARTING &&
-	    WIFEXITED(status) && WEXITSTATUS(status) == 0) {
-		supervisor_adopt(job);
+	if (was_launcher && job->state == JOB_STATE_STARTING) {
+		prowl_log(LOG_ERR, "job %s: could not adopt daemon", job->label);
+		if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+			status = 1 << 8;
+		job->last_exit_status = status;
+	}
+	release_start_slot(job);
+	if (job->reload_on_exit)
+		g_reload = true;
+
+	if (job->stop_after_start) {
+		job->stop_after_start = false;
+		if (supervisor_rc_stop(job) == 0)
+			return;
+		job->restart_after_stop = false;
+		job_set_state(job, JOB_STATE_FAILED);
+		dag_schedule_ready();
 		return;
 	}
 
@@ -2256,11 +2783,20 @@ supervisor_reap(pid_t pid, int status)
 	    (job->type != JOB_TYPE_ONESHOT || job->rc_stopping))
 		(void)supervisor_run_list(job, PROWL_CMD_POST);
 
+	if (job->masked) {
+		job->rc_stopping = false;
+		job->restart_after_stop = false;
+		job_set_state(job, JOB_STATE_STOPPED);
+		dag_schedule_ready();
+		return;
+	}
+
 	/*
 	 * A oneshot that ended well is not done until its start_post
 	 * commands have run; if one of them fails the job has failed.
 	 */
-	if (!job->rc_stopping && job->type == JOB_TYPE_ONESHOT &&
+	if (job->state != JOB_STATE_STOPPING && !job->rc_stopping &&
+	    job->type == JOB_TYPE_ONESHOT &&
 	    job->cmd_count[PROWL_CMD_START_POST] > 0 &&
 	    WIFEXITED(status) && WEXITSTATUS(status) == 0 &&
 	    !supervisor_run_list(job, PROWL_CMD_START_POST))
@@ -2271,18 +2807,12 @@ supervisor_reap(pid_t pid, int status)
 	 * rc.d script runs "start" to completion (daemonizing the service
 	 * if it has one), so a clean exit means dependents may proceed.
 	 */
-	if (!job->rc_stopping && (job->type == JOB_TYPE_ONESHOT ||
+	if (job->state != JOB_STATE_STOPPING && !job->rc_stopping &&
+	    (job->type == JOB_TYPE_ONESHOT ||
 	    (job->type == JOB_TYPE_RCSHIM &&
 	    job->state == JOB_STATE_STARTING)) &&
 	    WIFEXITED(status) && WEXITSTATUS(status) == 0) {
 		job_set_state(job, JOB_STATE_COMPLETED);
-		dag_schedule_ready();
-		return;
-	}
-
-	/* Masked while running: the process was stopped, stay masked */
-	if (job->state == JOB_STATE_MASKED) {
-		job->rc_stopping = false;
 		dag_schedule_ready();
 		return;
 	}
@@ -2351,7 +2881,7 @@ supervisor_shutdown_all(void)
 			break;
 
 		TAILQ_FOREACH(job, &g_jobs, entries) {
-			if ((job->shutdown_wait ||
+			if ((job->launch_fd >= 0 || job->shutdown_wait ||
 			    job->cmd_count[PROWL_CMD_POST] > 0) &&
 			    job->state == JOB_STATE_STOPPING) {
 				any_pending = true;
@@ -2371,7 +2901,7 @@ supervisor_shutdown_all(void)
 	/* Force-kill remaining processes */
 	TAILQ_FOREACH(job, &g_jobs, entries) {
 		if (job->pid > 0)
-			kill(job->pid, SIGKILL);
+			supervisor_signal(job, SIGKILL);
 	}
 
 	/*
@@ -2386,7 +2916,15 @@ supervisor_shutdown_all(void)
 		for (tries = 0; tries < 50; tries++) {
 			struct timespec ts = { 0, 20000000L };
 
-			if (waitpid(job->pid, &st, WNOHANG) != 0)
+			pid_t waited = waitpid(job->pid, &st, WNOHANG);
+			if (waited > 0 && job->launch_fd >= 0) {
+				supervisor_reap(waited, st);
+				if (job->adopted) {
+					(void)supervisor_signal(job, SIGKILL);
+					continue;
+				}
+			}
+			if (waited != 0)
 				break;
 			nanosleep(&ts, NULL);
 		}

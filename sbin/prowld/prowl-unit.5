@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd April 19, 2026
+.Dd November 22, 2026
 .Dt PROWL-UNIT 5
 .Os
 .Sh NAME
@@ -41,6 +41,24 @@ Files must have the
 .Pa .unit
 extension and be located in one of the search directories described in
 .Xr prowld 8 .
+Unit files and drop-in files must be regular files owned by root, with
+neither group nor other write permission, in a trusted directory chain.
+See
+.Xr prowld 8
+for path requirements.
+If a drop-in directory or a
+.Pa .unit
+file in it fails validation, or the merged configuration is invalid,
+the affected unit is rejected.
+For a unit with label
+.Ar label ,
+.Xr prowld 8
+first applies the
+.Pa <label>.d/
+fragments beside the selected unit, then those in
+.Pa /etc/prowld/overrides.d/<label>.d/ .
+Within each directory, files are read in filename order.
+A later fragment replaces an earlier value for the same field.
 .Sh SCHEMA
 The following fields are recognised at the top level of a unit file:
 .Ss Identity
@@ -119,6 +137,12 @@ prints what it writes to standard output and standard error and exits with
 its status.
 A command that runs longer than 30 seconds is killed, and the first 8192
 bytes of its output are kept.
+The deadline also applies after the command closes its output.
+.Xr prowld 8
+continues supervising other jobs while the command runs.
+One action may run per job, with up to eight actions running across
+all jobs.
+An additional request that would exceed either limit reports an error.
 Without
 .Va reload_arguments
 a running job gets SIGHUP.
@@ -143,16 +167,106 @@ into before execution.
 Directory to
 .Xr chroot 2
 into.
+The path must be a nonempty string shorter than 1024 bytes and contain
+no NUL byte.
 Requires
 .Va user
 to be set for security.
 .It Va user , Va group
 .Pq string
 User and group names to drop privileges to.
+A named account or group must resolve before its command can run.
+The service account's group list must fit in 32 entries.
+A unit specifying only a group retains its UID and clears inherited
+supplementary groups.
 .It Va umask
 .Pq string
 Octal umask (e.g.,
 .Dq 0022 ) .
+The string must contain only octal digits and represent a value from
+0 through 0777.
+The default is 0022.
+.It Va standard_in_path
+.Pq string
+File to open as the job's standard input.
+The default is a read-only
+.Pa /dev/null
+descriptor set up before entering the job's root directory.
+.It Va interactive
+.Pq boolean
+Let the job read the console while PID 1 is booting, for scripts that ask
+for a passphrase.
+Its standard input is then
+.Pa /dev/console
+instead of
+.Pa /dev/null ,
+unless
+.Va standard_in_path
+is set.
+This applies only when
+.Xr prowld 8
+is PID 1 and only until it goes multi-user; a job started later gets no
+console input.
+An rc.d script asks for it with
+.Dq KEYWORD: interactive .
+The default is false.
+.It Va standard_out_path
+.Pq string
+File to append the job's standard output to.
+It is created with mode 0644 if it does not exist.
+.It Va standard_error_path
+.Pq string
+File to append the job's standard error to, created the same way.
+It may name the same file as
+.Va standard_out_path .
+.Pp
+Without
+.Va standard_out_path
+or
+.Va standard_error_path
+the job shares the standard output or standard error of
+.Xr prowld 8 .
+These inherited output descriptors are write-only when
+.Xr prowld 8
+is PID 1.
+.Pp
+Configured paths are opened after
+.Va root_directory ,
+.Va user
+and
+.Va group
+take effect, so a path is looked up inside the
+.Xr chroot 2
+and must be accessible to
+.Va user .
+The command fails if a configured descriptor cannot be redirected.
+Configured paths also apply to
+.Va start_pre ,
+.Va start_post ,
+.Va stop_pre ,
+.Va stop_post
+and
+.Va stop_arguments .
+The output of
+.Va reload_arguments ,
+.Va check_arguments
+and
+.Va resync_arguments
+is not written there; it is passed back to
+.Xr prowlctl 8 .
+.Pp
+To have
+.Cm prowlctl logs
+show a job's output, point both at
+.Pa /var/log/prowld/jobs/ Ns Ar label Ns Pa .log ,
+where
+.Ar label
+is the job's full
+.Va label .
+.Xr prowld 8
+does not rotate these files; add an entry to
+.Xr newsyslog.conf 5
+if the job writes much.
 .El
 .Ss Lifecycle
 .Bl -tag -width "throttle_interval"
@@ -219,13 +333,14 @@ starts is then only a launcher: when it exits with status 0,
 looks for the daemon and supervises that instead, so that stopping, reloading
 and restarting act on the daemon.
 .Va pid_file
-is the path of the file the daemon writes its process id to; it is removed
-before each start.
+names a regular file containing the daemon PID on its first line.
+The service manages any existing pidfile when it starts.
 .Va pid_name
-is the name of the process, for a daemon that writes no pidfile: the oldest
-process with that name that was left to
-.Xr prowld 8
-is taken.
+selects the oldest matching process left by this launch.
+A temporary process reaper identifies the daemon across forks and changes of
+session or user ID.
+Until adoption succeeds, status reports no daemon PID.
+If the launch fails or is cancelled, the reaper cleans up its descendants.
 The daemon is looked for every 200 milliseconds for up to 10 seconds; if it
 does not appear the job is treated as having failed.
 Only one of the two may be given.
@@ -420,19 +535,52 @@ wildcard.
 .Ss Socket Activation
 The
 .Va sockets
-field is an object mapping logical names to socket descriptions.
-Keys in each description:
+field is an object mapping up to eight logical names to socket descriptions.
+Each description can specify
 .Va type
-(stream, dgram, seqpacket),
-.Va family
-(inet, inet6, unix),
-.Va path
-(AF_UNIX only),
-.Va port
-(inet only),
-.Va host
-(bind address),
+(stream, dgram, seqpacket) and
 .Va backlog .
+.Pp
+Specify either
+.Va path
+for a Unix socket or
+.Va port
+for an Internet socket.
+A Unix socket path must be a nonempty string of at most 103 bytes and
+contain no NUL byte.
+The port must be an integer from 0 through 65535.
+Port 0 requests an ephemeral port.
+An Internet socket can specify
+.Va host
+as a numeric IPv4 or IPv6 address, which selects the address family.
+Omit
+.Va host
+to bind the IPv4 wildcard address.
+.Pp
+Invalid or repeated values for
+.Va root_directory ,
+.Va umask ,
+or a socket's
+.Va path ,
+.Va port ,
+or
+.Va host
+cause the unit to be rejected.
+.Pp
+For Unix sockets,
+.Va mode
+is an octal permission string such as
+.Dq 0660 ,
+.Va owner
+is a user name, and
+.Va group
+is a group name.
+Omitting these fields preserves the ownership and umask used by
+.Xr bind 2 .
+Explicit permissions and replacement of an existing socket require a
+root-owned directory that other users cannot modify.
+An existing regular file or symbolic link at the socket path prevents
+the job from binding.
 .Sh RC.CONF VARIABLES
 .Va program ,
 .Va arguments ,
@@ -456,6 +604,13 @@ and
 .Pa /usr/local/etc/rc.conf.d/ Ns Ar rc_name ,
 with later files overriding earlier ones.
 They are read each time the job is started.
+Either per-service path may also be a directory.
+Its visible regular files are read in filename order.
+.Xr prowld 8
+checks the ownership, permissions, and ACLs of these inputs and their
+directory chains as described in
+.Xr prowld 8 .
+It skips unsafe inputs and retains assignments from earlier trusted files.
 .Bl -tag -width "@name?text@" -compact
 .It Li @name@
 The value, empty if the variable is not set.

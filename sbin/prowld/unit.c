@@ -30,16 +30,18 @@
  * Unit file loading and parsing (UCL/JSON via libucl).
  */
 
+#include <sys/param.h>
+#include <sys/acl.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/un.h>
+#include <arpa/inet.h>
 #include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <grp.h>
-#include <libgen.h>
 #include <netinet/in.h>
 #include <pwd.h>
 #include <signal.h>
@@ -324,6 +326,132 @@ parse_mdns(const ucl_object_t *obj, mdns_config_t *mdns)
 	}
 }
 
+static bool
+parse_optional_string(const ucl_object_t *root, const char *key, char *dest,
+    size_t destsz, const char *path)
+{
+	const ucl_object_t *obj;
+	const char *value;
+	size_t len;
+
+	obj = ucl_object_lookup(root, key);
+	if (obj == NULL)
+		return (true);
+	if (obj->next != NULL ||
+	    !ucl_object_tolstring_safe(obj, &value, &len) || len == 0 ||
+	    len >= destsz || memchr(value, '\0', len) != NULL) {
+		prowl_log(LOG_ERR, "unit %s: invalid %s", path, key);
+		return (false);
+	}
+	memcpy(dest, value, len);
+	dest[len] = '\0';
+	return (true);
+}
+
+static bool
+parse_umask(const ucl_object_t *root, job_t *job)
+{
+	const ucl_object_t *obj;
+	const char *value;
+	size_t len, i;
+	unsigned int bits;
+
+	obj = ucl_object_lookup(root, "umask");
+	if (obj == NULL)
+		return (true);
+	if (obj->next != NULL ||
+	    !ucl_object_tolstring_safe(obj, &value, &len) || len == 0)
+		return (false);
+
+	bits = 0;
+	for (i = 0; i < len; i++) {
+		if (value[i] < '0' || value[i] > '7')
+			return (false);
+		bits = (bits << 3) | (value[i] - '0');
+		if (bits > 0777)
+			return (false);
+	}
+	job->umask_val = (mode_t)bits;
+	job->umask_set = true;
+	return (true);
+}
+
+static bool
+parse_socket_address(const ucl_object_t *obj, prowl_socket_t *sock,
+    const char *path)
+{
+	const ucl_object_t *port;
+	struct in_addr addr;
+	struct in6_addr addr6;
+	int64_t value;
+
+	if (!parse_optional_string(obj, "path", sock->path,
+	    sizeof(((struct sockaddr_un *)0)->sun_path), path) ||
+	    !parse_optional_string(obj, "host", sock->host, sizeof(sock->host),
+	    path))
+		return (false);
+
+	port = ucl_object_lookup(obj, "port");
+	if (sock->path[0] != '\0') {
+		if (port != NULL || sock->host[0] != '\0')
+			return (false);
+		sock->family = AF_UNIX;
+		return (true);
+	}
+	if (port == NULL || port->next != NULL ||
+	    ucl_object_type(port) != UCL_INT)
+		return (false);
+	value = ucl_object_toint(port);
+	if (value < 0 || value > UINT16_MAX)
+		return (false);
+
+	sock->port = (int)value;
+	if (sock->host[0] == '\0' || inet_pton(AF_INET, sock->host, &addr) == 1)
+		sock->family = AF_INET;
+	else if (inet_pton(AF_INET6, sock->host, &addr6) == 1)
+		sock->family = AF_INET6;
+	else
+		return (false);
+	return (true);
+}
+
+static bool
+parse_socket_access(const ucl_object_t *obj, prowl_socket_t *sock,
+    const char *path)
+{
+	char owner[MAXLOGNAME] = "", group[PROWL_LABEL_MAX] = "", mode[5] = "";
+	struct passwd *pw;
+	struct group *gr;
+	unsigned long bits;
+
+	if (!parse_optional_string(obj, "owner", owner, sizeof(owner), path) ||
+	    !parse_optional_string(obj, "group", group, sizeof(group), path) ||
+	    !parse_optional_string(obj, "mode", mode, sizeof(mode), path))
+		return (false);
+	if (sock->family != AF_UNIX && (*owner || *group || *mode))
+		return (false);
+	if (*mode) {
+		bits = strtoul(mode, NULL, 8);
+		if (mode[strspn(mode, "01234567")] != '\0' || bits > 0777)
+			return (false);
+		sock->mode = (mode_t)bits;
+		sock->mode_set = true;
+	}
+	if (*owner) {
+		pw = getpwnam(owner);
+		if (pw == NULL || pw->pw_uid == (uid_t)-1)
+			return (false);
+		sock->owner = pw->pw_uid;
+	}
+	if (*group) {
+		gr = getgrnam(group);
+		if (gr == NULL || gr->gr_gid == (gid_t)-1)
+			return (false);
+		sock->group = gr->gr_gid;
+	}
+	return (true);
+}
+
 /*
  * Parse a single unit file into a new job_t.
  * Returns NULL on error.
@@ -353,17 +481,17 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 	strlcpy(job->label, ucl_object_tostring(obj), sizeof(job->label));
 
 	/* Reject labels that could escape the mask directory path */
-	if (!label_valid(job->label)) {
+	if (!label_valid(ucl_object_tostring(obj))) {
 		prowl_log(LOG_ERR, "unit %s: invalid label '%s', skipping",
 		    path, job->label);
 		job_free(job);
 		return (NULL);
 	}
 
-	/* Check for duplicate */
-	if (job_find_by_label(job->label) != NULL) {
-		prowl_log(LOG_DEBUG, "unit %s: label %s already loaded, "
-		    "skipping (override applied earlier)", path, job->label);
+	if (!parse_optional_string(root, "user", job->user, sizeof(job->user),
+	    path) ||
+	    !parse_optional_string(root, "group", job->group, sizeof(job->group),
+	    path)) {
 		job_free(job);
 		return (NULL);
 	}
@@ -632,29 +760,17 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 		    sizeof(job->working_directory));
 
 	/* root_directory */
-	obj = ucl_object_lookup(root, "root_directory");
-	if (obj != NULL && ucl_object_type(obj) == UCL_STRING)
-		strlcpy(job->root_directory, ucl_object_tostring(obj),
-		    sizeof(job->root_directory));
-
-	/* user */
-	obj = ucl_object_lookup(root, "user");
-	if (obj != NULL && ucl_object_type(obj) == UCL_STRING)
-		strlcpy(job->user, ucl_object_tostring(obj),
-		    sizeof(job->user));
-
-	/* group */
-	obj = ucl_object_lookup(root, "group");
-	if (obj != NULL && ucl_object_type(obj) == UCL_STRING)
-		strlcpy(job->group, ucl_object_tostring(obj),
-		    sizeof(job->group));
+	if (!parse_optional_string(root, "root_directory", job->root_directory,
+	    sizeof(job->root_directory), path)) {
+		job_free(job);
+		return (NULL);
+	}
 
 	/* umask */
-	obj = ucl_object_lookup(root, "umask");
-	if (obj != NULL && ucl_object_type(obj) == UCL_STRING) {
-		job->umask_val = (mode_t)strtol(ucl_object_tostring(obj),
-		    NULL, 8);
-		job->umask_set = true;
+	if (!parse_umask(root, job)) {
+		prowl_log(LOG_ERR, "unit %s: invalid umask", path);
+		job_free(job);
+		return (NULL);
 	}
 
 	/* run_at_load */
@@ -819,6 +935,18 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 	job->provides_count = parse_str_array(arr, job->provides,
 	    PROWL_PROVIDES_MAX);
 
+	/* Console input while PID 1 boots (passphrase prompts) */
+	obj = ucl_object_lookup(root, "interactive");
+	if (obj != NULL) {
+		if (ucl_object_type(obj) != UCL_BOOLEAN) {
+			prowl_log(LOG_ERR, "unit %s: invalid interactive",
+			    path);
+			job_free(job);
+			return (NULL);
+		}
+		job->interactive = ucl_object_toboolean(obj);
+	}
+
 	/* I/O paths */
 	obj = ucl_object_lookup(root, "standard_in_path");
 	if (obj != NULL && ucl_object_type(obj) == UCL_STRING)
@@ -891,23 +1019,37 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 	 *   }
 	 */
 	obj = ucl_object_lookup(root, "sockets");
-	if (obj != NULL && ucl_object_type(obj) == UCL_OBJECT) {
+	if (obj != NULL) {
 		const ucl_object_t *sobj;
-		ucl_object_iter_t sit = NULL;
+		ucl_object_iter_t sit;
 
-		while ((sobj = ucl_object_iterate(obj, &sit, true)) != NULL) {
+		if (obj->next != NULL || ucl_object_type(obj) != UCL_OBJECT) {
+			prowl_log(LOG_ERR, "unit %s: invalid sockets", path);
+			job_free(job);
+			return (NULL);
+		}
+		sit = ucl_object_iterate_new(obj);
+		if (sit == NULL) {
+			job_free(job);
+			return (NULL);
+		}
+
+		while ((sobj = ucl_object_iterate_safe(sit, true)) != NULL) {
 			const char *sname;
 			const ucl_object_t *f;
 			prowl_socket_t *sock;
 
 			if (job->sockets_count >= PROWL_SOCKETS_MAX) {
-				prowl_log(LOG_WARNING,
-				    "unit %s: too many sockets (max %d), "
-				    "ignoring remaining", path, PROWL_SOCKETS_MAX);
+				prowl_log(LOG_ERR, "unit %s: too many sockets "
+				    "(max %d)", path, PROWL_SOCKETS_MAX);
 				break;
 			}
-			if (ucl_object_type(sobj) != UCL_OBJECT)
-				continue;
+			if (sobj->next != NULL ||
+			    ucl_object_type(sobj) != UCL_OBJECT) {
+				prowl_log(LOG_ERR, "unit %s: invalid socket "
+				    "description", path);
+				break;
+			}
 
 			sname = ucl_object_key(sobj);
 			sock = &job->sockets[job->sockets_count];
@@ -916,8 +1058,9 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 
 			/* Defaults */
 			sock->socktype = SOCK_STREAM;
-			sock->family   = AF_UNSPEC;
 			sock->backlog  = 0;	/* SOMAXCONN */
+			sock->owner = (uid_t)-1;
+			sock->group = (gid_t)-1;
 
 			/* type: "stream" (default), "dgram", "seqpacket" */
 			f = ucl_object_lookup(sobj, "type");
@@ -930,32 +1073,10 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 				/* else: stream (default) */
 			}
 
-			/* path → AF_UNIX */
-			f = ucl_object_lookup(sobj, "path");
-			if (f != NULL && ucl_object_type(f) == UCL_STRING) {
-				strlcpy(sock->path, ucl_object_tostring(f),
-				    sizeof(sock->path));
-				sock->family = AF_UNIX;
-			}
-
-			/* port → AF_INET or AF_INET6 */
-			f = ucl_object_lookup(sobj, "port");
-			if (f != NULL) {
-				sock->port = (int)ucl_object_toint(f);
-				if (sock->family == AF_UNSPEC)
-					sock->family = AF_INET;
-			}
-
-			/* host → refines family */
-			f = ucl_object_lookup(sobj, "host");
-			if (f != NULL && ucl_object_type(f) == UCL_STRING) {
-				strlcpy(sock->host, ucl_object_tostring(f),
-				    sizeof(sock->host));
-				/* Auto-detect IPv6 if host contains ':' */
-				if (strchr(sock->host, ':') != NULL)
-					sock->family = AF_INET6;
-				else if (sock->family == AF_UNSPEC)
-					sock->family = AF_INET;
+			if (!parse_socket_address(sobj, sock, path)) {
+				prowl_log(LOG_ERR, "unit %s: invalid address "
+				    "for socket %s", path, sname);
+				break;
 			}
 
 			/* backlog */
@@ -963,15 +1084,17 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 			if (f != NULL)
 				sock->backlog = (int)ucl_object_toint(f);
 
-			/* Require a usable address */
-			if (sock->family == AF_UNSPEC) {
-				prowl_log(LOG_WARNING,
-				    "unit %s: socket '%s' has no path or port, "
-				    "skipping", path, sname);
-				continue;
+			if (!parse_socket_access(sobj, sock, path)) {
+				prowl_log(LOG_ERR, "%s: invalid access settings "
+				    "for socket %s", job->label, sname);
+				break;
 			}
-
 			job->sockets_count++;
+		}
+		ucl_object_iterate_free(sit);
+		if (obj->len != (unsigned int)job->sockets_count) {
+			job_free(job);
+			return (NULL);
 		}
 	}
 
@@ -1008,11 +1131,252 @@ instance_valid(const char *inst)
 }
 
 /*
- * Add the unit file at path to the parser.  For a template instance every
+ * NFSv4 ACLs can grant mutation rights that are absent from st_mode.
+ * Check grants in order. An earlier deny for everyone or the same
+ * principal masks a grant; membership in unrelated groups is optional.
+ */
+static int
+trusted_acl_check(acl_t acl, const struct stat *sb, bool sticky)
+{
+	struct {
+		acl_tag_t tag;
+		uid_t id;
+		acl_perm_t perms;
+	} denies[ACL_MAX_ENTRIES];
+	acl_entry_t ace;
+	acl_entry_type_t type;
+	acl_flagset_t flags;
+	acl_permset_t perms;
+	acl_perm_t mutation, rights;
+	acl_tag_t tag;
+	uid_t id, *qualifier;
+	size_t i, ndenies;
+	int entry;
+
+	mutation = ACL_WRITE_ACL | ACL_WRITE_OWNER | ACL_WRITE_ATTRIBUTES |
+	    ACL_WRITE_NAMED_ATTRS | ACL_DELETE;
+	if (S_ISDIR(sb->st_mode))
+		mutation |= ACL_DELETE_CHILD;
+	if (!sticky)
+		mutation |= ACL_WRITE_DATA | ACL_APPEND_DATA;
+
+	ndenies = 0;
+	for (entry = acl_get_entry(acl, ACL_FIRST_ENTRY, &ace); entry == 1;
+	    entry = acl_get_entry(acl, ACL_NEXT_ENTRY, &ace)) {
+		if (acl_get_entry_type_np(ace, &type) == -1 ||
+		    acl_get_flagset_np(ace, &flags) == -1 ||
+		    acl_get_permset(ace, &perms) == -1 ||
+		    acl_get_tag_type(ace, &tag) == -1)
+			return (errno);
+		if ((type != ACL_ENTRY_TYPE_ALLOW && type != ACL_ENTRY_TYPE_DENY) ||
+		    acl_get_flag_np(flags, ACL_ENTRY_INHERIT_ONLY) == 1)
+			continue;
+		rights = (acl_perm_t)*perms & mutation;
+		if (rights == 0 || tag == ACL_USER_OBJ)
+			continue;
+		id = 0;
+		if (tag == ACL_GROUP_OBJ) {
+			tag = ACL_GROUP;
+			id = sb->st_gid;
+		} else if (tag == ACL_USER || tag == ACL_GROUP) {
+			qualifier = acl_get_qualifier(ace);
+			if (qualifier == NULL)
+				return (errno);
+			id = *qualifier;
+			acl_free(qualifier);
+			if (tag == ACL_USER && id == 0)
+				continue;
+		} else if (tag != ACL_EVERYONE)
+			return (EINVAL);
+
+		if (type == ACL_ENTRY_TYPE_DENY) {
+			if (ndenies == nitems(denies))
+				return (EINVAL);
+			denies[ndenies].tag = tag;
+			denies[ndenies].id = id;
+			denies[ndenies++].perms = rights;
+			continue;
+		}
+		for (i = 0; i < ndenies; i++)
+			if (denies[i].tag == ACL_EVERYONE ||
+			    (denies[i].tag == tag && denies[i].id == id))
+				rights &= ~denies[i].perms;
+		if (rights != 0)
+			return (EPERM);
+	}
+	return (entry == -1 ? errno : 0);
+}
+
+static int
+trusted_check_acl_fd(int fd, const struct stat *sb, bool sticky)
+{
+	acl_t acl;
+	long supported;
+	int error;
+
+	errno = 0;
+	supported = fpathconf(fd, _PC_ACL_NFS4);
+	if (supported == 0)
+		return (0);
+	if (supported == -1) {
+		if (errno == EINVAL || errno == EOPNOTSUPP)
+			return (0);
+		if (errno != 0)
+			return (errno);
+		/* An indeterminate limit does not establish that ACLs are absent. */
+	}
+	acl = acl_get_fd_np(fd, ACL_TYPE_NFS4);
+	if (acl == NULL)
+		return (errno);
+	error = trusted_acl_check(acl, sb, sticky);
+	acl_free(acl);
+	return (error);
+}
+
+/*
+ * A root-owned sticky ancestor (such as /tmp) protects root-owned
+ * entries from replacement when deletion is not explicitly granted.
+ */
+static int
+trusted_check_fd(int fd, bool directory, bool ancestor, bool executable)
+{
+	struct stat sb;
+	int error;
+
+	if (fd == -1)
+		return (-1);
+	if (fstat(fd, &sb) == -1)
+		error = errno;
+	else if (directory ? !S_ISDIR(sb.st_mode) : !S_ISREG(sb.st_mode))
+		error = EFTYPE;
+	else if (sb.st_uid != 0 ||
+	    ((sb.st_mode & (S_IWGRP | S_IWOTH)) != 0 &&
+	    !(ancestor && (sb.st_mode & S_ISVTX) != 0)))
+		error = EPERM;
+	else if (executable &&
+	    (sb.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) == 0)
+		error = ENOEXEC;
+	else if ((error = trusted_check_acl_fd(fd, &sb,
+	    ancestor && (sb.st_mode & S_ISVTX) != 0)) == 0)
+		return (fd);
+	close(fd);
+	errno = error;
+	return (-1);
+}
+
+int
+trusted_open_dir(const char *path)
+{
+	char full[PROWL_PATH_MAX], cwd[PROWL_PATH_MAX];
+	char *rest, *name;
+	int error, fd, nextfd, n;
+
+	if (path[0] == '/') {
+		n = snprintf(full, sizeof(full), "%s", path);
+	} else {
+		if (getcwd(cwd, sizeof(cwd)) == NULL)
+			return (-1);
+		n = snprintf(full, sizeof(full), "%s/%s", cwd, path);
+	}
+	if (n < 0 || (size_t)n >= sizeof(full)) {
+		errno = ENAMETOOLONG;
+		return (-1);
+	}
+
+	rest = full;
+	while (*rest == '/')
+		rest++;
+	fd = trusted_check_fd(open("/", O_RDONLY | O_DIRECTORY | O_CLOEXEC),
+	    true, *rest != '\0', false);
+	while (fd != -1 && *rest != '\0') {
+		name = strsep(&rest, "/");
+		if (rest == NULL)
+			rest = name + strlen(name);
+		while (*rest == '/')
+			rest++;
+		nextfd = openat(fd, name,
+		    O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+		error = errno;
+		close(fd);
+		errno = error;
+		fd = trusted_check_fd(nextfd, true, *rest != '\0', false);
+	}
+	return (fd);
+}
+
+int
+trusted_open_file_at(int dirfd, const char *name, bool executable)
+{
+	struct stat sb;
+	int fd = -1, pathfd, error;
+
+	if (strchr(name, '/') != NULL) {
+		errno = EINVAL;
+		return (-1);
+	}
+	/* Inspect the leaf without invoking a FIFO or device open routine. */
+	pathfd = openat(dirfd, name, O_PATH | O_NOFOLLOW | O_CLOEXEC);
+	if (pathfd == -1)
+		return (-1);
+	if (fstat(pathfd, &sb) == 0) {
+		if (S_ISREG(sb.st_mode))
+			fd = openat(pathfd, "", O_EMPTY_PATH | O_RDONLY | O_CLOEXEC);
+		else
+			errno = S_ISLNK(sb.st_mode) ? ELOOP : EFTYPE;
+	}
+	error = errno;
+	close(pathfd);
+	errno = error;
+	return (trusted_check_fd(fd, false, false, executable));
+}
+
+int
+trusted_open_file(const char *path, bool executable)
+{
+	char parent[PROWL_PATH_MAX];
+	const char *name;
+	int dirfd, fd, error;
+	size_t len;
+
+	name = strrchr(path, '/');
+	if (name == NULL) {
+		dirfd = trusted_open_dir(".");
+		name = path;
+	} else {
+		len = name == path ? 1 : (size_t)(name - path);
+		if (len >= sizeof(parent)) {
+			errno = ENAMETOOLONG;
+			return (-1);
+		}
+		memcpy(parent, path, len);
+		parent[len] = '\0';
+		dirfd = trusted_open_dir(parent);
+		name++;
+	}
+	if (dirfd == -1)
+		return (-1);
+	fd = trusted_open_file_at(dirfd, name, executable);
+	error = errno;
+	close(dirfd);
+	errno = error;
+	return (fd);
+}
+
+bool
+trusted_ucl_add_fd(struct ucl_parser *parser, int fd, const char *path)
+{
+	/* Preserve FILENAME and CURDIR for ordinary UCL files. */
+	return (ucl_parser_set_filevars(parser, path, true) &&
+	    ucl_parser_add_fd(parser, fd));
+}
+
+/*
+ * Add the opened unit file to the parser.  For a template instance every
  * "%i" in the file is replaced by the instance name and "%%" by "%".
  */
 static bool
-add_unit_file(struct ucl_parser *parser, const char *path, const char *inst)
+add_unit_fd(struct ucl_parser *parser, int fd, const char *path,
+    const char *inst, enum ucl_duplicate_strategy strategy)
 {
 	struct stat sb;
 	char *in, *out, *o;
@@ -1020,31 +1384,26 @@ add_unit_file(struct ucl_parser *parser, const char *path, const char *inst)
 	size_t ilen;
 	ssize_t n;
 	bool ok;
-	int fd;
 
+	if (!ucl_parser_set_filevars(parser, path, true))
+		return (false);
 	if (inst == NULL)
-		return (ucl_parser_add_file(parser, path));
+		return (ucl_parser_add_fd_full(parser, fd, 0, strategy,
+		    UCL_PARSE_UCL));
 
-	fd = open(path, O_RDONLY | O_NOFOLLOW);
-	if (fd == -1)
+	if (fstat(fd, &sb) == -1 || sb.st_size < 0 ||
+	    sb.st_size > UNIT_FILE_MAX)
 		return (false);
-	if (fstat(fd, &sb) == -1 || !S_ISREG(sb.st_mode) ||
-	    sb.st_size > UNIT_FILE_MAX) {
-		close(fd);
-		return (false);
-	}
 	ilen = strlen(inst);
 	in = malloc((size_t)sb.st_size + 1);
 	out = malloc((size_t)sb.st_size * (ilen > 1 ? ilen : 1) + 1);
 	if (in == NULL || out == NULL) {
 		free(in);
 		free(out);
-		close(fd);
 		return (false);
 	}
-	n = read(fd, in, (size_t)sb.st_size);
-	close(fd);
-	if (n < 0 || n != sb.st_size) {
+	n = pread(fd, in, (size_t)sb.st_size, 0);
+	if (n < 0 || n != sb.st_size || memchr(in, '\0', (size_t)n) != NULL) {
 		free(in);
 		free(out);
 		return (false);
@@ -1064,220 +1423,378 @@ add_unit_file(struct ucl_parser *parser, const char *path, const char *inst)
 			*o++ = *p;
 	}
 	*o = '\0';
-	ok = ucl_parser_add_chunk(parser, (const unsigned char *)out,
-	    (size_t)(o - out));
+	ok = ucl_parser_add_chunk_full(parser, (const unsigned char *)out,
+	    (size_t)(o - out), 0, strategy, UCL_PARSE_UCL);
 	free(in);
 	free(out);
 	return (ok);
 }
 
+/*
+ * Rejected native policy must continue to shadow lower definitions and
+ * rc.d scripts without exposing the rejected job to the scheduler or IPC.
+ * Only trusted unit contents and directory entry names can make claims.
+ */
+#define CLAIM_FILE	0x01
+#define CLAIM_LABEL	0x02
+#define CLAIM_PROVIDER	0x04
+#define CLAIM_SELECTED	0x08
+
+struct unit_claim {
+	SLIST_ENTRY(unit_claim) link;
+	unsigned flags;
+	char name[];
+};
+static SLIST_HEAD(, unit_claim) unit_claims =
+    SLIST_HEAD_INITIALIZER(unit_claims);
+/* Keep the winning template by declared label, independently of filename. */
+struct unit_template {
+	STAILQ_ENTRY(unit_template) link;
+	char pattern[2 * PROWL_LABEL_MAX];
+	char path[PROWL_PATH_MAX];	/* empty for rejected policy */
+};
+static STAILQ_HEAD(, unit_template) templates = STAILQ_HEAD_INITIALIZER(templates);
+static bool scan_incomplete, admin_dropins, loading_all;
+
+static const struct unit_template *template_for(const char *, const char *);
+
+static unsigned
+claims_for(const char *name)
+{
+	struct unit_claim *claim;
+
+	SLIST_FOREACH(claim, &unit_claims, link) {
+		if (strcmp(claim->name, name) == 0)
+			return (claim->flags);
+	}
+	return (0);
+}
+
+static void
+claim_name(const char *name, unsigned flags)
+{
+	struct unit_claim *claim;
+	size_t size = strlen(name) + 1;
+
+	SLIST_FOREACH(claim, &unit_claims, link) {
+		if (strcmp(claim->name, name) == 0) {
+			claim->flags |= flags;
+			return;
+		}
+	}
+	claim = malloc(sizeof(*claim) + size);
+	if (claim == NULL) {
+		prowl_log(LOG_ERR, "cannot reserve native unit name %s", name);
+		scan_incomplete = true;
+		return;
+	}
+	memcpy(claim->name, name, size);
+	claim->flags = flags;
+	SLIST_INSERT_HEAD(&unit_claims, claim, link);
+}
+
+bool
+unit_label_reserved(const char *label)
+{
+	return (scan_incomplete ||
+	    (claims_for(label) & (CLAIM_SELECTED | CLAIM_LABEL)) != 0);
+}
+
+bool
+unit_provider_rejected(const char *name)
+{
+	return (scan_incomplete || (claims_for(name) & CLAIM_PROVIDER) != 0);
+}
+
+static void
+reserve_identity(const char *label, const ucl_object_t *rc,
+    const ucl_object_t *provides)
+{
+	const ucl_object_t *entry;
+	ucl_object_iter_t iter = NULL;
+	char rc_name[PROWL_LABEL_MAX];
+
+	claim_name(label, CLAIM_LABEL);
+	if (rc != NULL && ucl_object_type(rc) == UCL_STRING)
+		claim_name(ucl_object_tostring(rc), CLAIM_PROVIDER);
+	else {
+		derive_rc_name(label, rc_name, sizeof(rc_name));
+		claim_name(rc_name, CLAIM_PROVIDER);
+	}
+	if (provides != NULL && ucl_object_type(provides) == UCL_ARRAY) {
+		while ((entry = ucl_object_iterate(provides, &iter, true)) != NULL) {
+			if (ucl_object_type(entry) == UCL_STRING)
+				claim_name(ucl_object_tostring(entry),
+				    CLAIM_PROVIDER);
+		}
+	}
+}
+
 static int
-unit_load_file_inst(const char *path, const char *inst)
+is_unit_entry(const struct dirent *de)
+{
+	size_t len = strlen(de->d_name);
+
+	return (len >= 5 && strcmp(de->d_name + len - 5, ".unit") == 0);
+}
+
+/* Each fragment is a complete UCL/JSON document. Replace whole fields. */
+static bool
+merge_dropin(ucl_object_t *root, int fd, const char *path, const char *inst)
 {
 	struct ucl_parser *parser;
-	ucl_object_t *root;
-	struct stat sb;
-	job_t *job;
-	int ret = 0;
+	ucl_object_t *fragment, *value;
+	const ucl_object_t *field;
+	ucl_object_iter_t iter = NULL;
+	const char *key;
+	size_t len;
+	bool ok;
 
-	/* Reject unit files not owned by root or writable by others */
-	if (lstat(path, &sb) == -1) {
-		prowl_log(LOG_WARNING, "unit_load_file %s: lstat: %m", path);
-		return (-1);
+	parser = ucl_parser_new(UCL_PARSER_NO_FILEVARS);
+	if (parser == NULL)
+		return (false);
+	ok = add_unit_fd(parser, fd, path, inst, UCL_DUPLICATE_APPEND);
+	if (!ok)
+		prowl_log(LOG_ERR, "invalid drop-in %s at line %u, column %u",
+		    path, ucl_parser_get_linenum(parser),
+		    ucl_parser_get_column(parser));
+	fragment = ok ? ucl_parser_get_object(parser) : NULL;
+	ucl_parser_free(parser);
+	if (fragment == NULL)
+		return (ok);	/* empty fragment */
+	ok = ucl_object_type(fragment) == UCL_OBJECT;
+	if (!ok)
+		prowl_log(LOG_ERR, "drop-in %s must contain an object", path);
+	while (ok && (field = ucl_object_iterate(fragment, &iter, true)) != NULL) {
+		key = ucl_object_keyl(field, &len);
+		if (field->next != NULL) {
+			prowl_log(LOG_ERR, "duplicate field in drop-in %s", path);
+			ok = false;
+			break;
+		}
+		value = ucl_object_ref(field);
+		if (value == NULL) {
+			ok = false;
+			break;
+		}
+		/* replace_key also inserts absent keys and then returns false. */
+		(void)ucl_object_replace_key(root, value, key, len, false);
 	}
-	if (!S_ISREG(sb.st_mode)) {
-		prowl_log(LOG_WARNING,
-		    "unit_load_file %s: not a regular file, skipping", path);
-		return (-1);
+	ucl_object_unref(fragment);
+	return (ok);
+}
+
+static bool
+add_dropin(ucl_object_t *root, int dfd, const char *dir, const char *name,
+    const char *inst)
+{
+	char path[PROWL_PATH_MAX];
+	int fd;
+	bool ok;
+
+	if (snprintf(path, sizeof(path), "%s/%s", dir, name) >=
+	    (int)sizeof(path)) {
+		prowl_log(LOG_ERR, "drop-in path too long in %s", dir);
+		return (false);
 	}
-	if (sb.st_uid != 0) {
-		prowl_log(LOG_WARNING,
-		    "unit_load_file %s: not owned by root, skipping", path);
-		return (-1);
+	fd = trusted_open_file_at(dfd, name, false);
+	if (fd == -1) {
+		prowl_log(LOG_ERR, "drop-in %s: %m", path);
+		return (false);
 	}
-	if (sb.st_mode & S_IWOTH) {
-		prowl_log(LOG_WARNING,
-		    "unit_load_file %s: world-writable, skipping", path);
-		return (-1);
+	ok = merge_dropin(root, fd, path, inst);
+	close(fd);
+	return (ok);
+}
+
+/* Read fragments in filename order from the directory that was checked. */
+static bool
+add_dropin_dir(ucl_object_t *root, const char *parent, const char *key,
+    const char *inst)
+{
+	struct dirent **names;
+	char dir[PROWL_PATH_MAX];
+	int dfd, count, i;
+	bool ok;
+
+	if (snprintf(dir, sizeof(dir), "%s/%s.d", parent, key) >=
+	    (int)sizeof(dir)) {
+		prowl_log(LOG_ERR, "drop-in path too long for %s", key);
+		return (false);
 	}
+	dfd = trusted_open_dir(dir);
+	if (dfd == -1) {
+		if (errno == ENOENT)
+			return (true);
+		prowl_log(LOG_ERR, "drop-in directory %s: %m", dir);
+		return (false);
+	}
+	count = fdscandir(dfd, &names, is_unit_entry, alphasort);
+	ok = count >= 0;
+	if (!ok)
+		prowl_log(LOG_ERR, "read drop-in directory %s: %m", dir);
+	for (i = 0; i < count; i++) {
+		if (ok)
+			ok = add_dropin(root, dfd, dir, names[i]->d_name, inst);
+		free(names[i]);
+	}
+	if (count >= 0)
+		free(names);
+	close(dfd);
+	return (ok);
+}
+
+static bool
+add_dropins(ucl_object_t *root, const char *path, const char *label,
+    const char *inst)
+{
+	char parent[PROWL_PATH_MAX], template[NAME_MAX + 1], *slash;
+	const char *dirs[2], *base;
+	size_t len;
+	int i, n = 1;
+
+	if (strlcpy(parent, path, sizeof(parent)) >= sizeof(parent))
+		return (false);
+	slash = strrchr(parent, '/');
+	if (slash == NULL)
+		return (false);
+	base = slash + 1;
+	len = strlen(base) - strlen(".unit");
+	if (len >= sizeof(template))
+		return (false);
+	memcpy(template, base, len);
+	template[len] = '\0';
+	*slash = '\0';
+	dirs[0] = parent;
+	if (admin_dropins && strcmp(parent, UNIT_DIR_OVERRIDE) != 0)
+		dirs[n++] = UNIT_DIR_OVERRIDE;
+	for (i = 0; i < n; i++) {
+		if (inst != NULL && !add_dropin_dir(root, dirs[i], template, inst))
+			return (false);
+		if (!add_dropin_dir(root, dirs[i], label, inst))
+			return (false);
+	}
+	return (true);
+}
+
+/*
+ * An active process retains its stop policy. Refresh the definition at the
+ * next rescan after it exits. Keep this job's address stable for events and
+ * queued IPC requests in all states.
+ */
+static bool
+install_unit(job_t *job, ucl_object_t *root, job_t *existing, const char *inst)
+{
+	job_t *before;
+
+	job->unit_config = ucl_object_emit(root, UCL_EMIT_JSON_COMPACT);
+	if (inst != NULL)
+		job->template_instance = strdup(inst);
+	if (job->unit_config == NULL ||
+	    (inst != NULL && job->template_instance == NULL)) {
+		job_free(job);
+		return (false);
+	}
+	if (existing == NULL) {
+		TAILQ_FOREACH(before, &g_jobs, entries) {
+			if (before->type == JOB_TYPE_RCSHIM)
+				break;
+		}
+		if (before == NULL)
+			TAILQ_INSERT_TAIL(&g_jobs, job, entries);
+		else
+			TAILQ_INSERT_BEFORE(before, job, entries);
+	} else if (existing->unit_config != NULL &&
+	    strcmp((const char *)existing->unit_config,
+	    (const char *)job->unit_config) == 0) {
+		existing->policy_blocked = false;
+		existing->reload_on_exit = false;
+		job_free(job);
+	} else if (existing->pid > 0 || existing->start_pending ||
+	    existing->mdns_pid > 0 || existing->state == JOB_STATE_STOPPING ||
+	    (existing->state == JOB_STATE_COMPLETED &&
+	    (existing->stop_argc > 0 || existing->type == JOB_TYPE_RCSHIM))) {
+		existing->policy_blocked = true;
+		existing->reload_on_exit = true;
+		job_free(job);
+	} else
+		supervisor_replace_unit(existing, job);
+	return (true);
+}
+
+/*
+ * Get the identity from the base before adding any overrides. Reserve it
+ * even if the service schema or a fragment is rejected. The parser owns
+ * the merged object and can replace its fields as fragments are read.
+ */
+static int
+unit_load_file_inst(int fd, const char *path, const char *inst, bool shadowed)
+{
+	struct ucl_parser *parser;
+	ucl_object_t *root, *base_rc, *base_provides;
+	const ucl_object_t *obj;
+	const struct unit_template *source;
+	char label[PROWL_LABEL_MAX];
+	job_t *job, *existing;
+	int ret = -1;
 
 	parser = ucl_parser_new(UCL_PARSER_NO_FILEVARS);
 	if (parser == NULL) {
-		prowl_log(LOG_ERR, "ucl_parser_new failed");
+		scan_incomplete = true;
 		return (-1);
 	}
-
-	if (!add_unit_file(parser, path, inst)) {
-		/*
-		 * Log only a bounded prefix of the parser error.  UCL error
-		 * strings can include surrounding token text from the file,
-		 * which may contain secret values from environment= blocks.
-		 */
-		prowl_log(LOG_ERR, "unit_load_file %s: %.128s", path,
-		    ucl_parser_get_error(parser));
-		ucl_parser_free(parser);
-		return (-1);
+	if (!add_unit_fd(parser, fd, path, inst, UCL_DUPLICATE_APPEND) ||
+	    (root = ucl_parser_get_object(parser)) == NULL) {
+		prowl_log(LOG_ERR, "cannot parse native unit %s", path);
+		goto done;
 	}
-
-	root = ucl_parser_get_object(parser);
-	ucl_parser_free(parser);
-
-	if (root == NULL) {
-		prowl_log(LOG_ERR, "unit_load_file %s: empty document", path);
-		return (-1);
+	obj = ucl_object_lookup(root, "label");
+	if (ucl_object_type(root) != UCL_OBJECT || obj == NULL ||
+	    ucl_object_type(obj) != UCL_STRING ||
+	    !label_valid(ucl_object_tostring(obj))) {
+		prowl_log(LOG_ERR, "missing or invalid unit label in %s", path);
+		goto release;
 	}
-
-	job = unit_parse_obj(root, path);
-	if (job == NULL) {
-		ucl_object_unref(root);
-		return (-1);
+	strlcpy(label, ucl_object_tostring(obj), sizeof(label));
+	/* A filename alias cannot instantiate a lower template indirectly. */
+	source = inst != NULL ? template_for(label, inst) : NULL;
+	if (!shadowed && source != NULL && strcmp(path, source->path) != 0)
+		goto release;
+	existing = job_find_by_label(label);
+	if ((claims_for(label) & CLAIM_SELECTED) != 0 ||
+	    (!loading_all && existing != NULL) ||
+	    (existing != NULL && existing->unit_config == NULL &&
+	    existing->type != JOB_TYPE_RCSHIM)) {
+		ret = 0;
+		goto release;
 	}
-
-	/*
-	 * Drop-in override support (§6.1): check for a <label>.d/ directory
-	 * and merge any .unit files found there.
-	 */
-	char dropin_dir[PROWL_PATH_MAX];
-	char *parent = strdup(path);
-	char *dname = dirname(parent);
-	if (inst != NULL) {
-		char *base = strdup(path);
-		char *bname = basename(base);
-		size_t blen = strlen(bname);
-
-		/* A template's drop-ins live in <name>@.d */
-		if (blen > 5)
-			blen -= 5;
-		snprintf(dropin_dir, sizeof(dropin_dir), "%s/%.*s.d", dname,
-		    (int)blen, bname);
-		free(base);
-	} else
-		snprintf(dropin_dir, sizeof(dropin_dir), "%s/%s.d", dname,
-		    job->label);
-	free(parent);
-
-	{
-		int dfd;
-		struct stat dsb;
-		DIR *ddir;
-
-		/*
-		 * Open the drop-in directory with O_NOFOLLOW|O_DIRECTORY to
-		 * prevent symlink attacks between the lstat check and opendir.
-		 * fstat on the resulting fd gives the definitive security check.
-		 */
-		dfd = open(dropin_dir, O_RDONLY | O_DIRECTORY | O_NOFOLLOW);
-		if (dfd >= 0) {
-			if (fstat(dfd, &dsb) == -1) {
-				close(dfd);
-				goto skip_dropins;
-			}
-			if (dsb.st_uid != 0) {
-				prowl_log(LOG_WARNING,
-				    "drop-in %s not owned by root, skipping",
-				    dropin_dir);
-				close(dfd);
-				goto skip_dropins;
-			}
-			if (dsb.st_mode & S_IWOTH) {
-				prowl_log(LOG_WARNING,
-				    "drop-in %s is world-writable, skipping",
-				    dropin_dir);
-				close(dfd);
-				goto skip_dropins;
-			}
-
-			ddir = fdopendir(dfd);
-			if (ddir != NULL) {
-				struct dirent *de;
-				bool has_dropins = false;
-
-				prowl_log(LOG_DEBUG, "checking for drop-ins in %s",
-				    dropin_dir);
-
-				while ((de = readdir(ddir)) != NULL) {
-					size_t nlen = strlen(de->d_name);
-					if (nlen < 5 ||
-					    strcmp(de->d_name + nlen - 5,
-					    ".unit") != 0)
-						continue;
-					/* Reject names containing '/' */
-					if (strchr(de->d_name, '/') != NULL)
-						continue;
-					has_dropins = true;
-					break;
-				}
-				rewinddir(ddir);
-
-				if (has_dropins) {
-					ucl_object_unref(root);
-					parser = ucl_parser_new(
-					    UCL_PARSER_NO_FILEVARS);
-					if (!add_unit_file(parser, path,
-					    inst)) {
-						prowl_log(LOG_WARNING,
-						    "drop-in re-parse %s: %.128s",
-						    path,
-						    ucl_parser_get_error(parser));
-						ucl_parser_free(parser);
-						closedir(ddir);
-						goto skip_dropins;
-					}
-
-					while ((de = readdir(ddir)) != NULL) {
-						size_t nlen;
-						char dpath[PROWL_PATH_MAX];
-
-						nlen = strlen(de->d_name);
-						if (nlen < 5 ||
-						    strcmp(de->d_name + nlen - 5,
-						    ".unit") != 0)
-							continue;
-						if (strchr(de->d_name, '/') !=
-						    NULL)
-							continue;
-
-						snprintf(dpath, sizeof(dpath),
-						    "%s/%s", dropin_dir,
-						    de->d_name);
-
-						if (!add_unit_file(parser,
-						    dpath, inst)) {
-							prowl_log(LOG_WARNING,
-							    "drop-in %s: %.128s",
-							    dpath,
-							    ucl_parser_get_error(
-							    parser));
-							continue;
-						}
-						prowl_log(LOG_DEBUG,
-						    "applied drop-in %s", dpath);
-					}
-
-					root = ucl_parser_get_object(parser);
-					ucl_parser_free(parser);
-
-					if (root != NULL) {
-						job_t *newjob = unit_parse_obj(
-						    root, path);
-						if (newjob != NULL) {
-							job_free(job);
-							job = newjob;
-						}
-					}
-				}
-				closedir(ddir);
-			} else {
-				close(dfd);
-			}
-		}
+	base_rc = ucl_object_ref(ucl_object_lookup(root, "rc_name"));
+	base_provides = ucl_object_ref(ucl_object_lookup(root, "provides"));
+	job = NULL;
+	if (!shadowed && (claims_for(label) & CLAIM_LABEL) == 0 &&
+	    add_dropins(root, path, label, inst)) {
+		obj = ucl_object_lookup(root, "label");
+		if (obj != NULL && ucl_object_type(obj) == UCL_STRING &&
+		    strcmp(ucl_object_tostring(obj), label) == 0)
+			job = unit_parse_obj(root, path);
+		else
+			prowl_log(LOG_ERR, "drop-in changed label of %s", path);
 	}
-
-skip_dropins:
+	if (job == NULL || !install_unit(job, root, existing, inst)) {
+		reserve_identity(label, base_rc, base_provides);
+		reserve_identity(label, ucl_object_lookup(root, "rc_name"),
+		    ucl_object_lookup(root, "provides"));
+	} else {
+		claim_name(label, CLAIM_SELECTED);
+		prowl_log(LOG_DEBUG, "loaded unit %s from %s", label, path);
+		ret = 0;
+	}
+	ucl_object_unref(base_rc);
+	ucl_object_unref(base_provides);
+release:
 	ucl_object_unref(root);
-	TAILQ_INSERT_TAIL(&g_jobs, job, entries);
-	prowl_log(LOG_DEBUG, "loaded unit %s from %s", job->label, path);
-
+done:
+	ucl_parser_free(parser);
 	return (ret);
 }
 
@@ -1289,34 +1806,91 @@ is_template_name(const char *name)
 	return (len > 6 && strcmp(name + len - 6, "@.unit") == 0);
 }
 
+/* Apply the same substitution used when parsing the full template. */
+static bool
+template_label(const char *pattern, const char *inst, char *label, size_t size)
+{
+	size_t len = strlen(inst), n = 0;
+
+	while (*pattern != '\0') {
+		if (pattern[0] == '%' && pattern[1] == 'i') {
+			if (len >= size - n)
+				return (false);
+			memcpy(label + n, inst, len);
+			n += len;
+			pattern += 2;
+		} else {
+			if (n + 1 >= size)
+				return (false);
+			if (pattern[0] == '%' && pattern[1] == '%')
+				pattern++;
+			label[n++] = *pattern++;
+		}
+	}
+	label[n] = '\0';
+	return (label_valid(label));
+}
+
 /*
  * Instantiate the template at path for the instances named by its
  * "instances_var" rc.conf variable, or for "default_instance" if the
  * variable is empty or unset.
  */
 static int
-unit_load_template(const char *path)
+unit_load_template(int fd, const char *path, bool shadowed)
 {
 	struct ucl_parser *parser;
 	ucl_object_t *root;
 	const ucl_object_t *obj;
 	char list[1024], *p, *tok;
-	const char *def = NULL;
+	struct unit_template *source;
+	const char *def = NULL, *pattern;
+	char label[PROWL_LABEL_MAX];
 	int n = 0;
+	bool ok;
 
 	parser = ucl_parser_new(UCL_PARSER_NO_FILEVARS);
-	if (parser == NULL)
+	if (parser == NULL) {
+		scan_incomplete = true;
 		return (-1);
-	if (!ucl_parser_add_file(parser, path)) {
-		prowl_log(LOG_ERR, "unit_load_file %s: %.128s", path,
+	}
+	ok = add_unit_fd(parser, fd, path, NULL, UCL_DUPLICATE_APPEND);
+	if (!ok) {
+		prowl_log(LOG_ERR, "unit_load_template %s: %.128s", path,
 		    ucl_parser_get_error(parser));
 		ucl_parser_free(parser);
 		return (-1);
 	}
+
 	root = ucl_parser_get_object(parser);
 	ucl_parser_free(parser);
 	if (root == NULL)
 		return (-1);
+
+	obj = ucl_object_lookup(root, "label");
+	pattern = obj != NULL && ucl_object_type(obj) == UCL_STRING ?
+	    ucl_object_tostring(obj) : NULL;
+	if (pattern == NULL || !template_label(pattern, "i", label, sizeof(label))) {
+		prowl_log(LOG_ERR, "missing or invalid template label in %s", path);
+		ucl_object_unref(root);
+		return (-1);
+	}
+	STAILQ_FOREACH(source, &templates, link) {
+		if (strcmp(source->pattern, pattern) == 0) {
+			ucl_object_unref(root);
+			return (0);
+		}
+	}
+	source = calloc(1, sizeof(*source));
+	if (source == NULL) {
+		scan_incomplete = true;
+		ucl_object_unref(root);
+		return (-1);
+	}
+	strlcpy(source->pattern, pattern, sizeof(source->pattern));
+	if (!shadowed)
+		strlcpy(source->path, path, sizeof(source->path));
+	STAILQ_INSERT_TAIL(&templates, source, link);
 
 	list[0] = '\0';
 	obj = ucl_object_lookup(root, "instances_var");
@@ -1337,115 +1911,287 @@ unit_load_template(const char *path)
 			    path, tok);
 			continue;
 		}
-		if (unit_load_file_inst(path, tok) == 0)
+		if (unit_load_file_inst(fd, path, tok, shadowed) == 0)
 			n++;
 	}
 	if (n == 0 && list[0] == '\0' && def != NULL && instance_valid(def)) {
-		if (unit_load_file_inst(path, def) == 0)
+		if (unit_load_file_inst(fd, path, def, shadowed) == 0)
 			n++;
 	}
 	ucl_object_unref(root);
-	return (n > 0 ? 0 : -1);
+	return (0);
 }
 
-int
-unit_load_file(const char *path)
+static void
+reject_file(const char *name)
 {
-	const char *base = strrchr(path, '/');
+	char stem[NAME_MAX + 1], rc_name[PROWL_LABEL_MAX];
+	size_t len = strlen(name) - strlen(".unit");
 
-	base = base != NULL ? base + 1 : path;
-	if (is_template_name(base))
-		return (unit_load_template(path));
-	return (unit_load_file_inst(path, NULL));
+	claim_name(name, CLAIM_FILE);
+	if (len >= sizeof(stem))
+		return;
+	memcpy(stem, name, len);
+	stem[len] = '\0';
+	if (label_valid(stem)) {
+		claim_name(stem, CLAIM_LABEL);
+		derive_rc_name(stem, rc_name, sizeof(rc_name));
+		claim_name(rc_name, CLAIM_PROVIDER);
+	}
 }
 
 /*
- * Create the instance of a template named by label, e.g. the label
- * "org.midnightbsd.pflog@pflog1" from "pflog@.unit".  Returns the new job
- * or NULL if there is no such template.
+ * Known labels determine precedence even when filenames differ. When a
+ * higher-priority file is unreadable, take identities from a matching
+ * lower file solely to suppress fallback, never to launch it.
  */
+static int
+unit_load_file(const char *path, const char *name)
+{
+	unsigned claims = claims_for(name);
+	int fd, ret;
+	bool shadowed = (claims & CLAIM_FILE) != 0;
+
+	fd = trusted_open_file(path, false);
+	if (fd == -1) {
+		prowl_log(LOG_WARNING, "cannot open native unit %s: %m", path);
+		ret = -1;
+	} else {
+		if (is_template_name(name))
+			ret = unit_load_template(fd, path, shadowed);
+		else
+			ret = unit_load_file_inst(fd, path, NULL, shadowed);
+		close(fd);
+	}
+	if (ret == -1)
+		reject_file(name);
+	return (ret);
+}
+
+/* Highest-priority directory first, for boot and on-demand instances. */
+static int
+unit_dirs(const char **dirs)
+{
+	if (g_unit_override[0] != '\0') {
+		dirs[0] = g_unit_override;
+		return (1);
+	}
+	dirs[0] = g_generated_dir;
+	dirs[1] = UNIT_DIR_OVERRIDE;
+	dirs[2] = UNIT_DIR_LOCAL;
+	dirs[3] = UNIT_DIR_BASE;
+	return (4);
+}
+
+/* Resolve full labels first; short names follow directory priority. */
+static const struct unit_template *
+template_for(const char *requested, const char *instance)
+{
+	const struct unit_template *source, *short_match = NULL;
+	char label[PROWL_LABEL_MAX];
+	size_t len, requested_len = strlen(requested);
+
+	STAILQ_FOREACH(source, &templates, link) {
+		if (!template_label(source->pattern, instance, label, sizeof(label)))
+			continue;
+		if (strcmp(label, requested) == 0)
+			return (source);
+		len = strlen(label);
+		if (short_match == NULL && len > requested_len &&
+		    label[len - requested_len - 1] == '.' &&
+		    strcmp(label + len - requested_len, requested) == 0)
+			short_match = source;
+	}
+	return (short_match);
+}
+
+static bool
+load_template_instance(const struct unit_template *source, const char *instance)
+{
+	int fd, ret;
+
+	if (source->path[0] == '\0' || scan_incomplete)
+		return (false);
+	fd = trusted_open_file(source->path, false);
+	if (fd == -1)
+		return (false);
+	ret = unit_load_file_inst(fd, source->path, instance, false);
+	close(fd);
+	return (ret == 0);
+}
+
+/* Stop at the first matching filename, including a rejected definition. */
+static bool
+load_named_instance(const char *name, const char *instance)
+{
+	const char *dirs[4];
+	char path[PROWL_PATH_MAX];
+	int dfd, error, fd, i, n, ret;
+
+	n = unit_dirs(dirs);
+	for (i = 0; i < n && !scan_incomplete; i++) {
+		if (snprintf(path, sizeof(path), "%s/%s", dirs[i], name) >=
+		    (int)sizeof(path))
+			return (false);
+		dfd = trusted_open_dir(dirs[i]);
+		if (dfd == -1)
+			continue;
+		fd = trusted_open_file_at(dfd, name, false);
+		error = errno;
+		close(dfd);
+		if (fd == -1) {
+			if (error == ENOENT)
+				continue;
+			return (false);
+		}
+		ret = unit_load_file_inst(fd, path, instance, false);
+		close(fd);
+		return (ret == 0);
+	}
+	return (false);
+}
+
+/* Create an instance on demand, including lookup by its short name. */
 job_t *
 unit_instantiate(const char *label)
 {
-	char stem[PROWL_LABEL_MAX], path[PROWL_PATH_MAX];
-	const char *dirs[5], *at, *dot;
-	size_t len;
-	int i;
+	char name[NAME_MAX + 1];
+	const char *at, *dot;
+	const struct unit_template *source;
+	job_t *job;
 
 	at = strchr(label, '@');
 	if (at == NULL || !label_valid(label) || !instance_valid(at + 1))
 		return (NULL);
-	dot = at;
-	while (dot > label && dot[-1] != '.')
-		dot--;
-	len = (size_t)(at - dot);
-	if (len == 0 || len >= sizeof(stem))
-		return (NULL);
-	memcpy(stem, dot, len);
-	stem[len] = '\0';
-
-	if (g_unit_override[0] != '\0') {
-		dirs[0] = g_unit_override;
-		dirs[1] = NULL;
+	source = template_for(label, at + 1);
+	if (source != NULL) {
+		if (!load_template_instance(source, at + 1))
+			return (NULL);
 	} else {
-		dirs[0] = UNIT_DIR_BASE;
-		dirs[1] = UNIT_DIR_LOCAL;
-		dirs[2] = UNIT_DIR_OVERRIDE;
-		dirs[3] = g_generated_dir;
-		dirs[4] = NULL;
+		/* A newly created conventional template may predate the next scan. */
+		dot = at;
+		while (dot > label && dot[-1] != '.')
+			dot--;
+		if (dot == at || snprintf(name, sizeof(name), "%.*s@.unit",
+		    (int)(at - dot), dot) >= (int)sizeof(name) ||
+		    !load_named_instance(name, at + 1))
+			return (NULL);
 	}
-	for (i = 0; dirs[i] != NULL; i++) {
-		snprintf(path, sizeof(path), "%s/%s@.unit", dirs[i], stem);
-		if (access(path, R_OK) != 0)
-			continue;
-		if (unit_load_file_inst(path, at + 1) == 0) {
-			job_t *job = job_find_instance(label);
-
-			return (job != NULL ? job : job_find_by_label(label));
-		}
-	}
-	return (NULL);
+	job = job_find_instance(label);
+	return (job != NULL ? job : job_find_by_label(label));
 }
 
 /*
  * Load all .unit files from a directory.
  * Silently skips non-existent directories.
  */
-int
+static void
 unit_load_dir(const char *dirpath)
 {
-	DIR *dir;
-	struct dirent *de;
+	struct dirent **names;
 	char path[PROWL_PATH_MAX];
-	int loaded = 0;
+	int fd, count, i, loaded = 0;
 
-	dir = opendir(dirpath);
-	if (dir == NULL) {
+	fd = trusted_open_dir(dirpath);
+	if (fd == -1) {
 		if (errno != ENOENT)
-			prowl_log(LOG_WARNING, "unit_load_dir %s: %m",
-			    dirpath);
-		return (0);
+			prowl_log(LOG_WARNING, "ignoring unit directory %s: %m", dirpath);
+		return;
 	}
-
-	while ((de = readdir(dir)) != NULL) {
-		size_t namelen = strlen(de->d_name);
-
-		/* Skip non-.unit files */
-		if (namelen < 5 ||
-		    strcmp(de->d_name + namelen - 5, ".unit") != 0)
-			continue;
-
-		snprintf(path, sizeof(path), "%s/%s", dirpath, de->d_name);
-
-		if (unit_load_file(path) == 0)
-			loaded++;
+	count = fdscandir(fd, &names, is_unit_entry, alphasort);
+	close(fd);
+	if (count == -1) {
+		prowl_log(LOG_WARNING, "unit_load_dir %s: %m", dirpath);
+		scan_incomplete = true;
+		return;
 	}
-
-	closedir(dir);
+	for (i = 0; i < count; i++) {
+		if (!scan_incomplete && snprintf(path, sizeof(path), "%s/%s",
+		    dirpath, names[i]->d_name) < (int)sizeof(path)) {
+			if (unit_load_file(path, names[i]->d_name) == 0)
+				loaded++;
+		}
+		free(names[i]);
+	}
+	free(names);
 
 	if (loaded > 0)
 		prowl_log(LOG_NOTICE, "loaded %d unit(s) from %s",
 		    loaded, dirpath);
+}
 
-	return (loaded);
+void
+unit_load_all(void)
+{
+	const char *dirs[4];
+	struct unit_claim *claim;
+	struct unit_template *template;
+	const struct unit_template *source;
+	job_t *job;
+	int fd, i, n;
+
+	while ((claim = SLIST_FIRST(&unit_claims)) != NULL) {
+		SLIST_REMOVE_HEAD(&unit_claims, link);
+		free(claim);
+	}
+	while ((template = STAILQ_FIRST(&templates)) != NULL) {
+		STAILQ_REMOVE_HEAD(&templates, link);
+		free(template);
+	}
+	scan_incomplete = false;
+	admin_dropins = false;
+	if (g_unit_override[0] == '\0') {
+		fd = trusted_open_dir(UNIT_DIR_OVERRIDE);
+		if (fd >= 0) {
+			admin_dropins = true;
+			close(fd);
+		}
+	}
+	loading_all = true;
+	n = unit_dirs(dirs);
+	for (i = 0; i < n && !scan_incomplete; i++)
+		unit_load_dir(dirs[i]);
+	/* Lazy instances need the same policy rescan as boot instances. */
+	TAILQ_FOREACH(job, &g_jobs, entries) {
+		if (job->template_instance == NULL ||
+		    (claims_for(job->label) & (CLAIM_SELECTED | CLAIM_LABEL)) != 0)
+			continue;
+		source = template_for(job->label, job->template_instance);
+		if (source != NULL)
+			(void)load_template_instance(source, job->template_instance);
+	}
+	loading_all = false;
+
+	/* Retain the last trusted identity of a now unreadable definition. */
+	TAILQ_FOREACH(job, &g_jobs, entries) {
+		if (job->unit_config == NULL ||
+		    (claims_for(job->label) & CLAIM_SELECTED) != 0)
+			continue;
+		job->policy_blocked = true;
+		job->reload_on_exit = false;
+		job->restart_after_reload = false;
+		claim_name(job->label, CLAIM_LABEL);
+		claim_name(job->rc_name, CLAIM_PROVIDER);
+		for (i = 0; i < job->provides_count; i++)
+			claim_name(job->provides[i], CLAIM_PROVIDER);
+	}
+
+	/* A shim from a previous scan may now be covered by native policy. */
+	TAILQ_FOREACH(job, &g_jobs, entries) {
+		if (job->type == JOB_TYPE_RCSHIM) {
+			job_t *provider = job_find_by_provides(job->rc_name);
+
+			job->policy_blocked = unit_label_reserved(job->label) ||
+			    unit_provider_rejected(job->rc_name) ||
+			    (provider != NULL && provider->type != JOB_TYPE_RCSHIM);
+			for (i = 0; i < job->provides_count; i++)
+				if (unit_provider_rejected(job->provides[i]))
+					job->policy_blocked = true;
+		}
+		if (job->policy_blocked && job->sockets_count > 0) {
+			socket_close_all(job);
+			if (job->pid <= 0 && job->state == JOB_STATE_RUNNING)
+				job_set_state(job, JOB_STATE_LOADED);
+		}
+	}
 }

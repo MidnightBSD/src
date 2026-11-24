@@ -436,6 +436,218 @@ actions_cleanup()
 	stop_prowld
 }
 
+atf_test_case action_deadline cleanup
+action_deadline_head()
+{
+	atf_set descr "An action's deadline covers process exit after output closes"
+	atf_set require.user root
+	atf_set timeout 60
+}
+action_deadline_body()
+{
+	mkdir units
+	cat >units/action.unit <<'EOF'
+{"label":"org.test.action","type":"oneshot","program":"/bin/sh",
+ "run_at_load":false,
+ "check_arguments":["-c","echo partial; exec 1>&- 2>&-; : >checking; exec /bin/sleep 45"]}
+EOF
+	start_prowld
+	ctl check org.test.action >out &
+	client=$!
+	for i in $(jot 50); do
+		[ -f checking ] && break
+		sleep 0.1
+	done
+	[ -f checking ] || atf_fail "action did not start"
+	atf_check -s exit:0 -o ignore timeout 5 ${CTL} status org.test.action
+	code=0
+	wait "$client" || code=$?
+	atf_check_equal 124 "$code"
+	atf_check -o inline:'partial\n' cat out
+}
+action_deadline_cleanup()
+{
+	stop_prowld
+}
+
+atf_test_case mask_activation cleanup
+mask_activation_head()
+{
+	atf_set descr "A mask prevents socket launches and preserves stop escalation"
+	atf_set require.user root
+	atf_set require.progs nc
+}
+mask_activation_body()
+{
+	mkdir units
+	cat >units/socket.unit <<'EOF'
+{"label":"org.test.listener","program":"/bin/sh","run_at_load":true,
+ "arguments":["-c",": >activated; exec /bin/sleep 40"],
+ "sockets":{"main":{"path":"listener.sock"}}}
+EOF
+	cat >units/stubborn.unit <<'EOF'
+{"label":"org.test.stubborn","program":"/bin/sh","run_at_load":true,
+ "exit_timeout":1,"keep_alive":true,
+ "arguments":["-c","trap '' TERM; : >ready; exec /bin/sleep 40"]}
+EOF
+	start_prowld
+	wait_state org.test.listener running
+	wait_state org.test.stubborn running
+	[ -f ready ] || atf_fail "TERM handler was not installed"
+	pid=$(job_pid org.test.stubborn)
+	atf_check -o ignore ${CTL} mask org.test.stubborn
+	atf_check -o ignore ${CTL} mask org.test.listener
+	[ -L run/db/masked.d/org.test.listener ] || atf_fail "missing private mask"
+	atf_check -s not-exit:0 -o ignore -e ignore ${CTL} start org.test.listener
+	: >empty
+	atf_check -s not-exit:0 -o ignore -e ignore nc -w 1 -U listener.sock <empty
+	for i in $(jot 50); do
+		kill -0 "$pid" 2>/dev/null || break
+		sleep 0.1
+	done
+	kill -0 "$pid" 2>/dev/null && atf_fail "masked process survived its stop deadline"
+	wait_state org.test.stubborn masked
+	[ ! -e activated ] || atf_fail "masked listener launched its job"
+	atf_check -o ignore ${CTL} unmask org.test.listener
+	wait_state org.test.listener running
+	atf_check -s exit:0 -o ignore nc -w 1 -U listener.sock <empty
+	for i in $(jot 50); do
+		[ -f activated ] && break
+		sleep 0.1
+	done
+	[ -f activated ] || atf_fail "unmasked listener did not activate"
+}
+mask_activation_cleanup()
+{
+	stop_prowld
+}
+
+atf_test_case persist_enabled cleanup
+persist_enabled_head()
+{
+	atf_set descr "Enable and disable acknowledge completed sysrc writes in order"
+	atf_set require.user root
+	atf_set require.progs "chroot /rescue/sh"
+}
+persist_enabled_body()
+{
+	mkdir -p root/bin root/etc root/usr/sbin root/units root/run
+	cp "${PROWLD}" root/prowld
+	cp /rescue/sh root/bin/sh
+	cat >root/units/service.unit <<'EOF'
+{"label":"test.persist","type":"oneshot","program":"/bin/sh","run_at_load":false}
+EOF
+	chroot root /prowld -d -s /run -u /units >prowld.log 2>&1 &
+	echo $! >prowld.pid
+	for i in $(jot 100); do
+		[ -S root/run/prowld.sock ] && break
+		sleep 0.05
+	done
+	client="${PROWLCTL} -s root/run"
+	atf_check -s not-exit:0 -e match:sysrc ${client} enable test.persist
+	atf_check -o match:'Enabled: false' ${client} status test.persist
+
+	cat >root/usr/sbin/sysrc <<'EOF'
+#!/bin/sh
+[ "$1" = "--" ] && shift
+[ ! -e /reject ] || exit 1
+if [ -e /signal ]; then kill -TERM $$; fi
+if [ "$1" = persist_enable=YES ] && [ -p /gate ]; then
+	: >/waiting
+	read -r ready </gate || exit 1
+fi
+printf '%s\n' "$1" >>/writes && printf '%s\n' "$1" >/etc/rc.conf
+EOF
+	chmod 755 root/usr/sbin/sysrc
+	mkfifo root/gate
+	${client} enable test.persist >enable.out &
+	enabling=$!
+	for i in $(jot 100); do
+		[ -e root/waiting ] && break
+		sleep 0.05
+	done
+	[ -e root/waiting ] || atf_fail "sysrc did not start"
+	atf_check -o match:'Enabled: false' timeout 5 ${client} status test.persist
+	${client} disable test.persist >disable.out &
+	disabling=$!
+	echo ready >root/gate
+	wait "$enabling" && wait "$disabling" || atf_fail "queued write failed"
+	atf_check -o inline:'persist_enable=YES\npersist_enable=NO\n' cat root/writes
+	atf_check -o match:'Enabled: false' ${client} status test.persist
+	rm root/gate
+	atf_check -o ignore ${client} enable test.persist
+	: >root/reject
+	atf_check -s not-exit:0 -e match:sysrc ${client} disable test.persist
+	rm root/reject
+	: >root/signal
+	atf_check -s not-exit:0 -e match:sysrc ${client} disable test.persist
+	atf_check -o match:'Enabled: true' ${client} status test.persist
+	atf_check -o inline:'persist_enable=YES\n' cat root/etc/rc.conf
+}
+persist_enabled_cleanup()
+{
+	stop_prowld
+}
+
+atf_test_case masked_timer cleanup
+masked_timer_head()
+{
+	atf_set descr "A saved mask prevents boot and interval timer launches"
+	atf_set require.user root
+	atf_set require.progs chroot
+}
+masked_timer_body()
+{
+	# Keep both the persistent masks and the timer state in the fixture.
+	mkdir -p root/etc/prowld/masks.d root/var/db/prowld/masked.d \
+	    root/var/run root/var/log root/units root/lib root/libexec root/dev
+	: >root/dev/null
+	cp "${PROWLD}" root/prowld
+	cp /bin/echo root/echo
+	cp /lib/libc.so.7 root/lib/
+	cp /libexec/ld-elf.so.1 root/libexec/
+	for timer in allowed protected legacy; do
+		echo "${timer}_enable=YES" >>root/etc/rc.conf
+		cat >"root/units/$timer.unit" <<EOF
+{"label":"org.test.$timer","type":"timer","run_at_load":false,
+ "schedule":{"interval":1,"on_boot_delay":1},"program":"/echo",
+ "arguments":["tick"],"standard_out_path":"/$timer.out"}
+EOF
+	done
+	new=root/etc/prowld/masks.d
+	old=root/var/db/prowld/masked.d
+	run=root/var/run/prowld
+	ln -s /dev/null "$new/org.test.protected"
+	ln -s /dev/null "$old/org.test.legacy"
+	chroot root /prowld -d -u /units >prowld.log 2>&1 &
+	echo $! >prowld.pid
+	for i in $(jot 60); do
+		[ -f root/allowed.out ] && \
+		    [ "$(grep -c '^tick$' root/allowed.out)" -ge 2 ] && break
+		sleep 0.1
+	done
+	[ -f root/allowed.out ] && [ "$(grep -c '^tick$' root/allowed.out)" -ge 2 ] ||
+	    atf_fail "control timer did not fire twice"
+	[ ! -e root/protected.out ] || atf_fail "masked timer ran"
+	[ ! -e root/legacy.out ] || atf_fail "legacy-masked timer ran"
+	atf_check -o match:'State: masked' "${PROWLCTL}" -s "$run" status org.test.protected
+	atf_check -o ignore "${PROWLCTL}" -s "$run" mask org.test.legacy
+	[ -L "$new/org.test.legacy" ] || atf_fail "missing early-boot mask"
+	atf_check -o ignore "${PROWLCTL}" -s "$run" unmask org.test.legacy
+	[ ! -L "$new/org.test.legacy" ] && [ ! -L "$old/org.test.legacy" ] ||
+	    atf_fail "unmask left a saved mask"
+	atf_check -o ignore "${PROWLCTL}" -s "$run" unmask org.test.protected
+	for i in $(jot 50); do
+		[ -s root/protected.out ] && break
+		sleep 0.1
+	done
+	atf_check -o ignore grep -qx tick root/protected.out
+}
+masked_timer_cleanup()
+{
+	stop_prowld
+}
+
 atf_test_case expansion cleanup
 expansion_head()
 {
@@ -554,6 +766,164 @@ forking_cleanup()
 {
 	stop_prowld
 	pkill -KILL -f "sleep (300|400)" 2>/dev/null || true
+}
+
+atf_test_case forking_launch_identity cleanup
+forking_launch_identity_head()
+{
+	atf_set descr "Concurrent double-forked daemons with the same name are tracked separately"
+	atf_set require.user root
+	atf_set timeout 60
+}
+forking_launch_identity_body()
+{
+	dir=$(pwd)
+	mkdir units
+	cp /bin/sh fork-worker
+	cat >worker.sh <<'EOF'
+echo "$$" >"$1/$2.pid"
+for i in $(jot 60); do
+	[ ! -e "$1/done" ] || exit 0
+	sleep 1
+done
+EOF
+	cat >launch.sh <<'EOF'
+( "$1/fork-worker" "$1/worker.sh" "$1" "$2" & ) &
+wait "$!" || exit 1
+# Keep both launchers alive until both workers have started.
+for i in $(jot 100); do
+	[ -s "$1/first.pid" ] && [ -s "$1/second.pid" ] && exit 0
+	sleep 0.1
+done
+exit 1
+EOF
+	for name in first second; do
+		cat >"units/$name.unit" <<EOF
+{"label":"org.test.$name","type":"daemon","program":"/bin/sh",
+ "arguments":["$dir/launch.sh","$dir","$name"],
+ "pid_name":"fork-worker","run_at_load":true}
+EOF
+	done
+	start_prowld
+	for name in first second; do
+		wait_state "org.test.$name" running
+		atf_check_equal "$(cat "$name.pid")" "$(job_pid "org.test.$name")"
+	done
+	atf_check -o ignore ${CTL} stop org.test.first
+	wait_state org.test.first stopped
+	atf_check -o ignore kill -0 "$(cat second.pid)"
+	atf_check_equal "$(cat second.pid)" "$(job_pid org.test.second)"
+	atf_check -o ignore ${CTL} stop org.test.second
+	wait_state org.test.second stopped
+}
+forking_launch_identity_cleanup()
+{
+	touch done
+	stop_prowld
+}
+
+atf_test_case forking_pidfile cleanup
+forking_pidfile_head()
+{
+	atf_set descr "Pidfile adoption requires a regular file and a member of the job's own launch"
+	atf_set require.user root
+	atf_set require.progs "mkfifo timeout"
+	atf_set timeout 60
+}
+forking_pidfile_body()
+{
+	dir=$(pwd)
+	mkdir units
+	cat >units/peer.unit <<'EOF'
+{"label":"org.test.peer","type":"daemon","program":"/bin/sleep",
+ "arguments":["60"],"run_at_load":true}
+EOF
+	cat >units/fifo.unit <<EOF
+{"label":"org.test.fifo","type":"daemon","program":"/usr/bin/mkfifo",
+ "arguments":["$dir/service.fifo"],"pid_file":"$dir/service.fifo"}
+EOF
+	cat >launcher.sh <<'EOF'
+sleep 60 &
+echo "$!" >"$1/worker.pid"
+cp "$1/peer.pid" "$1/service.pid"
+EOF
+	cat >units/foreign.unit <<EOF
+{"label":"org.test.foreign","type":"daemon","program":"/bin/sh",
+ "arguments":["$dir/launcher.sh","$dir"],"pid_file":"$dir/service.pid"}
+EOF
+	start_prowld
+	wait_state org.test.peer running
+	peer=$(job_pid org.test.peer)
+	echo "$peer" >peer.pid
+	atf_check -o ignore ${CTL} start org.test.fifo
+	for i in $(jot 50); do
+		[ -p service.fifo ] && break
+		sleep 0.1
+	done
+	[ -p service.fifo ] || atf_fail "pidfile fixture was not created"
+	atf_check -o match:'State: running' timeout 5 ${CTL} status org.test.peer
+	atf_check -o ignore timeout 5 ${CTL} start org.test.foreign
+	wait_state org.test.fifo failed
+	wait_state org.test.foreign failed
+	atf_check_equal "$peer" "$(cat service.pid)"
+	atf_check_equal "-1" "$(job_pid org.test.foreign)"
+	atf_check -s not-exit:0 -e ignore kill -0 "$(cat worker.pid)"
+
+	# Stop after the new launcher has written the foreign pidfile.
+	rm service.pid
+	atf_check -o ignore ${CTL} start org.test.foreign
+	for i in $(jot 50); do
+		[ -s service.pid ] && [ "$(job_pid org.test.foreign)" = -1 ] && break
+		sleep 0.1
+	done
+	atf_check_equal "-1" "$(job_pid org.test.foreign)"
+	atf_check -o ignore timeout 5 ${CTL} stop org.test.foreign
+	wait_state org.test.foreign stopped
+	atf_check -s not-exit:0 -e ignore kill -0 "$(cat worker.pid)"
+	atf_check -o match:'State: running' ${CTL} status org.test.peer
+	atf_check_equal "$peer" "$(job_pid org.test.peer)"
+	atf_check -o ignore kill -0 "$peer"
+}
+forking_pidfile_cleanup()
+{
+	stop_prowld
+}
+
+atf_test_case shim_pidfile_status cleanup
+shim_pidfile_status_head()
+{
+	atf_set descr "rc-shim status reads only regular pidfiles"
+	atf_set require.user root
+	atf_set require.progs "chroot mkfifo timeout"
+}
+shim_pidfile_status_body()
+{
+	mkdir -p root/etc/rc.d root/run
+	cp "${PROWLD}" root/prowld
+	cat >root/etc/rc.d/pidprobe <<'EOF'
+#!/bin/sh
+# PROVIDE: pidprobe
+name=pidprobe
+rcvar=pidprobe_enable
+pidfile=/run/pidprobe.pid
+EOF
+	chmod 755 root/etc/rc.d/pidprobe
+	mkfifo root/run/pidprobe.pid
+	chroot root /prowld -d -s /run >prowld.log 2>&1 &
+	echo $! >prowld.pid
+	for i in $(jot 50); do
+		[ -S root/run/prowld.sock ] && break
+		sleep 0.2
+	done
+	atf_check -o match:'PID: -1$' timeout 5 "${PROWLCTL}" -s root/run status pidprobe
+	rm root/run/pidprobe.pid
+	self=$$
+	printf '%s\ncommand arguments\n' "$self" >root/run/pidprobe.pid
+	atf_check -o match:"PID: ${self}$" "${PROWLCTL}" -s root/run status pidprobe
+}
+shim_pidfile_status_cleanup()
+{
+	stop_prowld
 }
 
 atf_test_case pre_post cleanup
@@ -918,14 +1288,358 @@ oneshot_lists_cleanup()
 	stop_prowld
 }
 
+atf_test_case post_hook_timeout cleanup
+post_hook_timeout_head()
+{
+	atf_set descr "A timed-out required start_post hook fails the oneshot"
+	atf_set require.user root
+	atf_set timeout 65
+}
+post_hook_timeout_body()
+{
+	mkdir units
+	cat >units/slow.unit <<'EOF'
+{"label":"org.test.slow","type":"oneshot","program":"/usr/bin/true",
+ "run_at_load":false,"start_post":[["/bin/sleep","45"],
+ ["/bin/sh","-c",": >hooks_done"]]}
+EOF
+	start_prowld
+	atf_check -o ignore ${CTL} start org.test.slow
+	for i in $(jot 40); do
+		[ -f hooks_done ] && break
+		sleep 1
+	done
+	[ -f hooks_done ] || atf_fail "remaining hook did not run after timeout"
+	wait_state org.test.slow failed
+}
+post_hook_timeout_cleanup()
+{
+	stop_prowld
+}
+
+atf_test_case standard_streams cleanup
+standard_streams_head()
+{
+	atf_set descr "A failed standard-stream redirect prevents execution"
+	atf_set require.user root
+}
+standard_streams_body()
+{
+	mkdir units
+	for stream in in out error; do
+		cat >"units/$stream.unit" <<EOF
+{"label":"org.test.$stream","type":"oneshot","program":"/bin/sh",
+ "arguments":["-c",": >ran_$stream"],"run_at_load":true,
+ "standard_${stream}_path":"$(pwd)/missing/file"}
+EOF
+	done
+	start_prowld
+	for stream in in out error; do
+		wait_state "org.test.$stream" failed
+		[ ! -e "ran_$stream" ] || atf_fail "command ran after bad $stream redirect"
+	done
+}
+standard_streams_cleanup()
+{
+	stop_prowld
+}
+
+atf_test_case credentials cleanup
+credentials_head()
+{
+	atf_set descr "Configured job credentials are applied or execution is refused"
+	atf_set require.user root
+	atf_set require.progs "chroot jot pwd_mkdb"
+}
+credentials_body()
+{
+	[ -x "${PROWLD}" ] || atf_skip "${PROWLD} is not installed"
+	[ -x "${PROWLCTL}" ] || atf_skip "${PROWLCTL} is not installed"
+
+	# Use a private account database so that group membership does not
+	# depend on the test host and no host accounts need to be changed.
+	mkdir -p root/etc root/lib root/libexec root/usr/bin root/units root/dev
+	: >root/dev/null
+	cp "${PROWLD}" root/prowld
+	cp /usr/bin/id root/usr/bin/
+	cp /libexec/ld-elf.so.1 root/libexec/
+	cp /lib/libc.so.7 root/lib/
+	cat >root/etc/master.passwd <<EOF
+root:*:0:0::0:0:root:/:/bin/sh
+service:*:101:101::0:0:service:/:/bin/sh
+many:*:102:101::0:0:many:/:/bin/sh
+EOF
+	atf_check -o ignore pwd_mkdb -d root/etc root/etc/master.passwd
+	cat >root/etc/nsswitch.conf <<EOF
+passwd: files
+group: files
+EOF
+	cat >root/etc/group <<EOF
+wheel:*:0:
+service:*:101:
+EOF
+	for gid in $(jot 32 200); do
+		echo "extra${gid}:*:${gid}:many" >>root/etc/group
+	done
+	: >root/valid.out
+	chown 101:101 root/valid.out
+
+	for entry in 'missing_user "user": "absent"' \
+	    'missing_group "group": "absent"' 'many "user": "many"' \
+	    'group_only "group": "service"' 'valid "user": "service"'; do
+		name=${entry%% *}
+		identity=${entry#* }
+		cat >"root/units/${name}.unit" <<EOF
+{"label": "org.test.${name}", "type": "oneshot",
+ "program": "/usr/bin/id", "arguments": ["-G"],
+ "standard_out_path": "/${name}.out", "check_arguments": ["-u"],
+ "run_at_load": true, ${identity}}
+EOF
+	done
+
+	long_name=$(printf '%064d' 0)
+	for field in user group; do
+		for bad in empty number long nul duplicate; do
+			case ${bad} in
+			empty)	value='""' ;;
+			number)	value=0 ;;
+			long)	value="\"${long_name}\"" ;;
+			nul)	value='"root\u0000service"' ;;
+			duplicate) value="\"root\", \"${field}\": \"service\"" ;;
+			esac
+			name="${field}_${bad}"
+			cat >"root/units/${name}.unit" <<EOF
+{"label": "org.test.${name}", "type": "oneshot",
+ "program": "/usr/bin/id", "standard_out_path": "/${name}.out",
+ "run_at_load": true, "${field}": ${value}}
+EOF
+		done
+	done
+
+	# Seed a supplementary group that neither valid unit should inherit.
+	chroot -G 999 root /prowld -d -s run -u units >prowld.log 2>&1 &
+	echo $! >prowld.pid
+	for i in $(jot 50); do
+		[ -S root/run/prowld.sock ] && break
+		sleep 0.2
+	done
+	[ -S root/run/prowld.sock ] || atf_fail "prowld did not create its socket"
+	ctl_path="${PROWLCTL} -s root/run"
+
+	for field in user group; do
+		for bad in empty number long nul duplicate; do
+			name="${field}_${bad}"
+			atf_check -s not-exit:0 -o ignore -e ignore \
+			    ${ctl_path} status "org.test.${name}"
+			[ ! -e "root/${name}.out" ] || atf_fail "${name} was executed"
+		done
+	done
+	for name in missing_user missing_group many; do
+		atf_check -o match:'State: failed' ${ctl_path} status "org.test.${name}"
+		atf_check -s not-exit:0 -o ignore -e ignore \
+		    ${ctl_path} check "org.test.${name}"
+		[ ! -e "root/${name}.out" ] || atf_fail "${name} was executed"
+	done
+	for name in group_only valid; do
+		for i in $(jot 50); do
+			${ctl_path} status "org.test.${name}" |
+			    grep -q 'State: completed' && break
+			sleep 0.2
+		done
+		atf_check -o match:'State: completed' ${ctl_path} status "org.test.${name}"
+		atf_check -o inline:'101\n' cat "root/${name}.out"
+	done
+	atf_check -o inline:'0\n' ${ctl_path} check org.test.group_only
+	atf_check -o inline:'101\n' ${ctl_path} check org.test.valid
+}
+credentials_cleanup()
+{
+	stop_prowld
+}
+
+atf_test_case interactive cleanup
+interactive_head()
+{
+	atf_set descr "interactive is a boolean; outside PID 1 stdin stays /dev/null"
+	atf_set require.user root
+}
+interactive_body()
+{
+	mkdir -p units
+	# Not PID 1: the console is not offered, and the job runs as usual.
+	cat >units/ia.unit <<EOF
+{"label": "org.test.ia", "rc_name": "prowlctl_test_ia",
+ "type": "daemon", "program": "/bin/sh",
+ "arguments": ["-c", "if [ -t 0 ]; then exit 3; fi; exec sleep 300"],
+ "run_at_load": true, "interactive": true}
+EOF
+	cat >units/bad.unit <<EOF
+{"label": "org.test.iabad", "rc_name": "prowlctl_test_iabad",
+ "type": "daemon", "program": "/bin/sleep",
+ "arguments": ["300"], "run_at_load": true, "interactive": "yes"}
+EOF
+	start_prowld
+	wait_state org.test.ia running
+	atf_check -s not-exit:0 -e ignore -o ignore ${CTL} status org.test.iabad
+}
+interactive_cleanup()
+{
+	stop_prowld
+}
+
+atf_test_case unix_socket_access cleanup
+unix_socket_access_head()
+{
+	atf_set descr "Unix socket activation preserves files and sets requested access"
+	atf_set require.user root
+}
+unix_socket_access_body()
+{
+	mkdir units
+	echo keep >occupied
+	ln -s occupied linked
+	for label in occupied linked restricted legacy; do
+		access=
+		if [ "$label" = restricted ]; then
+			access=', "mode": "0660", "owner": "root", "group": "wheel"'
+		fi
+		cat >"units/$label.unit" <<EOF
+{"label":"org.test.$label","run_at_load":true,"program":"/usr/bin/true",
+ "sockets":{"main":{"path":"$label"$access}}}
+EOF
+	done
+	start_prowld
+	wait_state org.test.occupied failed
+	wait_state org.test.linked failed
+	atf_check -o inline:'keep\n' cat occupied
+	atf_check -o inline:'occupied\n' readlink linked
+	wait_state org.test.restricted running
+	wait_state org.test.legacy running
+	[ -S legacy ] || atf_fail "missing legacy socket"
+	atf_check -o inline:'660 0 0\n' stat -f '%Lp %u %g' restricted
+}
+unix_socket_access_cleanup()
+{
+	stop_prowld
+}
+
+atf_test_case unit_explicit_settings cleanup
+unit_explicit_settings_head()
+{
+	atf_set descr "Reject malformed chroot, umask, and socket addresses"
+	atf_set require.user root
+}
+unit_explicit_settings_body()
+{
+	mkdir units
+	while IFS='|' read -r name fields; do
+		cat >"units/$name.unit" <<EOF
+{"label":"org.test.settings_$name","program":"/usr/bin/true",$fields}
+EOF
+		printf '%s\n' "$name" >>rejected
+	done <<'EOF'
+root_empty|"root_directory":""
+root_type|"root_directory":false
+root_nul|"root_directory":"/\u0000ignored"
+root_duplicate|"root_directory":"/","root_directory":"/var"
+mask_empty|"umask":""
+mask_type|"umask":22
+mask_prefix|"umask":"0022junk"
+mask_space|"umask":" 0022"
+mask_signed|"umask":"-1"
+mask_range|"umask":"1000"
+mask_nul|"umask":"0022\u0000"
+mask_duplicate|"umask":"0077","umask":"0000"
+host_empty|"sockets":{"main":{"port":0,"host":""}}
+host_type|"sockets":{"main":{"port":0,"host":false}}
+host_invalid|"sockets":{"main":{"port":0,"host":"localhost"}}
+host_nul|"sockets":{"main":{"port":0,"host":"127.0.0.1\u0000ignored"}}
+host_duplicate|"sockets":{"main":{"port":0,"host":"127.0.0.1","host":"0.0.0.0"}}
+host_no_port|"sockets":{"main":{"host":"127.0.0.1"}}
+port_type|"sockets":{"main":{"port":"0"}}
+port_fraction|"sockets":{"main":{"port":0.5}}
+port_negative|"sockets":{"main":{"port":-1}}
+port_range|"sockets":{"main":{"port":65536}}
+port_wide|"sockets":{"main":{"port":4294967296}}
+port_duplicate|"sockets":{"main":{"port":0,"port":1}}
+path_empty|"sockets":{"main":{"path":""}}
+path_type|"sockets":{"main":{"path":false,"port":0}}
+path_nul|"sockets":{"main":{"path":"endpoint\u0000ignored"}}
+path_duplicate|"sockets":{"main":{"path":"endpoint","path":"other"}}
+path_conflict|"sockets":{"main":{"path":"endpoint","port":0}}
+socket_duplicate|"sockets":{"main":{"port":0},"main":{"port":-1}}
+sockets_duplicate|"sockets":{"main":{"port":0}},"sockets":{"main":{"port":-1}}
+EOF
+	long_root=$(printf '%01024d' 0)
+	long_socket=$(printf '%0104d' 0)
+	cat >units/root_long.unit <<EOF
+{"label":"org.test.settings_root_long","program":"/usr/bin/true",
+ "root_directory":"$long_root"}
+EOF
+	cat >units/path_long.unit <<EOF
+{"label":"org.test.settings_path_long","program":"/usr/bin/true",
+ "sockets":{"main":{"path":"$long_socket"}}}
+EOF
+	printf '%s\n' root_long path_long >>rejected
+
+	for name in dropin_bad dropin_valid; do
+		cat >"units/$name.unit" <<EOF
+label = "org.test.settings_$name";
+program = "/usr/bin/true";
+EOF
+		mkdir "units/org.test.settings_$name.d"
+	done
+	echo 'sockets { main { port = 0; host = false; } }' \
+	    >units/org.test.settings_dropin_bad.d/socket.unit
+	echo 'root_directory = "/"; user = "nobody"; umask = "0000";' \
+	    >units/org.test.settings_dropin_valid.d/security.unit
+	echo dropin_bad >>rejected
+
+	cat >units/ipv6_valid.unit <<'EOF'
+{"label":"org.test.settings_ipv6_valid","program":"/usr/bin/true",
+ "sockets":{"loopback":{"port":0,"host":"::1"}}}
+EOF
+	cat >units/socket_valid.unit <<'EOF'
+{"label":"org.test.settings_socket_valid","program":"/usr/bin/true",
+ "run_at_load":true,"sockets":{"unix":{"path":"settings.sock"},
+ "loopback":{"port":0,"host":"127.0.0.1"},"wildcard":{"port":0}}}
+EOF
+	start_prowld
+	while read -r name; do
+		atf_check -s exit:1 -o ignore -e match:'job not found' \
+		    ${CTL} status "org.test.settings_$name"
+	done <rejected
+	atf_check -o ignore ${CTL} status org.test.settings_dropin_valid
+	atf_check -o ignore ${CTL} status org.test.settings_ipv6_valid
+	wait_state org.test.settings_socket_valid running
+	[ -S settings.sock ] || atf_fail "missing valid activation socket"
+}
+unit_explicit_settings_cleanup()
+{
+	stop_prowld
+}
+
 atf_init_test_cases()
 {
+	atf_add_test_case action_deadline
+	atf_add_test_case mask_activation
+	atf_add_test_case persist_enabled
+	atf_add_test_case masked_timer
+	atf_add_test_case unix_socket_access
+	atf_add_test_case interactive
+	atf_add_test_case unit_explicit_settings
+	atf_add_test_case credentials
 	atf_add_test_case dependency_loop
 	atf_add_test_case oneshot_lists
+	atf_add_test_case post_hook_timeout
+	atf_add_test_case standard_streams
 	atf_add_test_case conditions
 	atf_add_test_case activates
 	atf_add_test_case pre_post
 	atf_add_test_case forking
+	atf_add_test_case forking_launch_identity
+	atf_add_test_case forking_pidfile
+	atf_add_test_case shim_pidfile_status
 	atf_add_test_case expansion
 	atf_add_test_case actions
 	atf_add_test_case oneshot_stop

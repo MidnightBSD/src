@@ -246,18 +246,13 @@ dag_build(void)
 		cycles++;
 	}
 
-	/* Apply disabled/masked states */
+	/* Apply administrative masks, then mark disabled idle jobs. */
+	supervisor_load_masks();
 	TAILQ_FOREACH(job, &g_jobs, entries) {
-		if (job->state == JOB_STATE_FAILED)
-			continue;
-		if (job_is_masked(job)) {
-			job_set_state(job, JOB_STATE_MASKED);
-			continue;
-		}
-		if (!job->enabled) {
+		if (!job->masked && !job->enabled &&
+		    (job->state == JOB_STATE_LOADED ||
+		    job->state == JOB_STATE_STOPPED))
 			job_set_state(job, JOB_STATE_DISABLED);
-			continue;
-		}
 	}
 
 	return (cycles == 0 ? 0 : -1);
@@ -301,7 +296,8 @@ dag_activate(job_t *job)
 		p = job_find_by_provides(job->deps[i].name);
 		if (p == NULL)
 			p = job_find_by_label(job->deps[i].name);
-		if (p == NULL || p == job || p->type == JOB_TYPE_RCSHIM)
+		if (p == NULL || p == job || job_launch_blocked(p) ||
+		    p->type == JOB_TYPE_RCSHIM)
 			continue;
 		/*
 		 * A provider that is disabled is enabled; one that is enabled
@@ -337,17 +333,19 @@ dag_schedule_ready(void)
 {
 	job_t *job;
 	int limit = max_concurrent();
-	bool rerun = false;
+	bool rerun;
 
 	/* Nothing new starts while the system is going down. */
 	if (g_shutdown || g_rundown)
 		return;
 
+again:
+	rerun = false;
 	TAILQ_FOREACH(job, &g_jobs, entries) {
 		if (g_current_starts >= limit)
 			break;
 
-		if (job->state != JOB_STATE_LOADED)
+		if (job_launch_blocked(job) || job->state != JOB_STATE_LOADED)
 			continue;
 
 		if (!job->run_at_load)
@@ -389,14 +387,14 @@ dag_schedule_ready(void)
 				dag_schedule_ready();
 			} else {
 				job_set_state(job, JOB_STATE_FAILED);
+				rerun = true;
 			}
-		} else {
-			if (supervisor_start(job) == 0)
-				g_current_starts++;
-		}
+		} else if (supervisor_start(job) == -1 &&
+		    job->state == JOB_STATE_FAILED)
+			rerun = true;
 	}
 
-	/* A service that was activated may be startable now */
+	/* Activation or a synchronous failure may have unblocked earlier jobs. */
 	if (rerun)
-		dag_schedule_ready();
+		goto again;
 }

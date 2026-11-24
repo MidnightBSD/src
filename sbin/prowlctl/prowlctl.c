@@ -60,6 +60,7 @@
 
 /* Exit codes per spec §13.3 */
 #define PROWLD_TIMEOUT		30	/* seconds without an answer */
+#define ACTION_REPLY_TIMEOUT	40	/* includes the daemon's 30s deadline */
 #define EXIT_OK			0
 #define EXIT_NOT_FOUND		1
 #define EXIT_FAILED		2
@@ -67,6 +68,7 @@
 #define EXIT_NO_DAEMON		4
 
 static int g_sock = -1;
+static int g_reply_timeout = PROWLD_TIMEOUT;
 static char g_sock_path[PATH_MAX] = PROWLD_SOCK_PATH;
 static char g_pid_path[PATH_MAX] = "/var/run/prowld/prowld.pid";
 static bool g_json = false;	/* --json flag */
@@ -143,8 +145,12 @@ connect_daemon(void)
 	 * Do not wait for ever on a prowld that does not answer, for example
 	 * one that is busy running rc.shutdown.
 	 */
-	if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) == -1 ||
-	    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) == -1) {
+	if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) == -1) {
+		close(fd);
+		return (-1);
+	}
+	tv.tv_sec = g_reply_timeout;
+	if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) == -1) {
 		close(fd);
 		return (-1);
 	}
@@ -214,7 +220,7 @@ recv_response(int fd)
 	if (n != 4) {
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			warnx("no answer from prowld after %d seconds",
-			    PROWLD_TIMEOUT);
+			    g_reply_timeout);
 		return (NULL);
 	}
 
@@ -232,7 +238,7 @@ recv_response(int fd)
 			if (n == -1 && (errno == EAGAIN ||
 			    errno == EWOULDBLOCK))
 				warnx("no answer from prowld after %d seconds",
-				    PROWLD_TIMEOUT);
+				    g_reply_timeout);
 			free(buf);
 			return (NULL);
 		}
@@ -1040,6 +1046,43 @@ do_graph(int argc, char *argv[])
 
 #define LOGS_TAIL_DEFAULT	50
 
+/*
+ * Turn a name as given to "logs" (full label, short name, rc.d name, or
+ * template instance) into the job's full label by asking prowld, the way
+ * the other commands resolve their target.  If prowld does not know the
+ * name, or will not answer, the name is used as given so that the log of
+ * a job that has since been removed can still be read.
+ */
+static void
+logs_resolve_label(const char *name, char *label, size_t labelsz)
+{
+	char req[REQ_MAX];
+	char status[32];
+	char full[256];
+	const char *result;
+	char *resp;
+
+	strlcpy(label, name, labelsz);
+
+	snprintf(req, sizeof(req),
+	    "{\"verb\":\"status\",\"target\":\"%s\"}", name);
+	if (send_request(g_sock, req) == -1)
+		return;
+
+	resp = recv_response(g_sock);
+	if (resp == NULL)
+		return;
+
+	if (json_get_str(resp, "status", status, sizeof(status)) != NULL &&
+	    strcmp(status, "ok") == 0 &&
+	    (result = strstr(resp, "\"result\":")) != NULL &&
+	    json_get_str(result, "label", full, sizeof(full)) != NULL &&
+	    validate_label_input(full))
+		strlcpy(label, full, labelsz);
+
+	free(resp);
+}
+
 static int
 do_logs(int argc, char *argv[])
 {
@@ -1063,7 +1106,7 @@ do_logs(int argc, char *argv[])
 		return (EXIT_NOT_FOUND);
 	}
 
-	strlcpy(label, argv[0], sizeof(label));
+	logs_resolve_label(argv[0], label, sizeof(label));
 
 	for (i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "--follow") == 0)
@@ -1264,6 +1307,9 @@ main(int argc, char *argv[])
 		argv++;
 	}
 
+	if (strcmp(cmd, "check") == 0 || strcmp(cmd, "reload") == 0 ||
+	    strcmp(cmd, "resync") == 0)
+		g_reply_timeout = ACTION_REPLY_TIMEOUT;
 	g_sock = connect_daemon();
 	if (g_sock == -1) {
 		if (errno == ENOENT || errno == ECONNREFUSED)

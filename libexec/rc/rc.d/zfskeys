@@ -3,6 +3,7 @@
 # PROVIDE: zfskeys
 # REQUIRE: zpool
 # BEFORE: zfs zvol
+# KEYWORD: interactive
 
 . /etc/rc.subr
 

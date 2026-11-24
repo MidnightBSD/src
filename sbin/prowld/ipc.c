@@ -35,10 +35,12 @@
  * Incoming JSON is parsed with libucl.  Responses are built with snprintf.
  */
 
+#include <sys/param.h>
 #include <sys/event.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/ucred.h>
 #include <sys/un.h>
 #include <sys/wait.h>
 
@@ -46,6 +48,7 @@
 
 #include <errno.h>
 #include <grp.h>
+#include <poll.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -63,12 +66,49 @@ int ipc_listen_fd = -1;
 /* Cached wheel group GID for IPC authorization */
 static gid_t g_wheel_gid = 0;
 
+/* Reserve slots for root and bound work per listen event. */
+#define IPC_ROOT_RESERVE	4
+#define IPC_UID_MAX		4
+#define IPC_ACCEPT_BATCH	16
+#define IPC_FRAME_TIMEOUT	30
+
 /* Per-client state */
 static ipc_client_t g_clients[IPC_MAX_CLIENTS];
+static uintptr_t g_event_seq;
+
+/* Serialize updates to rc.conf while the event loop continues serving IPC. */
+static struct sysrc_request {
+	job_t		*job;
+	char		rc_name[PROWL_LABEL_MAX];
+	uintptr_t	tag;
+	bool		enabled;
+} sysrc_queue[IPC_MAX_CLIENTS];
+static size_t sysrc_count;
+static pid_t sysrc_pid;
 
 /* Internal prototypes */
 static ipc_client_t *ipc_get_client(int fd);
 static void ipc_send_error(int fd, const char *id, const char *message);
+static void ipc_dispatch_buffered(ipc_client_t *);
+
+static uintptr_t
+ipc_event_tag(uintptr_t type)
+{
+	g_event_seq += READ_EVENT_MASK + 1;
+	return (g_event_seq | type);
+}
+
+static int
+ipc_watch_read(const ipc_client_t *client, int flags, bool hold)
+{
+	struct kevent kev;
+
+	/* Keep monitoring EOF while leaving later requests in the socket. */
+	EV_SET(&kev, (uintptr_t)client->fd, EVFILT_READ, flags,
+	    hold ? NOTE_LOWAT : 0, hold ? INTPTR_MAX : 0,
+	    (void *)client->event_tag);
+	return (kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL));
+}
 
 /* ------------------------------------------------------------------ */
 /* JSON helpers                                                          */
@@ -86,32 +126,35 @@ json_escape_str(const char *src, char *dst, size_t dstsz)
 	const unsigned char *p = (const unsigned char *)src;
 	size_t i = 0;
 
+	if (dstsz == 0)
+		return (-1);
+	dst[0] = '\0';
 	while (*p != '\0') {
 		unsigned char c = *p++;
 
 		if (c == '"' || c == '\\') {
 			if (i + 2 >= dstsz)
-				return (-1);
+				goto truncated;
 			dst[i++] = '\\';
 			dst[i++] = (char)c;
 		} else if (c == '\n') {
 			if (i + 2 >= dstsz)
-				return (-1);
+				goto truncated;
 			dst[i++] = '\\';
 			dst[i++] = 'n';
 		} else if (c == '\r') {
 			if (i + 2 >= dstsz)
-				return (-1);
+				goto truncated;
 			dst[i++] = '\\';
 			dst[i++] = 'r';
 		} else if (c == '\t') {
 			if (i + 2 >= dstsz)
-				return (-1);
+				goto truncated;
 			dst[i++] = '\\';
 			dst[i++] = 't';
 		} else if (c < 0x20) {
 			if (i + 6 >= dstsz)
-				return (-1);
+				goto truncated;
 			dst[i++] = '\\';
 			dst[i++] = 'u';
 			dst[i++] = '0';
@@ -120,12 +163,15 @@ json_escape_str(const char *src, char *dst, size_t dstsz)
 			dst[i++] = hex[c & 0xf];
 		} else {
 			if (i + 1 >= dstsz)
-				return (-1);
+				goto truncated;
 			dst[i++] = (char)c;
 		}
 	}
 	dst[i] = '\0';
 	return ((int)i);
+truncated:
+	dst[i] = '\0';
+	return (-1);
 }
 
 /* Upper bound on queued output per client; slower readers lose messages. */
@@ -174,7 +220,7 @@ ipc_flush_client(ipc_client_t *c)
 				if (c->want_write)
 					return;
 				EV_SET(&kev, (uintptr_t)c->fd, EVFILT_WRITE,
-				    EV_ADD, 0, 0, NULL);
+				    EV_ADD, 0, 0, (void *)c->event_tag);
 				if (kevent(g_kqueue_fd, &kev, 1, NULL, 0,
 				    NULL) == 0) {
 					c->want_write = true;
@@ -255,14 +301,16 @@ ipc_send(int fd, const char *json, size_t len)
  * EVFILT_WRITE fired: the socket has room again.
  */
 void
-ipc_write_ready(int fd)
+ipc_write_ready(int fd, uintptr_t tag)
 {
 	ipc_client_t *c;
 
 	c = ipc_get_client(fd);
-	if (c == NULL)
+	if (c == NULL || c->event_tag != tag)
 		return;
 	ipc_flush_client(c);
+	if (c->read_eof && !c->want_write)
+		ipc_close_client(fd);
 }
 
 static void
@@ -273,7 +321,10 @@ ipc_send_ok(int fd, const char *id, const char *result_json)
 	size_t cap;
 	int n;
 
-	json_escape_str(id != NULL ? id : "", eid, sizeof(eid));
+	if (json_escape_str(id != NULL ? id : "", eid, sizeof(eid)) == -1) {
+		ipc_send_error(fd, "", "request id too large");
+		return;
+	}
 
 	/* Room for the envelope plus the result; results can be large. */
 	cap = strlen(eid) + 64 +
@@ -307,7 +358,8 @@ ipc_send_error(int fd, const char *id, const char *message)
 	char eid[256];
 	int n;
 
-	json_escape_str(id != NULL ? id : "", eid, sizeof(eid));
+	if (json_escape_str(id != NULL ? id : "", eid, sizeof(eid)) == -1)
+		eid[0] = '\0';
 
 	n = snprintf(buf, sizeof(buf),
 	    "{\"id\":\"%s\",\"status\":\"error\",\"message\":\"%s\"}",
@@ -351,8 +403,9 @@ job_to_json(const job_t *job, char *buf, size_t bufsz)
 	    elabel,
 	    edesc,
 	    job_type_str(job->type),
-	    job_state_str(job->state),
-	    (int)(job->pid > 0 ? job->pid : supervisor_shim_pid(job)),
+	    job_state_str(job_reported_state(job)),
+	    (int)(job->pid > 0 && !job->launcher ?
+	    job->pid : supervisor_shim_pid(job)),
 	    ercname,
 	    job->enabled ? "true" : "false",
 	    job->restart_count,
@@ -403,42 +456,6 @@ append_dep_array(const job_t *job, char *buf, size_t bufsz)
 }
 
 /* ------------------------------------------------------------------ */
-/* sysrc helper: call /usr/sbin/sysrc safely via fork+execvp           */
-/* ------------------------------------------------------------------ */
-
-static void
-run_sysrc(const char *varname, const char *value)
-{
-	pid_t pid;
-	char assignment[PROWL_LABEL_MAX + 8];
-	int status;
-
-	snprintf(assignment, sizeof(assignment), "%s=%s", varname, value);
-
-	pid = fork();
-	if (pid == -1) {
-		prowl_log(LOG_ERR, "run_sysrc fork: %m");
-		return;
-	}
-
-	if (pid == 0) {
-		/* Child: close kqueue fd */
-		if (g_kqueue_fd >= 0)
-			close(g_kqueue_fd);
-		prowl_reset_signals();
-		char *argv[] = {
-			(char *)(uintptr_t)"/usr/sbin/sysrc",
-			assignment,
-			NULL
-		};
-		execvp("/usr/sbin/sysrc", argv);
-		_exit(127);
-	}
-
-	waitpid(pid, &status, 0);
-}
-
-/* ------------------------------------------------------------------ */
 /* Resolve a target label/name to a job                                */
 /* ------------------------------------------------------------------ */
 
@@ -447,6 +464,7 @@ resolve_target(const ucl_object_t *req, int fd, const char *id)
 {
 	const ucl_object_t *tgt;
 	const char *label;
+	ipc_client_t *client;
 	job_t *job;
 
 	tgt = ucl_object_lookup(req, "target");
@@ -464,8 +482,10 @@ resolve_target(const ucl_object_t *req, int fd, const char *id)
 	if (job == NULL)
 		job = job_find_by_rcname(label);
 
-	/* "unit@instance" of a template that was not listed in rc.conf */
-	if (job == NULL && strchr(label, '@') != NULL) {
+	/* Only root may instantiate a template as a side effect of lookup. */
+	client = ipc_get_client(fd);
+	if (job == NULL && strchr(label, '@') != NULL && client != NULL &&
+	    client->peer_uid == 0) {
 		job = unit_instantiate(label);
 		if (job != NULL)
 			dag_build();
@@ -552,14 +572,14 @@ cmd_list(int fd, const char *id, const ucl_object_t *req)
 		int n;
 
 		if (state_filter != NULL &&
-		    strcmp(job_state_str(job->state), state_filter) != 0)
+		    strcmp(job_state_str(job_reported_state(job)),
+		    state_filter) != 0)
 			continue;
 		if (type_filter != NULL &&
 		    strcmp(job_type_str(job->type), type_filter) != 0)
 			continue;
 		if (enabled_only && (!job->enabled ||
-		    job->state == JOB_STATE_DISABLED ||
-		    job->state == JOB_STATE_MASKED))
+		    job->state == JOB_STATE_DISABLED || job->masked))
 			continue;
 
 		n = job_to_json(job, jbuf, sizeof(jbuf));
@@ -611,25 +631,27 @@ cmd_start(int fd, const char *id, const ucl_object_t *req)
 	if (job == NULL)
 		return;
 
-	if (job->state == JOB_STATE_MASKED) {
-		ipc_send_error(fd, id, "job is masked");
+	if (job_launch_blocked(job)) {
+		ipc_send_error(fd, id, job->policy_blocked ?
+		    "job blocked by native unit policy" : "job is masked");
 		return;
 	}
 
 	job->run_at_load = true;
 	job->enabled = true;
-	if (job->state != JOB_STATE_RUNNING &&
+	if (job->state == JOB_STATE_STOPPING) {
+		job->restart_after_stop = true;
+	} else if (job->state != JOB_STATE_RUNNING &&
 	    job->state != JOB_STATE_STARTING &&
-	    (dag_activate(job) || job_activations_pending(job))) {
-		/* Wait for the services it activates: the scheduler starts it */
+	    (dag_activate(job) || job_activations_pending(job) ||
+	    job->sockets_count > 0)) {
+		/* The scheduler handles dependencies and socket listeners. */
 		job_set_state(job, JOB_STATE_LOADED);
 		dag_schedule_ready();
 	} else if (job->state != JOB_STATE_RUNNING &&
 	    job->state != JOB_STATE_STARTING) {
 		job_set_state(job, JOB_STATE_LOADED);
-		if (supervisor_start(job) == 0)
-			g_current_starts++;
-		else {
+		if (supervisor_start(job) == -1) {
 			ipc_send_error(fd, id, "job failed to start "
 			    "(see the system log)");
 			return;
@@ -661,6 +683,14 @@ cmd_restart(int fd, const char *id, const ucl_object_t *req)
 	if (job == NULL)
 		return;
 
+	if (job->masked || (job->policy_blocked && !job->reload_on_exit)) {
+		ipc_send_error(fd, id, job->policy_blocked ?
+		    "job blocked by native unit policy" : "job is masked");
+		return;
+	}
+
+	if (job->reload_on_exit)
+		job->restart_after_reload = true;
 	supervisor_stop(job, false);
 	job->run_at_load = true;
 	if (job->state == JOB_STATE_STOPPING) {
@@ -668,7 +698,6 @@ cmd_restart(int fd, const char *id, const ucl_object_t *req)
 		job->restart_after_stop = true;
 	} else if (job->state != JOB_STATE_RUNNING &&
 	    job->state != JOB_STATE_STARTING &&
-	    job->state != JOB_STATE_MASKED &&
 	    job->state != JOB_STATE_DISABLED) {
 		job_set_state(job, JOB_STATE_LOADED);
 		dag_schedule_ready();
@@ -684,19 +713,19 @@ cmd_restart(int fd, const char *id, const ucl_object_t *req)
 static void
 cmd_action(int fd, const char *id, job_t *job, int action, const char *name)
 {
-	char out[PROWL_ACTION_OUT_MAX];
+	ipc_client_t *client = ipc_get_client(fd);
 	char msg[96];
-	char *esc, *result;
-	size_t cap;
-	int code;
+	uintptr_t tag;
+	int error;
 
 	if (job->action_argc[action] == 0) {
 		snprintf(msg, sizeof(msg), "job has no %s command", name);
 		ipc_send_error(fd, id, msg);
 		return;
 	}
-	if (job->state == JOB_STATE_MASKED) {
-		ipc_send_error(fd, id, "job is masked");
+	if (job_launch_blocked(job)) {
+		ipc_send_error(fd, id, job->policy_blocked ?
+		    "job blocked by native unit policy" : "job is masked");
 		return;
 	}
 	if (action != PROWL_ACTION_CHECK &&
@@ -706,8 +735,29 @@ cmd_action(int fd, const char *id, job_t *job, int action, const char *name)
 		return;
 	}
 
-	if (supervisor_run_action(job, action, out, sizeof(out), &code) == -1) {
-		ipc_send_error(fd, id, "could not run the command");
+	tag = ipc_event_tag(READ_EVENT_ACTION);
+	error = client == NULL ? -1 : supervisor_start_action(job, action, tag);
+	if (error != 0) {
+		ipc_send_error(fd, id, error == EBUSY ?
+		    "another command is running for this job" : error == EAGAIN ?
+		    "too many service actions are running" :
+		    "could not run the command");
+		return;
+	}
+	client->action_tag = tag;
+	strlcpy(client->action_id, id, sizeof(client->action_id));
+	if (ipc_watch_read(client, EV_ADD, true) == -1)
+		ipc_close_client(fd);
+}
+
+static void
+ipc_send_action_result(int fd, const char *id, int code, const char *out)
+{
+	char *esc, *result;
+	size_t cap;
+
+	if (code < 0) {
+		ipc_send_error(fd, id, "could not collect command output");
 		return;
 	}
 
@@ -734,6 +784,37 @@ cmd_action(int fd, const char *id, job_t *job, int action, const char *name)
 	ipc_send_ok(fd, id, result);
 	free(result);
 	free(esc);
+}
+
+void
+ipc_action_complete(uintptr_t tag, int code, const char *out)
+{
+	ipc_client_t *client = NULL;
+	struct timespec now;
+
+	for (size_t i = 0; i < nitems(g_clients); i++) {
+		if (g_clients[i].active && g_clients[i].action_tag == tag) {
+			client = &g_clients[i];
+			break;
+		}
+	}
+	if (client == NULL)
+		return;
+	client->action_tag = 0;
+	if (out != NULL)
+		ipc_send_action_result(client->fd, client->action_id, code, out);
+	else if (code == 0)
+		ipc_send_ok(client->fd, client->action_id, NULL);
+	else
+		ipc_send_error(client->fd, client->action_id,
+		    "could not persist enable setting with sysrc");
+	if (ipc_watch_read(client, EV_ADD | EV_ENABLE, false) == -1 ||
+	    clock_gettime(CLOCK_MONOTONIC, &now) == -1) {
+		ipc_close_client(client->fd);
+		return;
+	}
+	client->frame_started = now.tv_sec;
+	ipc_dispatch_buffered(client);
 }
 
 static void
@@ -771,77 +852,122 @@ cmd_reload(int fd, const char *id, const ucl_object_t *req)
 		return;
 	}
 
+	if (job_launch_blocked(job)) {
+		ipc_send_error(fd, id, job->policy_blocked ?
+		    "job blocked by native unit policy" : "job is masked");
+		return;
+	}
+
 	if (job->state != JOB_STATE_RUNNING) {
 		ipc_send_error(fd, id, "job not running");
 		return;
 	}
 
-	supervisor_signal(job, SIGHUP);
-	ipc_send_ok(fd, id, NULL);
+	if (supervisor_signal(job, SIGHUP) == -1)
+		ipc_send_error(fd, id, "could not signal job");
+	else
+		ipc_send_ok(fd, id, NULL);
 }
 
 static void
-cmd_enable(int fd, const char *id, const ucl_object_t *req)
+sysrc_complete(bool success)
 {
+	struct sysrc_request req = sysrc_queue[0];
+
+	sysrc_pid = 0;
+	sysrc_count--;
+	memmove(sysrc_queue, sysrc_queue + 1, sysrc_count * sizeof(req));
+	if (success && strcmp(req.job->rc_name, req.rc_name) == 0)
+		req.job->enabled = req.enabled;
+	ipc_action_complete(req.tag, success ? 0 : -1, NULL);
+}
+
+bool
+ipc_sysrc_reap(pid_t pid, int status)
+{
+	bool success;
+
+	if (pid != sysrc_pid)
+		return (false);
+	success = WIFEXITED(status) && WEXITSTATUS(status) == 0;
+	if (!success)
+		prowl_log(LOG_ERR, "sysrc failed for %s (wait status %#x)",
+		    sysrc_queue[0].job->label, status);
+	sysrc_complete(success);
+	return (true);
+}
+
+void
+ipc_start_sysrc(void)
+{
+	char assignment[PROWL_LABEL_MAX + sizeof("_enable=YES")];
+
+	if (sysrc_count == 0 || sysrc_pid != 0 || g_shutdown)
+		return;
+	sysrc_pid = fork();
+	if (sysrc_pid == -1) {
+		prowl_log(LOG_ERR, "fork sysrc: %m");
+		sysrc_complete(false);
+	} else if (sysrc_pid == 0) {
+		if (g_kqueue_fd >= 0)
+			close(g_kqueue_fd);
+		prowl_reset_signals();
+		snprintf(assignment, sizeof(assignment), "%s_enable=%s",
+		    sysrc_queue[0].rc_name,
+		    sysrc_queue[0].enabled ? "YES" : "NO");
+		execl("/usr/sbin/sysrc", "sysrc", "--", assignment, (char *)NULL);
+		_exit(127);
+	}
+}
+
+static void
+cmd_set_enabled(int fd, const char *id, const ucl_object_t *req, bool enabled)
+{
+	ipc_client_t *client = ipc_get_client(fd);
+	struct sysrc_request *pending;
 	job_t *job;
-	char varname[PROWL_LABEL_MAX + 8];
 
 	job = resolve_target(req, fd, id);
-	if (job == NULL)
+	if (job == NULL || client == NULL)
 		return;
-
 	if (job->rc_name[0] == '\0') {
 		ipc_send_error(fd, id, "job has no rc_name");
 		return;
 	}
-
-	snprintf(varname, sizeof(varname), "%s_enable", job->rc_name);
-	run_sysrc(varname, "YES");
-	job->enabled = true;
-
-	ipc_send_ok(fd, id, NULL);
-}
-
-static void
-cmd_disable(int fd, const char *id, const ucl_object_t *req)
-{
-	job_t *job;
-	char varname[PROWL_LABEL_MAX + 8];
-
-	job = resolve_target(req, fd, id);
-	if (job == NULL)
-		return;
-
-	if (job->rc_name[0] == '\0') {
-		ipc_send_error(fd, id, "job has no rc_name");
+	if (sysrc_count == nitems(sysrc_queue)) {
+		ipc_send_error(fd, id, "too many pending sysrc requests");
 		return;
 	}
 
-	snprintf(varname, sizeof(varname), "%s_enable", job->rc_name);
-	run_sysrc(varname, "NO");
-	job->enabled = false;
-
-	ipc_send_ok(fd, id, NULL);
+	client->action_tag = ipc_event_tag(READ_EVENT_ACTION);
+	strlcpy(client->action_id, id, sizeof(client->action_id));
+	pending = &sysrc_queue[sysrc_count++];
+	pending->tag = client->action_tag;
+	pending->job = job;
+	strlcpy(pending->rc_name, job->rc_name, sizeof(pending->rc_name));
+	pending->enabled = enabled;
+	if (ipc_watch_read(client, EV_ADD, true) == -1)
+		ipc_close_client(fd);
 }
 
 static void
 cmd_mask(int fd, const char *id, const ucl_object_t *req)
 {
 	job_t *job;
-	char path[PROWL_PATH_MAX];
 
 	job = resolve_target(req, fd, id);
 	if (job == NULL)
 		return;
 
-	snprintf(path, sizeof(path), "%s/%s", g_mask_dir, job->label);
-	if (symlink("/dev/null", path) == -1 && errno != EEXIST) {
+	if (job_save_mask(job, true) == -1) {
 		ipc_send_error(fd, id, "mask failed");
 		return;
 	}
 
-	supervisor_stop(job, false);
-	job_set_state(job, JOB_STATE_MASKED);
+	if (supervisor_mask(job) == -1) {
+		ipc_send_error(fd, id, "job masked, but stop failed");
+		return;
+	}
 	ipc_send_ok(fd, id, NULL);
 }
 
@@ -849,18 +975,17 @@ static void
 cmd_unmask(int fd, const char *id, const ucl_object_t *req)
 {
 	job_t *job;
-	char path[PROWL_PATH_MAX];
 
 	job = resolve_target(req, fd, id);
 	if (job == NULL)
 		return;
 
-	snprintf(path, sizeof(path), "%s/%s", g_mask_dir, job->label);
-	unlink(path);
+	if (job_save_mask(job, false) == -1) {
+		ipc_send_error(fd, id, "unmask failed");
+		return;
+	}
 
-	if (job->state == JOB_STATE_MASKED)
-		job_set_state(job, JOB_STATE_LOADED);
-
+	supervisor_unmask(job);
 	ipc_send_ok(fd, id, NULL);
 }
 
@@ -1058,7 +1183,7 @@ ipc_peer_is_root(const ipc_client_t *client)
 static bool
 ipc_peer_can_query(const ipc_client_t *client)
 {
-	return (client->peer_uid == 0 || client->peer_gid == g_wheel_gid);
+	return (client->peer_uid == 0 || client->peer_wheel);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1073,8 +1198,10 @@ ipc_dispatch_message(int fd, const char *json, size_t len)
 	const ucl_object_t *obj;
 	const char *verb = NULL;
 	const char *id = "";
+	char escaped_id[256];
 
-	parser = ucl_parser_new(UCL_PARSER_NO_FILEVARS);
+	parser = ucl_parser_new(UCL_PARSER_NO_FILEVARS |
+	    UCL_PARSER_DISABLE_MACRO);
 	if (parser == NULL)
 		return;
 
@@ -1102,6 +1229,11 @@ ipc_dispatch_message(int fd, const char *json, size_t len)
 	obj = ucl_object_lookup(root, "id");
 	if (obj != NULL && ucl_object_type(obj) == UCL_STRING)
 		id = ucl_object_tostring(obj);
+	if (json_escape_str(id, escaped_id, sizeof(escaped_id)) == -1) {
+		ipc_send_error(fd, "", "request id too large");
+		ucl_object_unref(root);
+		return;
+	}
 
 	obj = ucl_object_lookup(root, "verb");
 	if (obj != NULL && ucl_object_type(obj) == UCL_STRING)
@@ -1168,9 +1300,9 @@ ipc_dispatch_message(int fd, const char *json, size_t len)
 	else if (strcmp(verb, "resync") == 0)
 		cmd_resync(fd, id, root);
 	else if (strcmp(verb, "enable") == 0)
-		cmd_enable(fd, id, root);
+		cmd_set_enabled(fd, id, root, true);
 	else if (strcmp(verb, "disable") == 0)
-		cmd_disable(fd, id, root);
+		cmd_set_enabled(fd, id, root, false);
 	else if (strcmp(verb, "mask") == 0)
 		cmd_mask(fd, id, root);
 	else if (strcmp(verb, "unmask") == 0)
@@ -1294,57 +1426,90 @@ ipc_shutdown(void)
 void
 ipc_accept(void)
 {
-	struct sockaddr_un sun;
-	socklen_t sunlen = sizeof(sun);
-	struct kevent kev;
-	int cfd, i;
+	struct xucred cred;
+	struct timespec now;
+	socklen_t credlen;
+	int batch, cfd, i, slot, nonroot, sameuid;
+	bool wheel;
 
-	cfd = accept4(ipc_listen_fd, (struct sockaddr *)&sun, &sunlen,
-	    SOCK_NONBLOCK | SOCK_CLOEXEC);
-	if (cfd == -1) {
-		if (errno != EAGAIN && errno != EWOULDBLOCK)
-			prowl_log(LOG_WARNING, "ipc accept: %m");
-		return;
-	}
-
-	for (i = 0; i < IPC_MAX_CLIENTS; i++) {
-		if (!g_clients[i].active)
-			break;
-	}
-
-	if (i == IPC_MAX_CLIENTS) {
-		prowl_log(LOG_WARNING, "ipc: client limit reached");
-		close(cfd);
-		return;
-	}
-
-	{
-		uid_t puid;
-		gid_t pgid;
-		if (getpeereid(cfd, &puid, &pgid) == -1) {
-			prowl_log(LOG_WARNING, "ipc_accept getpeereid: %m");
-			close(cfd);
+	for (batch = 0; batch < IPC_ACCEPT_BATCH; batch++) {
+		cfd = accept4(ipc_listen_fd, NULL, NULL,
+		    SOCK_NONBLOCK | SOCK_CLOEXEC);
+		if (cfd == -1) {
+			if (errno != EAGAIN && errno != EWOULDBLOCK &&
+			    errno != EINTR)
+				prowl_log(LOG_WARNING, "ipc accept: %m");
 			return;
 		}
-		g_clients[i].peer_uid = puid;
-		g_clients[i].peer_gid = pgid;
+
+		credlen = sizeof(cred);
+		if (getsockopt(cfd, SOL_LOCAL, LOCAL_PEERCRED, &cred,
+		    &credlen) == -1 || credlen != sizeof(cred) ||
+		    cred.cr_version != XUCRED_VERSION || cred.cr_ngroups < 0 ||
+		    cred.cr_ngroups > XU_NGROUPS ||
+		    clock_gettime(CLOCK_MONOTONIC, &now) == -1) {
+			close(cfd);
+			continue;
+		}
+		wheel = false;
+		for (i = 0; i < cred.cr_ngroups; i++) {
+			if (cred.cr_groups[i] == g_wheel_gid)
+				wheel = true;
+		}
+		if (cred.cr_uid != 0 && !wheel) {
+			close(cfd);
+			continue;
+		}
+
+		slot = -1;
+		nonroot = sameuid = 0;
+		for (i = 0; i < IPC_MAX_CLIENTS; i++) {
+			if (!g_clients[i].active) {
+				if (slot == -1)
+					slot = i;
+				continue;
+			}
+			if (g_clients[i].peer_uid != 0)
+				nonroot++;
+			if (g_clients[i].peer_uid == cred.cr_uid)
+				sameuid++;
+		}
+		if (slot == -1 || (cred.cr_uid != 0 &&
+		    (nonroot >= IPC_MAX_CLIENTS - IPC_ROOT_RESERVE ||
+		    sameuid >= IPC_UID_MAX))) {
+			close(cfd);
+			continue;
+		}
+
+		memset(&g_clients[slot], 0, sizeof(g_clients[slot]));
+		g_clients[slot].fd = cfd;
+		g_clients[slot].peer_uid = cred.cr_uid;
+		g_clients[slot].peer_wheel = wheel;
+		g_clients[slot].frame_started = now.tv_sec;
+		g_clients[slot].event_tag = ipc_event_tag(READ_EVENT_CLIENT);
+		if (ipc_watch_read(&g_clients[slot], EV_ADD, false) == -1) {
+			prowl_log(LOG_WARNING, "ipc_accept kevent: %m");
+			close(cfd);
+			continue;
+		}
+		g_clients[slot].active = true;
 	}
+}
 
-	g_clients[i].fd = cfd;
-	g_clients[i].buf_used = 0;
-	g_clients[i].is_subscriber = false;
-	g_clients[i].event_filter[0] = '\0';
-	g_clients[i].out = NULL;
-	g_clients[i].out_len = 0;
-	g_clients[i].out_off = 0;
-	g_clients[i].want_write = false;
-	g_clients[i].active = true;
+/* Idle established clients remain connected; incomplete requests do not. */
+void
+ipc_expire_clients(void)
+{
+	struct timespec now;
+	int i;
 
-	EV_SET(&kev, (uintptr_t)cfd, EVFILT_READ, EV_ADD, 0, 0, NULL);
-	if (kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL) == -1) {
-		prowl_log(LOG_WARNING, "ipc_accept kevent: %m");
-		close(cfd);
+	if (clock_gettime(CLOCK_MONOTONIC, &now) == -1)
 		return;
+	for (i = 0; i < IPC_MAX_CLIENTS; i++) {
+		if (g_clients[i].active && g_clients[i].action_tag == 0 &&
+		    (!g_clients[i].completed_request || g_clients[i].buf_used != 0) &&
+		    now.tv_sec - g_clients[i].frame_started >= IPC_FRAME_TIMEOUT)
+			ipc_close_client(g_clients[i].fd);
 	}
 }
 
@@ -1360,6 +1525,7 @@ ipc_close_client(int fd)
 
 	for (i = 0; i < IPC_MAX_CLIENTS; i++) {
 		if (g_clients[i].active && g_clients[i].fd == fd) {
+			g_clients[i].action_tag = 0;
 			free(g_clients[i].out);
 			g_clients[i].out = NULL;
 			g_clients[i].out_len = 0;
@@ -1375,21 +1541,24 @@ ipc_close_client(int fd)
 }
 
 void
-ipc_read_client(int fd)
+ipc_read_client(int fd, uintptr_t tag, bool eof)
 {
-	ipc_client_t *client = NULL;
+	ipc_client_t *client = ipc_get_client(fd);
 	ssize_t n;
-	int i;
 
-	for (i = 0; i < IPC_MAX_CLIENTS; i++) {
-		if (g_clients[i].active && g_clients[i].fd == fd) {
-			client = &g_clients[i];
-			break;
-		}
-	}
+	if (client == NULL || client->event_tag != tag)
+		return;
+	if (client->action_tag != 0) {
+		struct pollfd pfd = { .fd = fd };
 
-	if (client == NULL) {
-		close(fd);
+		if (!eof)
+			return;
+		/* A peer that only closed its write side can still read the reply. */
+		if (poll(&pfd, 1, 0) == -1 && errno == EINTR)
+			return;
+		if ((pfd.revents & (POLLHUP | POLLERR | POLLNVAL)) != 0 ||
+		    ipc_watch_read(client, EV_DISABLE, true) == -1)
+			ipc_close_client(fd);
 		return;
 	}
 
@@ -1403,13 +1572,34 @@ ipc_read_client(int fd)
 		return;
 	}
 	if (n == 0) {
+		if (client->want_write &&
+		    ipc_watch_read(client, EV_DISABLE, false) == 0) {
+			client->read_eof = true;
+			return;
+		}
 		ipc_close_client(fd);
 		return;
 	}
 
-	client->buf_used += (size_t)n;
+	if (client->completed_request && client->buf_used == 0) {
+		struct timespec now;
 
-	for (;;) {
+		if (clock_gettime(CLOCK_MONOTONIC, &now) == -1) {
+			ipc_close_client(fd);
+			return;
+		}
+		client->frame_started = now.tv_sec;
+	}
+	client->buf_used += (size_t)n;
+	ipc_dispatch_buffered(client);
+}
+
+static void
+ipc_dispatch_buffered(ipc_client_t *client)
+{
+	int fd = client->fd;
+
+	while (client->action_tag == 0) {
 		uint32_t msglen;
 		size_t total;
 
@@ -1431,6 +1621,9 @@ ipc_read_client(int fd)
 			break;
 
 		ipc_dispatch_message(fd, client->buf + 4, (size_t)msglen);
+		if (!client->active)
+			return;
+		client->completed_request = true;
 
 		if (client->buf_used > total) {
 			memmove(client->buf, client->buf + total,

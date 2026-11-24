@@ -27,7 +27,7 @@
 #
 
 # PROVIDE: disks
-# KEYWORD: nojail
+# KEYWORD: nojail interactive
 
 . /etc/rc.subr
 

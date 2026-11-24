@@ -134,10 +134,15 @@ prowld's daemon options; in particular `-s` is single-user, not a run
 directory.
 
 **Startup.** prowld mounts devfs if `/` and `/dev` share a device, becomes a
-session leader, opens `/dev/console` as fds 0-2, sets the login name to root,
-and honours the loader variables `init_exec` (run a script instead of init),
-`init_script` (run first; failure means single-user), `init_chroot`, and
-`init_shell`. It then loads units, rc-shims and one getty job per enabled
+session leader, and sets the login name to root. Standard input comes from
+`/dev/null`. Standard output and error are write-only console descriptors.
+It honours the loader variables `init_exec` (run a script instead of init),
+`init_script` (run first; failure means single-user recovery), `init_chroot`,
+and `init_shell`. Executable scripts run directly, using their declared
+interpreter when present. Readable plain-text scripts without an interpreter
+line can run under `init_shell` (default `/bin/sh`). Readable scripts with no
+execute bits and an option-free `/bin/sh` interpreter line can run under
+`/bin/sh`. prowld then loads units, rc-shims and one getty job per enabled
 `/etc/ttys` line.
 
 **rc-shims.** Shims run with `autoboot=yes` (unless `-f`), `rc_fast=yes`,
@@ -170,8 +175,11 @@ this run (`PROWLD_RUNDOWN=1`): it would wait for prowld itself.
 is how `stop_boot` in rc.subr aborts a boot). All processes are killed and
 `init_shell` (default `/bin/sh`) runs on the console. If the console is not
 `secure` in `/etc/ttys` and root has a password, it is asked for first; an
-empty password or end of file goes to multi-user. When the shell exits prowld
-re-executes itself with `-f`. Not implemented: init(8)'s DEBUGSHELL prompt for
+empty password or end of file ends the recovery attempt. After a loader
+configuration failure, prowld requires an explicitly secure console entry
+or successful root authentication on a configured console. If `init_chroot`
+succeeds after an `init_script` failure, the new root supplies the console
+policy. When the shell exits prowld re-executes itself with `-f`. Not implemented: init(8)'s DEBUGSHELL prompt for
 an alternate shell.
 
 **Reroot.** On SIGEMT: shutdown as above, SIGKILL all, copy prowld to a tmpfs
@@ -300,7 +308,7 @@ File extension: `.unit` (language-neutral; libucl auto-detects syntax).
 **Execution**
 - `program` *(required unless `arguments[0]` is a full path)*: Path to executable
 - `arguments` *(array of strings)*: argv (argv[0] is `program` basename by default)
-- `pid_file` / `pid_name` *(string, exclusive)*: for a daemon that forks and lets its parent exit. The process prowld starts is a launcher; when it exits with status 0 prowld finds the daemon (by the pid in the file, or the oldest process of that name left to prowld) and supervises it instead. The pidfile is removed before each start. The daemon is looked for every 200 ms for up to 10 s, after which the job counts as failed. prowld becomes a reaper (procctl(2) `PROC_REAP_ACQUIRE`) so the daemon is its child.
+- `pid_file` / `pid_name` *(string, exclusive)*: for a daemon that forks and lets its launcher exit. A private reaper waits for the launcher to exit successfully and selects a live child from that launch. It uses the PID on the first line of a regular file, or the oldest matching process name. The service manages any existing pidfile at startup. The reaper retries every 200 ms for up to 10 seconds and cleans up its descendants on failure or cancellation. prowld checks the process identity at handoff and reports the adopted PID.
 - `start_pre` / `start_post` / `stop_pre` / `stop_post` *(array of arrays of strings, at most 8 commands each)*: commands around the job, each `[program, args...]` with `@name@` expansion; a leading `-` on the program ignores its failure. Conditions may precede the program: `?var` (rc.conf variable is YES/TRUE/ON/1), `!var` (it is not), `+var` (it is not empty), `~var` (it is empty), `<var` (its value names a readable file), `!<var` (it does not); all must hold or the command is skipped. `start_post` (after a oneshot's command exited 0; a failing command fails the job) and `stop_pre` (before a oneshot's stop command) are for oneshot jobs only. `start_pre` commands run in order in the child that is about to exec the job, as the job's user; the first failure ends the child so the job does not start, and a daemon is not "up" while they run. `stop_post` commands run in the parent after the job's process has ended, however it ended; failures are logged and the rest still run, each is killed after 30 s, and prowld waits for them (also at shutdown).
 - Entries of `requires`, `wants` and `activates` may start with a condition and a space (`"?var service"`, `"!var service"`, `"+var service"`): the entry counts only if the rc.conf variable is YES, is not YES, or is not empty.
 - `activates` *(array of strings)*: like `requires`, but a provider that is disabled is started (as `prowlctl start` would) rather than waited for forever. The job starts once they are up, at load or by hand. Masked providers and rc.d-only providers are not started.
@@ -328,6 +336,8 @@ File extension: `.unit` (language-neutral; libucl auto-detects syntax).
 
 **I/O**
 - `standard_in_path`, `standard_out_path`, `standard_error_path`
+- `interactive` *(bool)*: while PID 1 boots, standard input is the console
+  (passphrase prompts); rc.d scripts ask with `KEYWORD: interactive`
 
 **Resources**
 - `resource_limits`: maps to `setrlimit(2)`
@@ -432,6 +442,11 @@ Searched in this order (later overrides earlier):
 A unit file at a higher-priority path with the same `label` fully replaces
 the lower-priority file. Partial overrides are supported via drop-in files:
 `/etc/prowld/overrides.d/org.example.myservice.d/local.unit`.
+Fragments beside the selected unit are read first. The administrator's
+fragments are read last, in filename order, and can replace individual
+fields. If validation fails for an identified native service, its provider
+names stay reserved so rc.d discovery cannot start it under a different
+policy.
 
 ### 6.2 Runtime State
 
@@ -459,15 +474,21 @@ store exists for enabled/disabled state.
 
 **Masking — symlinks**
 
-- `/var/db/prowld/masked.d/<label>` — symlink to `/dev/null`. Presence means
-  masked (cannot be started, even as a dependency). Created by `prowlctl mask`,
-  removed by `prowlctl unmask`.
+- `/etc/prowld/masks.d/<label>` — symlink to `/dev/null` in a root-owned,
+  mode 0700 directory available during early boot. Presence means masked
+  (cannot be started, even as a dependency). Created by `prowlctl mask`.
+- `/var/db/prowld/masked.d/<label>` — legacy system mask honored when
+  accessible. Copy existing mask symlinks to the new directory before the
+  first upgraded boot if `/var` is mounted separately. With the updated
+  daemon running, `prowlctl mask <label>` also creates the new marker.
+  `prowlctl unmask` removes both copies.
+- `<rundir>/db/masked.d/<label>` — private mask location when the daemon
+  is started with an explicit `-s <rundir>`.
 
 Masking is a prowld-specific concept with no rc.conf equivalent, so it has
-its own storage. Symlink creation and removal are atomic single syscalls,
-so the state cannot be observed in a torn form — even across a crash
-mid-operation. An administrator can inspect or repair masking state with
-`ls`, `ln`, and `rm` when prowld is not running.
+its own storage. Each marker is created or removed with a single syscall.
+An administrator can inspect or repair masking state with `ls`, `ln`, and
+`rm` when prowld is not running.
 
 **Persistent timer state — flat UCL file**
 
@@ -628,6 +649,14 @@ There is no dual state to reconcile. An admin who edits `rc.conf` directly,
 runs `sysrc`, or runs `prowlctl enable` reaches the same result by any path.
 On startup, prowld reads `rc.conf` to determine which services to launch, in
 the same way `rc(8)` does today.
+
+For its own variable lookups, prowld validates root ownership, write
+permissions and NFSv4 ACLs on the opened files and their directory chains.
+It skips symbolic links and unsafe inputs. For native unit expansion,
+each per-service path may be a regular file or a directory of visible
+regular files read in filename order. An ignored input leaves earlier
+trusted assignments in effect. Shell commands and rc.d scripts that source
+configuration directly use their own configuration readers.
 
 #### 7.6.2 Variable Name Derivation
 

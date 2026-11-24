@@ -80,6 +80,7 @@ bool			 g_fastboot = false;	/* no "autoboot": skip fsck */
 char			 g_unit_override[PROWL_PATH_MAX]; /* -u unit dir */
 static bool		 g_reroot = false;	/* PID 1: reroot requested */
 bool			 g_boot_mode = false;	/* we run rc.d */
+bool			 g_multi_user = false;	/* release /etc/ttys gettys */
 
 /* Runtime path globals — defaults match compile-time macros */
 char	g_run_dir[PROWL_PATH_MAX]      = PROWLD_RUN_DIR;
@@ -88,6 +89,7 @@ char	g_sock_path[PROWL_PATH_MAX]    = PROWLD_SOCK_PATH;
 char	g_pid_path[PROWL_PATH_MAX]     = PROWLD_PID_PATH;
 char	g_db_dir[PROWL_PATH_MAX]       = PROWLD_DB_DIR;
 char	g_mask_dir[PROWL_PATH_MAX]     = PROWLD_MASK_DIR;
+const char *g_legacy_mask_dir          = PROWLD_LEGACY_MASK_DIR;
 char	g_log_dir[PROWL_PATH_MAX]      = PROWLD_LOG_DIR;
 char	g_job_log_dir[PROWL_PATH_MAX]  = PROWLD_JOB_LOG_DIR;
 char	g_generated_dir[PROWL_PATH_MAX] = UNIT_DIR_GENERATED;
@@ -104,7 +106,7 @@ usage(void)
  * Called when -s is given or when auto-detection falls back to /tmp/prowld.
  */
 static void
-setup_runtime_paths(const char *base)
+setup_runtime_paths(const char *base, bool private_masks)
 {
 	int n;
 
@@ -127,9 +129,14 @@ setup_runtime_paths(const char *base)
 	if (n < 0 || (size_t)n >= sizeof(g_db_dir))
 		goto toolong;
 
-	n = snprintf(g_mask_dir, sizeof(g_mask_dir), "%s/db/masked.d", base);
-	if (n < 0 || (size_t)n >= sizeof(g_mask_dir))
-		goto toolong;
+	/* Only an explicit -s changes the administrative mask namespace. */
+	if (private_masks) {
+		n = snprintf(g_mask_dir, sizeof(g_mask_dir), "%s/db/masked.d",
+		    base);
+		if (n < 0 || (size_t)n >= sizeof(g_mask_dir))
+			goto toolong;
+		g_legacy_mask_dir = NULL;
+	}
 
 	n = snprintf(g_log_dir, sizeof(g_log_dir), "%s/log", base);
 	if (n < 0 || (size_t)n >= sizeof(g_log_dir))
@@ -256,7 +263,7 @@ ensure_dirs(void)
 		prowl_log(LOG_WARNING,
 		    "run dir %s unavailable, falling back to /tmp/prowld",
 		    g_run_dir);
-		setup_runtime_paths("/tmp/prowld");
+		setup_runtime_paths("/tmp/prowld", false);
 		if (secure_mkdir(g_run_dir, 0755) == -1) {
 			prowl_log(LOG_ERR,
 			    "cannot safely create or validate run directory "
@@ -266,7 +273,20 @@ ensure_dirs(void)
 	}
 
 	/* Subdirectories — failures are logged but not fatal */
-	(void)secure_mkdir(g_notify_dir,    0700); /* root-only: sd_notify */
+	if (secure_mkdir(g_notify_dir, 0711) == 0) {
+		int fd = trusted_open_dir(g_notify_dir);
+
+		if (fd == -1)
+			prowl_log(LOG_ERR, "unsafe notify directory %s: %m",
+			    g_notify_dir);
+		else {
+			/* Permit traversal but not listing or modification. */
+			if (fchmod(fd, 0711) == -1)
+				prowl_log(LOG_ERR, "chmod notify directory %s: %m",
+				    g_notify_dir);
+			close(fd);
+		}
+	}
 	(void)secure_mkdir(g_db_dir,        0755); /* world-readable */
 	(void)secure_mkdir(g_mask_dir,      0700); /* root-only: masks */
 	(void)secure_mkdir(g_log_dir,       0750); /* daemon logs */
@@ -304,8 +324,10 @@ runtime_up(void)
 	else
 		g_ipc_listen_fd = ipc_listen_fd;
 
-	if (g_boot_mode)
+	if (g_boot_mode) {
+		supervisor_load_masks();
 		timer_state_load();
+	}
 	return (0);
 }
 
@@ -333,39 +355,32 @@ load_config(void)
 	struct ucl_parser *parser;
 	ucl_object_t *root;
 	const ucl_object_t *obj;
-	struct stat sb;
+	bool ok;
+	int fd;
 
 	/* Apply defaults first; debug is not reset here — it is set by
 	 * the command-line -d flag in main() and must not be overridden. */
 	g_config.max_concurrent_starts = DEFAULT_MAX_STARTS;
 	g_config.shutdown_timeout      = DEFAULT_SHUTDOWN_TMO;
 
-	if (stat(PROWLD_CONF_PATH, &sb) == -1) {
+	fd = trusted_open_file(PROWLD_CONF_PATH, false);
+	if (fd == -1) {
 		if (errno != ENOENT)
-			prowl_log(LOG_WARNING, "load_config stat %s: %m",
+			prowl_log(LOG_WARNING, "load_config %s: %m",
 			    PROWLD_CONF_PATH);
-		return;
-	}
-
-	/* Reject config files not owned by root or world-writable. */
-	if (sb.st_uid != 0) {
-		prowl_log(LOG_WARNING,
-		    "%s: not owned by root, using defaults", PROWLD_CONF_PATH);
-		return;
-	}
-	if (sb.st_mode & S_IWOTH) {
-		prowl_log(LOG_WARNING,
-		    "%s: world-writable, using defaults", PROWLD_CONF_PATH);
 		return;
 	}
 
 	parser = ucl_parser_new(UCL_PARSER_NO_FILEVARS);
 	if (parser == NULL) {
 		prowl_log(LOG_ERR, "load_config: ucl_parser_new failed");
+		close(fd);
 		return;
 	}
 
-	if (!ucl_parser_add_file(parser, PROWLD_CONF_PATH)) {
+	ok = trusted_ucl_add_fd(parser, fd, PROWLD_CONF_PATH);
+	close(fd);
+	if (!ok) {
 		prowl_log(LOG_ERR, "load_config %s: %.128s",
 		    PROWLD_CONF_PATH, ucl_parser_get_error(parser));
 		ucl_parser_free(parser);
@@ -569,7 +584,7 @@ handle_timer_event(struct kevent *kev)
 		supervisor_handle_throttle(job);
 		break;
 	case TIMER_STOP:
-		supervisor_handle_stop_timeout(job);
+		supervisor_handle_stop_timeout(job, (uintptr_t)kev->udata);
 		break;
 	case TIMER_WATCHDOG:
 		supervisor_handle_watchdog(job);
@@ -597,14 +612,9 @@ handle_timer_event(struct kevent *kev)
 static void
 load_units(void)
 {
-	if (g_unit_override[0] != '\0') {
-		unit_load_dir(g_unit_override);
+	unit_load_all();
+	if (g_unit_override[0] != '\0')
 		return;
-	}
-	unit_load_dir(UNIT_DIR_BASE);
-	unit_load_dir(UNIT_DIR_LOCAL);
-	unit_load_dir(UNIT_DIR_OVERRIDE);
-	unit_load_dir(g_generated_dir);
 
 	prowl_log(LOG_NOTICE, "scanning rc.d directories");
 	rcshim_scan_dir(RCD_DIR_BASE);
@@ -686,6 +696,44 @@ startup_load(void)
 	arm_calendar_tick();
 }
 
+/*
+ * Boot work is still going on while a service that runs at boot is
+ * starting, or is waiting for its first restarts.  init(8) only goes
+ * multi-user once /etc/rc has finished; a service that failed and is
+ * held off for a retry is part of that work, but a service that keeps
+ * failing must not hold up the login prompt, so waiting for retries is
+ * bounded by BOOT_RETRY_WAIT seconds.
+ */
+#define BOOT_RETRY_WAIT	30
+
+static bool
+boot_work_pending(void)
+{
+	static time_t retry_since;
+	job_t *job;
+	time_t now;
+	bool retry = false;
+
+	if (g_current_starts != 0)
+		return (true);
+	TAILQ_FOREACH(job, &g_jobs, entries) {
+		if (job->masked || job->is_getty || !job->enabled ||
+		    !job->run_at_load)
+			continue;
+		if (job->start_pending || job->state == JOB_STATE_STARTING)
+			return (true);
+		if (job->state == JOB_STATE_LOADED && job->restart_hold &&
+		    job->throttle_timer_active)
+			retry = true;
+	}
+	if (!retry)
+		return (false);
+	now = time(NULL);
+	if (retry_since == 0)
+		retry_since = now;
+	return (now - retry_since < BOOT_RETRY_WAIT);
+}
+
 static void
 main_loop(void)
 {
@@ -693,15 +741,16 @@ main_loop(void)
 	int nev, i;
 	struct timespec timeout;
 
-	/* Start initial ready jobs */
 	dag_schedule_ready();
-
 	while (!g_shutdown) {
 		if (g_reload)
 			reload_config();
 
 		timeout.tv_sec = 5;
 		timeout.tv_nsec = 0;
+		supervisor_action_timeout(&timeout);
+		if (g_shutdown)
+			break;
 
 		nev = kevent(g_kqueue_fd, NULL, 0, events,
 		    (int)(sizeof(events) / sizeof(events[0])), &timeout);
@@ -714,6 +763,7 @@ main_loop(void)
 
 		for (i = 0; i < nev; i++) {
 			struct kevent *kev = &events[i];
+			uintptr_t tag = (uintptr_t)kev->udata;
 
 			switch (kev->filter) {
 			case EVFILT_SIGNAL:
@@ -721,31 +771,23 @@ main_loop(void)
 				break;
 			case EVFILT_READ:
 				if (g_ipc_listen_fd >= 0 &&
+				    tag == 0 &&
 				    (int)kev->ident == g_ipc_listen_fd)
 					ipc_accept();
-				else if (kev->udata != NULL &&
-				    ((uintptr_t)kev->udata & 1UL))
-					/*
-					 * Bit 0 set: socket activation fd.
-					 * Decode the prowl_socket_t pointer.
-					 */
+				else if ((tag & READ_EVENT_MASK) == READ_EVENT_CLIENT)
+					ipc_read_client((int)kev->ident, tag,
+					    (kev->flags & EV_EOF) != 0);
+				else if ((tag & READ_EVENT_MASK) == READ_EVENT_ACTION)
+					supervisor_read_action((int)kev->ident, tag);
+				else if ((tag & READ_EVENT_MASK) == READ_EVENT_SOCKET)
 					socket_handle_activation(
-					    (prowl_socket_t *)
-					    ((uintptr_t)kev->udata & ~1UL));
-				else if (kev->udata != NULL)
-					/*
-					 * Non-NULL, bit 0 clear: notify fd
-					 * registered by supervisor.c with the
-					 * job pointer as udata.
-					 */
-					supervisor_handle_notify(
-					    (job_t *)kev->udata);
-				else
-					ipc_read_client((int)kev->ident);
+					    (prowl_socket_t *)(tag & ~READ_EVENT_MASK));
+				else if (tag != 0)
+					supervisor_handle_notify((job_t *)tag);
 				break;
 			case EVFILT_WRITE:
 				/* IPC client socket has room again */
-				ipc_write_ready((int)kev->ident);
+				ipc_write_ready((int)kev->ident, tag);
 				break;
 			case EVFILT_PROC:
 				handle_proc_event(kev);
@@ -758,9 +800,24 @@ main_loop(void)
 			}
 		}
 
-		/* After processing events, promote any newly-ready jobs */
+		ipc_start_sysrc();
+		ipc_expire_clients();
 		dag_schedule_ready();
 		check_runtime();
+
+		/*
+		 * LOGIN can precede securelevel and other late rc.d scripts.
+		 * Once the boot work has drained, including the first retries
+		 * of services that failed, apply init's securelevel policy
+		 * before allowing any getty to run.
+		 */
+		if (g_is_init && !g_multi_user && !g_shutdown &&
+		    !g_rundown && !boot_work_pending()) {
+			if (!g_jailed)
+				pid1_raise_securelevel();
+			g_multi_user = true;
+			dag_schedule_ready();
+		}
 	}
 }
 
@@ -845,7 +902,7 @@ main(int argc, char *argv[])
 
 	/* Apply explicit runtime directory override before anything else. */
 	if (override_dir != NULL)
-		setup_runtime_paths(override_dir);
+		setup_runtime_paths(override_dir, true);
 
 	if (g_is_init) {
 		prowl_log(LOG_NOTICE, "running as PID 1 (init)");
@@ -910,6 +967,7 @@ main(int argc, char *argv[])
 
 	startup_load();
 	main_loop();
+	supervisor_cancel_actions();
 
 	prowl_log(LOG_NOTICE, "prowld stopping");
 

@@ -228,7 +228,7 @@ extern u_32_t getv6optbyname(char *);
 extern u_32_t getv6optbyvalue(int);
 extern char *icmptypename(int, int);
 extern void initparse(void);
-extern void ipf_dotuning(int, char *, ioctlfunc_t);
+extern int ipf_dotuning(int, char *, ioctlfunc_t);
 extern int ipf_addrule(int, ioctlfunc_t, void *);
 extern void ipf_mutex_clean(void);
 extern int ipf_parsefile(int, addfunc_t, ioctlfunc_t *, char *);

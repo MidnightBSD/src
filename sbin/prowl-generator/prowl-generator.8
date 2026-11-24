@@ -65,6 +65,10 @@ The
 .Dq shutdown
 keyword enables
 .Va shutdown_wait
+and the
+.Dq nostart
+keyword disables
+.Va run_at_load
 in the generated unit.
 .El
 .Pp
@@ -79,6 +83,35 @@ is automatically prefixed with
 to maintain consistency with the
 .Xr prowld 8
 rc-shim.
+.Pp
+The script must be an executable regular file owned by root and not
+writable by group or other, and its basename must be usable in a unit
+label (alphanumerics and
+.Qq \&. ,
+.Qq \&- ,
+.Qq _ ,
+.Qq @);
+otherwise
+.Nm
+exits with an error.
+.Pp
+.Va run_at_load
+is true only when the service is enabled: scripts with the
+.Dq nostart
+keyword never run at load, scripts without a
+.Va rcvar=
+assignment always do, and otherwise the rcvar (or
+.Dq <PROVIDE>_enable )
+must be
+.Dq YES
+in
+.Pa /etc/defaults/rc.conf ,
+.Pa /etc/rc.conf
+or
+.Pa /etc/rc.conf.local .
+.Pp
+Tokens longer than 255 characters and dependency lists longer than 32
+entries are truncated, with a warning printed to standard error.
 .Sh EXAMPLES
 Generate a unit file for the SSH daemon:
 .Bd -literal -offset indent

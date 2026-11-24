@@ -136,8 +136,10 @@ main(int argc, char *argv[])
 			swapactive();
 			break;
 		case 'T' :
-			if (opendevice(ipfname, 1) >= 0)
-				ipf_dotuning(fd, optarg, ioctl);
+			if (!(opts & OPT_DONOTHING) &&
+			    (opendevice(ipfname, 1) < 0 ||
+			    ipf_dotuning(fd, optarg, ioctl) != 0))
+				exitstatus = 1;
 			break;
 		case 'v' :
 			opts += OPT_VERBOSE;
@@ -216,28 +218,33 @@ get_flags(void)
 static void
 set_state(u_int enable)
 {
-	if (opendevice(ipfname, 0) != -2) {
-		if (ioctl(fd, SIOCFRENB, &enable) == -1) {
-			if (errno == EBUSY) {
-				fprintf(stderr,
-					"IP FIlter: already initialized\n");
-			} else {
-				ipferror(fd, "SIOCFRENB");
-			}
-		}
+	if (opts & OPT_DONOTHING)
+		return;
+	if (opendevice(ipfname, 0) < 0) {
+		exitstatus = 1;
+		return;
 	}
-	return;
+	if (ioctl(fd, SIOCFRENB, &enable) == -1) {
+		ipferror(fd, "SIOCFRENB");
+		exitstatus = 1;
+	}
 }
 
 
 static void
 procfile(char *file)
 {
-	(void) opendevice(ipfname, 1);
+	if (!(opts & OPT_DONOTHING) && opendevice(ipfname, 1) < 0) {
+		exitstatus = 1;
+		return;
+	}
 
 	initparse();
 
-	ipf_parsefile(fd, ipf_interceptadd, iocfunctions, file);
+	if (ipf_parsefile(fd, ipf_interceptadd, iocfunctions, file) != 0) {
+		exitstatus = 1;
+		return;
+	}
 
 	if (outputc) {
 		printC(0);
@@ -442,10 +449,18 @@ swapactive(void)
 {
 	int in = 2;
 
-	if (opendevice(ipfname, 1) != -2 && ioctl(fd, SIOCSWAPA, &in) == -1)
+	if (opts & OPT_DONOTHING)
+		return;
+	if (opendevice(ipfname, 1) < 0) {
+		exitstatus = 1;
+		return;
+	}
+	if (ioctl(fd, SIOCSWAPA, &in) == -1) {
 		ipferror(fd, "ioctl(SIOCSWAPA)");
-	else
-		printf("Set %d now inactive\n", in);
+		exitstatus = 1;
+		return;
+	}
+	printf("Set %d now inactive\n", in);
 }
 
 
@@ -454,10 +469,18 @@ ipf_frsync(void)
 {
 	int frsyn = 0;
 
-	if (opendevice(ipfname, 1) != -2 && ioctl(fd, SIOCFRSYN, &frsyn) == -1)
+	if (opts & OPT_DONOTHING)
+		return;
+	if (opendevice(ipfname, 1) < 0) {
+		exitstatus = 1;
+		return;
+	}
+	if (ioctl(fd, SIOCFRSYN, &frsyn) == -1) {
 		ipferror(fd, "SIOCFRSYN");
-	else
-		printf("filter sync'd\n");
+		exitstatus = 1;
+		return;
+	}
+	printf("filter sync'd\n");
 }
 
 

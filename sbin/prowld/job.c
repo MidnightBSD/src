@@ -35,6 +35,7 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -59,6 +60,7 @@ job_alloc(void)
 	job->exit_timeout = DEFAULT_EXIT_TIMEOUT;
 	job->pid = -1;
 	job->notify_fd = -1;
+	job->launch_fd = -1;
 	job->enabled = true;
 
 	for (int i = 0; i < PROWL_SOCKETS_MAX; i++) {
@@ -69,8 +71,8 @@ job_alloc(void)
 	return (job);
 }
 
-void
-job_free(job_t *job)
+static void
+job_clear(job_t *job)
 {
 	int i, a;
 
@@ -98,7 +100,44 @@ job_free(job_t *job)
 	for (i = 0; i < job->mdns.txt_count; i++)
 		free(job->mdns.txt_record[i]);
 
+	if (job->launch_fd >= 0)
+		close(job->launch_fd);
+	free(job->unit_config);
+	free(job->template_instance);
+}
+
+void
+job_free(job_t *job)
+{
+	job_clear(job);
 	free(job);
+}
+
+/* Keep every kqueue and IPC reference to this job valid across a rescan. */
+void
+job_replace(job_t *old, job_t *replacement)
+{
+	replacement->entries = old->entries;
+	/* A reload should not start an explicitly stopped or completed job. */
+	if (old->state == JOB_STATE_STOPPED || old->state == JOB_STATE_COMPLETED)
+		replacement->state = old->state;
+	if (old->restart_after_reload) {
+		replacement->state = JOB_STATE_LOADED;
+		replacement->run_at_load = true;
+		replacement->enabled = true;
+	}
+	replacement->masked = old->masked;
+	replacement->restart_count = old->restart_count;
+	replacement->last_exit_status = old->last_exit_status;
+	replacement->last_run = old->last_run;
+	replacement->started_at = old->started_at;
+	replacement->exited_at = old->exited_at;
+	replacement->stop_timer_generation = old->stop_timer_generation;
+	job_clear(old);
+	*old = *replacement;
+	for (int i = 0; i < PROWL_SOCKETS_MAX; i++)
+		old->sockets[i].job = old;
+	free(replacement);
 }
 
 job_t *
@@ -178,21 +217,55 @@ job_provides(const job_t *job, const char *name)
 	return (false);
 }
 
-void
-job_set_state(job_t *job, job_state_t state)
+bool
+job_launch_blocked(const job_t *job)
 {
-	if (job->state == state)
+	return (job->masked || job->policy_blocked);
+}
+
+job_state_t
+job_reported_state(const job_t *job)
+{
+	if (job->masked)
+		return (JOB_STATE_MASKED);
+	if (job->policy_blocked && job->pid <= 0)
+		return (JOB_STATE_FAILED);
+	return (job->state);
+}
+
+static void
+job_report_state_change(const job_t *job, job_state_t old)
+{
+	job_state_t state = job_reported_state(job);
+
+	if (old == state)
 		return;
 
 	prowl_log(LOG_DEBUG, "job %s: %s -> %s",
 	    job->label,
-	    job_state_str(job->state),
+	    job_state_str(old),
 	    job_state_str(state));
 
-	ipc_broadcast_event(job->label, job_state_str(job->state),
+	ipc_broadcast_event(job->label, job_state_str(old),
 	    job_state_str(state));
+}
+
+void
+job_set_state(job_t *job, job_state_t state)
+{
+	job_state_t old = job_reported_state(job);
 
 	job->state = state;
+	job_report_state_change(job, old);
+}
+
+void
+job_set_masked(job_t *job, bool masked)
+{
+	job_state_t old = job_reported_state(job);
+
+	job->masked = masked;
+	job_report_state_change(job, old);
 }
 
 const char *
@@ -226,14 +299,42 @@ job_type_str(job_type_t type)
 	}
 }
 
-bool
-job_is_masked(const job_t *job)
+static int
+update_mask(const job_t *job, const char *dir, bool masked)
 {
-	char path[PROWL_PATH_MAX];
 	struct stat sb;
+	int fd, rc, error;
 
-	snprintf(path, sizeof(path), "%s/%s", g_mask_dir, job->label);
-	return (lstat(path, &sb) == 0);
+	fd = trusted_open_dir(dir);
+	if (fd == -1)
+		return (!masked && errno == ENOENT ? 0 : -1);
+
+	if (masked) {
+		rc = symlinkat("/dev/null", fd, job->label);
+		if (rc == -1 && errno == EEXIST)
+			rc = 0;
+	} else {
+		/* An absent marker needs no write on a read-only file system. */
+		rc = fstatat(fd, job->label, &sb, AT_SYMLINK_NOFOLLOW);
+		if (rc == 0)
+			rc = unlinkat(fd, job->label, 0);
+		if (rc == -1 && errno == ENOENT)
+			rc = 0;
+	}
+	error = errno;
+	close(fd);
+	errno = error;
+	return (rc);
+}
+
+int
+job_save_mask(const job_t *job, bool masked)
+{
+	/* Keep the early-boot marker until any legacy copy is gone. */
+	if (!masked && g_legacy_mask_dir != NULL &&
+	    update_mask(job, g_legacy_mask_dir, false) == -1)
+		return (-1);
+	return (update_mask(job, g_mask_dir, masked));
 }
 
 /*
@@ -245,6 +346,7 @@ bool
 job_dep_satisfied(const job_t *job, const dep_entry_t *dep)
 {
 	job_t *provider;
+	job_state_t state;
 
 	/* "?name service": nothing to wait for unless the variable holds */
 	if (dep->cond[0] != '\0' && !prowl_cond_holds(job->rc_name, dep->cond))
@@ -259,8 +361,8 @@ job_dep_satisfied(const job_t *job, const dep_entry_t *dep)
 		return (!dep->hard || job->type == JOB_TYPE_RCSHIM);
 	}
 
-	if (provider->state == JOB_STATE_RUNNING ||
-	    provider->state == JOB_STATE_COMPLETED)
+	state = job_reported_state(provider);
+	if (state == JOB_STATE_RUNNING || state == JOB_STATE_COMPLETED)
 		return (true);
 
 	/*
@@ -273,9 +375,9 @@ job_dep_satisfied(const job_t *job, const dep_entry_t *dep)
 	 */
 	if ((job->type == JOB_TYPE_RCSHIM || !dep->hard ||
 	    (dep->activate && provider->type == JOB_TYPE_RCSHIM)) &&
-	    (provider->state == JOB_STATE_DISABLED ||
-	    provider->state == JOB_STATE_MASKED ||
-	    provider->state == JOB_STATE_FAILED ||
+	    (state == JOB_STATE_DISABLED ||
+	    state == JOB_STATE_MASKED ||
+	    state == JOB_STATE_FAILED ||
 	    provider->restart_hold))
 		return (true);
 

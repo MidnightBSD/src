@@ -67,6 +67,9 @@
 #define PID1_KILL_WAIT	5	/* seconds to wait after SIGKILL */
 #define PID1_RUNDOWN_TMO 120	/* seconds rc.shutdown may take */
 
+/* Loader failures require strict console recovery policy. */
+static bool loader_recovery;
+
 static char *const pid1_env[] = {
 	(char *)(uintptr_t)"HOME=/",
 	(char *)(uintptr_t)"PATH=/sbin:/bin:/usr/sbin:/usr/bin",
@@ -113,29 +116,71 @@ pid1_mount_devfs(bool force)
 }
 
 /*
- * Become session leader and make stdin/stdout/stderr the console, as
- * init(8) does, so that anything we or the rc scripts print is visible
- * and logging to stderr works before syslogd is running.
+ * Give an interactive boot or shutdown command the console on all three
+ * descriptors. The caller keeps the safe defaults if there is no console.
+ */
+static int
+pid1_interactive_console(void)
+{
+	int fd, i, ret;
+
+	fd = open(_PATH_CONSOLE, O_RDWR | O_NOCTTY);
+	if (fd == -1)
+		return (0);
+	ret = 0;
+	for (i = STDIN_FILENO; i <= STDERR_FILENO; i++) {
+		if (dup2(fd, i) == -1) {
+			syslog(LOG_ERR, "cannot attach console to fd %d: %m", i);
+			ret = -1;
+			break;
+		}
+	}
+	if (fd > STDERR_FILENO)
+		close(fd);
+	return (ret);
+}
+
+/*
+ * Keep console logging available before syslogd starts. Most children
+ * inherit these write-only outputs and an input that always returns EOF.
  */
 void
 pid1_open_console(void)
 {
-	int fd, i;
+	int error, fd;
 
 	if (setsid() == -1 && (errno != EPERM || getsid(0) != 1))
 		syslog(LOG_WARNING, "initial setsid() failed: %m");
 
-	fd = open(_PATH_CONSOLE, O_RDWR | O_NOCTTY);
+	fd = open(_PATH_CONSOLE, O_WRONLY | O_NOCTTY);
 	if (fd == -1)
-		fd = open(_PATH_DEVNULL, O_RDWR);
+		fd = open(_PATH_DEVNULL, O_WRONLY);
 	if (fd == -1)
-		return;
-	for (i = 0; i < 3; i++) {
-		if (fd != i)
-			(void)dup2(fd, i);
-	}
-	if (fd > 2)
+		goto fail;
+	if (dup2(fd, STDOUT_FILENO) == -1 ||
+	    dup2(fd, STDERR_FILENO) == -1)
+		goto fail_close;
+	if (fd != STDOUT_FILENO && fd != STDERR_FILENO)
 		close(fd);
+
+	fd = open(_PATH_DEVNULL, O_RDONLY);
+	if (fd == -1)
+		goto fail;
+	if (dup2(fd, STDIN_FILENO) == -1)
+		goto fail_close;
+	if (fd != STDIN_FILENO)
+		close(fd);
+	return;
+
+fail_close:
+	error = errno;
+	if (fd > STDERR_FILENO)
+		close(fd);
+	errno = error;
+fail:
+	syslog(LOG_ERR, "cannot set up PID 1 standard descriptors: %m");
+	loader_recovery = true;
+	pid1_single_user();
 }
 
 /*
@@ -228,6 +273,8 @@ boot_run_rundown(const char *arg)
 		char *argv[4];
 
 		prowl_reset_signals();
+		if (pid1_interactive_console() == -1)
+			_exit(1);
 		argv[0] = (char *)(uintptr_t)"sh";
 		argv[1] = (char *)(uintptr_t)PID1_RUNDOWN;
 		argv[2] = (char *)(uintptr_t)arg;
@@ -299,22 +346,94 @@ pid1_shell(void)
 }
 
 /*
- * Run a script the way init(8) does: execute it directly if it is
- * executable, otherwise hand it to the shell.  Only returns on failure.
+ * A readable legacy script can omit its execute bits or interpreter line.
+ * Honor a plain /bin/sh interpreter line on non-executable scripts, and
+ * leave other interpreter lines (including options) to execve().
  */
+static const char *
+pid1_script_shell(const char *script, int exec_error)
+{
+	unsigned char buf[4096];
+	const char *shell;
+	struct stat sb;
+	ssize_t n;
+	size_t i, start;
+	int fd;
+
+	if (exec_error != ENOEXEC && exec_error != EACCES)
+		return (NULL);
+	fd = open(script, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+	if (fd == -1)
+		return (NULL);
+	shell = NULL;
+	if (fstat(fd, &sb) == -1 || !S_ISREG(sb.st_mode) ||
+	    (exec_error == EACCES &&
+	    (sb.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) != 0))
+		goto out;
+
+	do {
+		n = read(fd, buf, sizeof(buf));
+	} while (n == -1 && errno == EINTR);
+	if (n <= 0 || (n < 2 && sb.st_size >= 2))
+		goto out;
+	shell = pid1_shell();
+	if (n >= 2 && buf[0] == '#' && buf[1] == '!') {
+		shell = NULL;
+		if (exec_error != EACCES)
+			goto out;
+		for (start = 2; start < (size_t)n &&
+		    (buf[start] == ' ' || buf[start] == '\t'); start++)
+			continue;
+		if ((size_t)n - start < sizeof(PID1_SHELL) ||
+		    memcmp(buf + start, PID1_SHELL, sizeof(PID1_SHELL) - 1) != 0)
+			goto out;
+		i = start + sizeof(PID1_SHELL) - 1;
+		while (i < (size_t)n && (buf[i] == ' ' || buf[i] == '\t'))
+			i++;
+		if (i == (size_t)n || buf[i] != '\n')
+			goto out;
+		shell = PID1_SHELL;
+	}
+	for (;;) {
+		for (i = 0; i < (size_t)n; i++) {
+			if ((buf[i] < ' ' && buf[i] != '\t' &&
+			    buf[i] != '\n' && buf[i] != '\r') ||
+			    buf[i] == 0x7f) {
+				shell = NULL;
+				goto out;
+			}
+		}
+		do {
+			n = read(fd, buf, sizeof(buf));
+		} while (n == -1 && errno == EINTR);
+		if (n <= 0)
+			break;
+	}
+	if (n == -1)
+		shell = NULL;
+out:
+	close(fd);
+	return (shell);
+}
+
+/* Only returns on failure. */
 static void
 pid1_exec_script(char *const argv[])
 {
 	const char *script = argv[1];
+	const char *shell;
+	int error;
 
-	if (access(script, X_OK) == 0) {
-		execve(script, argv + 1, pid1_env);
-		prowl_log(LOG_WARNING, "can't directly exec %s: %m", script);
-	} else if (errno != EACCES) {
-		prowl_log(LOG_WARNING, "can't access %s: %m", script);
+	execve(script, argv + 1, pid1_env);
+	error = errno;
+	shell = pid1_script_shell(script, error);
+	if (shell == NULL) {
+		errno = error;
+		prowl_log(LOG_ERR, "can't exec %s: %m", script);
+		return;
 	}
-	execve(pid1_shell(), argv, pid1_env);
-	prowl_log(LOG_ERR, "can't exec %s for %s: %m", pid1_shell(), script);
+	execve(shell, argv, pid1_env);
+	prowl_log(LOG_ERR, "can't exec %s for %s: %m", shell, script);
 }
 
 /*
@@ -333,13 +452,16 @@ pid1_init_exec(void)
 	argv[1] = path;
 	argv[2] = NULL;
 	prowl_reset_signals();
-	pid1_exec_script(argv);
-	_exit(0);
+	if (pid1_interactive_console() == 0)
+		pid1_exec_script(argv);
+	prowl_log(LOG_ERR, "init_exec failed; entering single-user mode");
+	loader_recovery = true;
+	pid1_single_user();
 }
 
 /*
  * loader variable init_script: run a script before anything else.
- * Returns -1 if it failed, which sends us to single-user mode.
+ * On failure, require strict console policy and return -1 for recovery.
  */
 int
 pid1_init_script(void)
@@ -355,10 +477,13 @@ pid1_init_script(void)
 	pid = fork();
 	if (pid == -1) {
 		prowl_log(LOG_ERR, "can't fork for %s: %m", path);
+		loader_recovery = true;
 		return (-1);
 	}
 	if (pid == 0) {
 		prowl_reset_signals();
+		if (pid1_interactive_console() == -1)
+			_exit(1);
 		argv[0] = (char *)(uintptr_t)"sh";
 		argv[1] = path;
 		argv[2] = g_fastboot ? NULL : (char *)(uintptr_t)"autoboot";
@@ -371,6 +496,7 @@ pid1_init_script(void)
 	} while (wpid == -1 && errno == EINTR);
 	if (wpid != pid || !WIFEXITED(st) || WEXITSTATUS(st) != 0) {
 		prowl_log(LOG_ERR, "%s failed", path);
+		loader_recovery = true;
 		return (-1);
 	}
 	return (0);
@@ -384,8 +510,11 @@ pid1_init_chroot(void)
 
 	if (!pid1_kenv("init_chroot", path, sizeof(path)))
 		return;
-	if (chdir(path) != 0 || chroot(".") != 0)
-		prowl_log(LOG_WARNING, "can't chroot to %s: %m", path);
+	if (chroot(path) == -1 || chdir("/") == -1) {
+		prowl_log(LOG_ERR, "can't enter init_chroot %s: %m", path);
+		loader_recovery = true;
+		pid1_single_user();
+	}
 }
 
 /*
@@ -406,6 +535,14 @@ pid1_single_user_auth(void)
 
 	typ = getttynam("console");
 	pp = getpwnam("root");
+	if (loader_recovery && (typ == NULL ||
+	    ((typ->ty_status & TTY_SECURE) == 0 &&
+	    (pp == NULL || pp->pw_uid != 0 || pp->pw_passwd == NULL ||
+	    *pp->pw_passwd == '\0')))) {
+		prowl_log(LOG_ERR, "cannot verify console recovery policy");
+		sleep(5);
+		_exit(0);
+	}
 	if (typ == NULL || (typ->ty_status & TTY_SECURE) != 0 ||
 	    pp == NULL || *pp->pw_passwd == '\0')
 		return;
@@ -449,6 +586,10 @@ pid1_single_user(void)
 			prowl_reset_signals();
 			(void)setsid();
 			fd = open(_PATH_CONSOLE, O_RDWR);
+			if (loader_recovery && fd == -1) {
+				sleep(5);
+				_exit(0);
+			}
 			if (fd != -1) {
 				(void)ioctl(fd, TIOCSCTTY, 0);
 				(void)dup2(fd, 0);
@@ -659,6 +800,21 @@ pid1_reroot_cleanup(void)
 		prowl_log(LOG_WARNING, "cannot unmount %s: %m", PID1_REROOT);
 }
 
+/* Match init(8)'s transition after rc completes, including a headless boot. */
+void
+pid1_raise_securelevel(void)
+{
+	int mib[2] = { CTL_KERN, KERN_SECURELVL };
+	int level, newlevel = 1;
+	size_t len = sizeof(level);
+
+	if (sysctl(mib, 2, &level, &len, NULL, 0) == -1)
+		prowl_log(LOG_ERR, "cannot read kern.securelevel: %m");
+	else if (level == 0 &&
+	    sysctl(mib, 2, NULL, NULL, &newlevel, sizeof(newlevel)) == -1)
+		prowl_log(LOG_ERR, "cannot raise kern.securelevel to 1: %m");
+}
+
 #define GETTY_PREFIX	"org.midnightbsd.getty."
 
 static job_t *
@@ -776,6 +932,7 @@ pid1_add_getty(const struct ttyent *typ)
 	job->deps_count = 1;
 
 	/* Respawn after every exit, as init(8) does. */
+	job->is_getty = true;
 	job->keep_alive.always = true;
 	job->throttle_interval = 1;
 	job->enabled = true;
