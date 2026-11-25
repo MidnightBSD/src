@@ -7,6 +7,10 @@ Updating Information for MidnightBSD users.
 	CVE-2026-134703. It also updates XML name handling to XML 1.0
 	Fifth Edition.
 
+	Native inotify watch syscalls have moved to 593 and 594 to match
+	FreeBSD. Update the kernel and world together. Rebuild binaries
+	statically linked against the earlier development inotify ABI.
+
 20261123:
 	prowld now applies administrator drop-ins after packaged policy. If it
 	rejects a known native service, it also blocks the matching rc.d
