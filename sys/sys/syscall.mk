@@ -422,6 +422,7 @@ MIASM =  \
 	__specialfd.o \
 	aio_writev.o \
 	aio_readv.o \
+	fspacectl.o \
 	sched_getcpu.o \
 	swapoff.o \
 	kqueuex.o \
@@ -430,5 +431,7 @@ MIASM =  \
 	timerfd_gettime.o \
 	timerfd_settime.o \
 	kcmp.o \
+	getrlimitusage.o \
+	setcred.o \
 	inotify_add_watch_at.o \
 	inotify_rm_watch.o

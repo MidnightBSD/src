@@ -6064,6 +6064,16 @@ vop_need_inactive_debugpost(void *ap, int rc)
 #endif
 
 void
+vop_deallocate_post(void *ap, int rc)
+{
+	struct vop_deallocate_args *a;
+
+	a = ap;
+	if (rc == 0)
+		INOTIFY(a->a_vp, IN_MODIFY);
+}
+
+void
 vop_allocate_post(void *ap, int rc)
 {
 	struct vop_allocate_args *a;

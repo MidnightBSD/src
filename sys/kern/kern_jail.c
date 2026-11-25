@@ -3610,6 +3610,7 @@ prison_priv_check(struct ucred *cred, int priv)
 	case PRIV_CRED_SETREGID:
 	case PRIV_CRED_SETRESUID:
 	case PRIV_CRED_SETRESGID:
+	case PRIV_CRED_SETCRED:
 
 		/*
 		 * Jail implements visibility constraints already, so allow

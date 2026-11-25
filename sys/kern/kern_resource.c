@@ -41,6 +41,7 @@
 #include <sys/systm.h>
 #include <sys/sysproto.h>
 #include <sys/file.h>
+#include <sys/filedesc.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
@@ -795,6 +796,96 @@ sys_getrlimit(struct thread *td, struct __getrlimit_args *uap)
 	lim_rlimit(td, uap->which, &rlim);
 	error = copyout(&rlim, uap->rlp, sizeof(struct rlimit));
 	return (error);
+}
+
+int
+sys_getrlimitusage(struct thread *td, struct getrlimitusage_args *uap)
+{
+	struct proc *p;
+	struct thread *td1;
+	struct uidinfo *ui;
+	struct vmspace *vm;
+	rlim_t res;
+
+	if (uap->which >= RLIM_NLIMITS ||
+	    (uap->flags & ~GETRLIMITUSAGE_EUID) != 0)
+		return (EINVAL);
+	p = td->td_proc;
+	vm = p->p_vmspace;
+	switch (uap->which) {
+	case RLIMIT_CPU:
+		PROC_LOCK(p);
+		PROC_STATLOCK(p);
+		FOREACH_THREAD_IN_PROC(p, td1)
+			ruxagg(p, td1);
+		res = p->p_rux.rux_runtime;
+		PROC_STATUNLOCK(p);
+		PROC_UNLOCK(p);
+		res /= cpu_tickrate();
+		break;
+	case RLIMIT_FSIZE:
+	case RLIMIT_CORE:
+		return (ENXIO);
+	case RLIMIT_DATA:
+		res = (rlim_t)vm->vm_dsize * PAGE_SIZE;
+		break;
+	case RLIMIT_STACK:
+		res = (rlim_t)vm->vm_ssize * PAGE_SIZE;
+		break;
+	case RLIMIT_RSS:
+		res = (rlim_t)vmspace_resident_count(vm) * PAGE_SIZE;
+		break;
+	case RLIMIT_MEMLOCK:
+		res = (rlim_t)pmap_wired_count(vmspace_pmap(vm)) * PAGE_SIZE;
+		break;
+	case RLIMIT_NOFILE:
+		res = proc_nfiles(p);
+		break;
+	case RLIMIT_VMEM:
+		vm_map_lock_read(&vm->vm_map);
+		res = vm->vm_map.size;
+		vm_map_unlock_read(&vm->vm_map);
+		break;
+	case RLIMIT_NPROC:
+	case RLIMIT_SBSIZE:
+	case RLIMIT_NPTS:
+	case RLIMIT_SWAP:
+	case RLIMIT_KQUEUES:
+	case RLIMIT_UMTXP:
+		PROC_LOCK(p);
+		ui = (uap->flags & GETRLIMITUSAGE_EUID) != 0 ?
+		    p->p_ucred->cr_uidinfo : p->p_ucred->cr_ruidinfo;
+		uihold(ui);
+		PROC_UNLOCK(p);
+		switch (uap->which) {
+		case RLIMIT_NPROC:
+			res = atomic_load_long(&ui->ui_proccnt);
+			break;
+		case RLIMIT_SBSIZE:
+			res = atomic_load_long(&ui->ui_sbsize);
+			break;
+		case RLIMIT_NPTS:
+			res = atomic_load_long(&ui->ui_ptscnt);
+			break;
+		case RLIMIT_SWAP:
+			res = atomic_load_long(&ui->ui_vmsize);
+			break;
+		case RLIMIT_KQUEUES:
+			res = atomic_load_long(&ui->ui_kqcnt);
+			break;
+		case RLIMIT_UMTXP:
+			res = atomic_load_long(&ui->ui_umtxcnt);
+			break;
+		default:
+			__unreachable();
+		}
+		uifree(ui);
+		break;
+	default:
+		return (EINVAL);
+	}
+
+	return (copyout(&res, uap->res, sizeof(res)));
 }
 
 /*

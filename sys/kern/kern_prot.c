@@ -81,6 +81,10 @@ FEATURE(regression,
     "Kernel support for interfaces necessary for regression testing (SECURITY RISK!)");
 #endif
 
+#ifdef COMPAT_FREEBSD32
+#include <compat/freebsd32/freebsd32_proto.h>
+#endif
+
 #include <security/audit/audit.h>
 #include <security/mac/mac_framework.h>
 
@@ -933,6 +937,229 @@ fail:
 	crfree(newcred);
 	return (error);
 }
+
+/*
+ * Apply one credential transition after copying all selected user inputs.
+ * Keep the existing MAC checks for IDs, groups, and label changes.
+ */
+static int
+setcred_apply(struct thread *td, u_int flags, const struct setcred *wcred,
+    bool compat32 __unused)
+{
+	struct proc *p = td->td_proc;
+	struct ucred *newcred, *oldcred;
+	struct uidinfo *uip, *ruip;
+#ifdef MAC
+	struct label *label;
+#endif
+	gid_t smallgroups[CRED_SMALLGROUPS_NB], *groups;
+	int error, ngrp;
+
+	if ((flags & ~SETCREDF_MASK) != 0)
+		return (EINVAL);
+#ifndef MAC
+	if ((flags & SETCREDF_MAC_LABEL) != 0)
+		return (EOPNOTSUPP);
+#endif
+	ngrp = 0;
+	groups = smallgroups;
+	if ((flags & SETCREDF_SUPP_GROUPS) != 0) {
+		if (wcred->sc_supp_groups_nb > (u_int)ngroups_max)
+			return (EINVAL);
+		ngrp = wcred->sc_supp_groups_nb + 1;
+		if (ngrp > CRED_SMALLGROUPS_NB)
+			groups = mallocarray(ngrp, sizeof(*groups), M_TEMP,
+			    M_WAITOK);
+		if (ngrp > 1) {
+			error = copyin(wcred->sc_supp_groups, groups + 1,
+			    (ngrp - 1) * sizeof(*groups));
+			if (error != 0)
+				goto free_groups;
+		}
+		AUDIT_ARG_GROUPSET(groups + 1, ngrp - 1);
+		groups_normalize(&ngrp, groups);
+	}
+
+#ifdef MAC
+	label = NULL;
+	if ((flags & SETCREDF_MAC_LABEL) != 0) {
+		error = mac_cred_label_copyin(wcred->sc_label, compat32,
+		    &label);
+		if (error != 0)
+			goto free_groups;
+	}
+#endif
+	AUDIT_ARG_FFLAGS(flags);
+	uip = NULL;
+	ruip = NULL;
+	if ((flags & SETCREDF_UID) != 0) {
+		AUDIT_ARG_EUID(wcred->sc_uid);
+		uip = uifind(wcred->sc_uid);
+	}
+	if ((flags & SETCREDF_RUID) != 0) {
+		AUDIT_ARG_RUID(wcred->sc_ruid);
+		ruip = uifind(wcred->sc_ruid);
+	}
+	if ((flags & SETCREDF_SVUID) != 0)
+		AUDIT_ARG_SUID(wcred->sc_svuid);
+	if ((flags & SETCREDF_GID) != 0)
+		AUDIT_ARG_EGID(wcred->sc_gid);
+	if ((flags & SETCREDF_RGID) != 0)
+		AUDIT_ARG_RGID(wcred->sc_rgid);
+	if ((flags & SETCREDF_SVGID) != 0)
+		AUDIT_ARG_SGID(wcred->sc_svgid);
+
+	newcred = crget();
+	if (ngrp != 0)
+		crextend(newcred, ngrp);
+
+	/*
+	 * crcopysafe() can drop the lock to grow the group list. Reserve
+	 * enough room first, rechecking the exec barrier after each unlock.
+	 */
+	PROC_LOCK(p);
+	for (;;) {
+		int agroups;
+
+		execve_block_pass(td);
+		agroups = p->p_ucred->cr_agroups;
+		if (newcred->cr_agroups >= agroups)
+			break;
+		PROC_UNLOCK(p);
+		crextend(newcred, agroups);
+		PROC_LOCK(p);
+	}
+	oldcred = crcopysafe(p, newcred);
+
+	error = priv_check_cred(oldcred, PRIV_CRED_SETCRED);
+	if (error != 0)
+		goto fail;
+	if (uip != NULL)
+		change_euid(newcred, uip);
+	if (ruip != NULL)
+		change_ruid(newcred, ruip);
+	if ((flags & SETCREDF_SVUID) != 0)
+		change_svuid(newcred, wcred->sc_svuid);
+
+	if ((flags & SETCREDF_GID) != 0)
+		change_egid(newcred, wcred->sc_gid);
+	if ((flags & SETCREDF_RGID) != 0)
+		change_rgid(newcred, wcred->sc_rgid);
+	if ((flags & SETCREDF_SVGID) != 0)
+		change_svgid(newcred, wcred->sc_svgid);
+	if (ngrp != 0) {
+		groups[0] = newcred->cr_gid;
+		crsetgroups_internal(newcred, ngrp, groups);
+	}
+
+#ifdef MAC
+	if ((flags & (SETCREDF_UID | SETCREDF_RUID | SETCREDF_SVUID)) != 0) {
+		error = mac_cred_check_setresuid(oldcred, newcred->cr_ruid,
+		    newcred->cr_uid, newcred->cr_svuid);
+		if (error != 0)
+			goto fail;
+	}
+	if ((flags & (SETCREDF_GID | SETCREDF_RGID | SETCREDF_SVGID)) != 0) {
+		error = mac_cred_check_setresgid(oldcred, newcred->cr_rgid,
+		    newcred->cr_gid, newcred->cr_svgid);
+		if (error != 0)
+			goto fail;
+	}
+	if (ngrp != 0) {
+		error = mac_cred_check_setgroups(oldcred, ngrp, groups);
+		if (error != 0)
+			goto fail;
+	}
+	if (label != NULL) {
+		error = mac_cred_check_relabel(oldcred, label);
+		if (error != 0)
+			goto fail;
+		mac_cred_relabel(newcred, label);
+	}
+#endif
+
+	if (!proc_set_cred_enforce_proc_lim(p, newcred)) {
+		error = EAGAIN;
+		goto fail;
+	}
+	setsugid(p);
+#ifdef RACCT
+	racct_proc_ucred_changed(p, oldcred, newcred);
+#endif
+#ifdef RCTL
+	crhold(newcred);
+#endif
+	PROC_UNLOCK(p);
+#ifdef RCTL
+	rctl_proc_ucred_changed(p, newcred);
+	crfree(newcred);
+#endif
+#ifdef MAC
+	if (label != NULL)
+		mac_proc_vm_revoke(td);
+#endif
+	crfree(oldcred);
+	goto free_inputs;
+
+fail:
+	PROC_UNLOCK(p);
+	crfree(newcred);
+free_inputs:
+	if (uip != NULL)
+		uifree(uip);
+	if (ruip != NULL)
+		uifree(ruip);
+#ifdef MAC
+	if (label != NULL)
+		mac_cred_label_free(label);
+#endif
+free_groups:
+	if (groups != smallgroups)
+		free(groups, M_TEMP);
+	return (error);
+}
+
+int
+sys_setcred(struct thread *td, struct setcred_args *uap)
+{
+	struct setcred wcred;
+	int error;
+
+	if (uap->size != sizeof(wcred))
+		return (EINVAL);
+	error = copyin(uap->wcred, &wcred, sizeof(wcred));
+	if (error != 0)
+		return (error);
+	return (setcred_apply(td, uap->flags, &wcred, false));
+}
+
+#ifdef COMPAT_FREEBSD32
+int
+freebsd32_setcred(struct thread *td, struct freebsd32_setcred_args *uap)
+{
+	struct setcred32 wcred32;
+	struct setcred wcred;
+	int error;
+
+	if (uap->size != sizeof(wcred32))
+		return (EINVAL);
+	error = copyin(uap->wcred, &wcred32, sizeof(wcred32));
+	if (error != 0)
+		return (error);
+	wcred = (struct setcred){
+		.sc_uid = wcred32.sc_uid,
+		.sc_ruid = wcred32.sc_ruid,
+		.sc_svuid = wcred32.sc_svuid,
+		.sc_gid = wcred32.sc_gid,
+		.sc_rgid = wcred32.sc_rgid,
+		.sc_svgid = wcred32.sc_svgid,
+		.sc_supp_groups_nb = wcred32.sc_supp_groups_nb,
+		.sc_supp_groups = (gid_t *)(uintptr_t)wcred32.sc_supp_groups,
+		.sc_label = (struct mac *)(uintptr_t)wcred32.sc_label,
+	};
+	return (setcred_apply(td, uap->flags, &wcred, true));
+}
+#endif
 
 #ifndef _SYS_SYSPROTO_H_
 struct setreuid_args {

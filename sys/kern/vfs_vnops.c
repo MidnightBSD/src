@@ -106,6 +106,7 @@ static fo_poll_t	vn_poll;
 static fo_kqfilter_t	vn_kqfilter;
 static fo_close_t	vn_closefile;
 static fo_mmap_t	vn_mmap;
+static fo_fspacectl_t	vn_fspacectl;
 static fo_fallocate_t	vn_fallocate;
 
 struct 	fileops vnops = {
@@ -123,6 +124,7 @@ struct 	fileops vnops = {
 	.fo_seek = vn_seek,
 	.fo_fill_kinfo = vn_fill_kinfo,
 	.fo_mmap = vn_mmap,
+	.fo_fspacectl = vn_fspacectl,
 	.fo_fallocate = vn_fallocate,
 	.fo_cmp = vn_cmp,
 	.fo_flags = DFLAG_PASSABLE | DFLAG_SEEKABLE
@@ -2563,7 +2565,8 @@ vn_pages_remove_valid(struct vnode *vp, vm_pindex_t start, vm_pindex_t end)
 }
 
 int
-vn_bmap_seekhole(struct vnode *vp, u_long cmd, off_t *off, struct ucred *cred)
+vn_bmap_seekhole_locked(struct vnode *vp, u_long cmd, off_t *off,
+    struct ucred *cred)
 {
 	struct vattr va;
 	daddr_t bn, bnp;
@@ -2574,19 +2577,18 @@ vn_bmap_seekhole(struct vnode *vp, u_long cmd, off_t *off, struct ucred *cred)
 	KASSERT(cmd == FIOSEEKHOLE || cmd == FIOSEEKDATA,
 	    ("Wrong command %lu", cmd));
 
-	if (vn_lock(vp, LK_EXCLUSIVE) != 0)
-		return (EBADF);
+	ASSERT_VOP_ELOCKED(vp, "vn_bmap_seekhole_locked");
 	if (vp->v_type != VREG) {
 		error = ENOTTY;
-		goto unlock;
+		goto out;
 	}
 	error = VOP_GETATTR(vp, &va, cred);
 	if (error != 0)
-		goto unlock;
+		goto out;
 	noff = *off;
 	if (noff < 0 || noff >= va.va_size) {
 		error = ENXIO;
-		goto unlock;
+		goto out;
 	}
 
 	/* See the comment in ufs_bmap_seekdata(). */
@@ -2596,16 +2598,17 @@ vn_bmap_seekhole(struct vnode *vp, u_long cmd, off_t *off, struct ucred *cred)
 	for (bn = noff / bsize; noff < va.va_size; bn++, noff += bsize -
 	    noff % bsize) {
 		error = VOP_BMAP(vp, bn, NULL, &bnp, NULL, NULL);
-		if (error == EOPNOTSUPP) {
-			error = ENOTTY;
-			goto unlock;
+		if (error != 0) {
+			if (error == EOPNOTSUPP)
+				error = ENOTTY;
+			goto out;
 		}
 		if ((bnp == -1 && cmd == FIOSEEKHOLE) ||
 		    (bnp != -1 && cmd == FIOSEEKDATA)) {
 			noff = bn * bsize;
 			if (noff < *off)
 				noff = *off;
-			goto unlock;
+			goto out;
 		}
 	}
 	if (noff > va.va_size)
@@ -2613,10 +2616,21 @@ vn_bmap_seekhole(struct vnode *vp, u_long cmd, off_t *off, struct ucred *cred)
 	/* noff == va.va_size. There is an implicit hole at the end of file. */
 	if (cmd == FIOSEEKDATA)
 		error = ENXIO;
-unlock:
-	VOP_UNLOCK(vp);
+out:
 	if (error == 0)
 		*off = noff;
+	return (error);
+}
+
+int
+vn_bmap_seekhole(struct vnode *vp, u_long cmd, off_t *off, struct ucred *cred)
+{
+	int error;
+
+	if (vn_lock(vp, LK_EXCLUSIVE) != 0)
+		return (EBADF);
+	error = vn_bmap_seekhole_locked(vp, cmd, off, cred);
+	VOP_UNLOCK(vp);
 	return (error);
 }
 
@@ -3668,6 +3682,73 @@ vn_fallocate(struct file *fp, off_t offset, off_t len, struct thread *td)
 		maybe_yield();
 	}
 
+	return (error);
+}
+
+static int
+vn_fspacectl(struct file *fp, int cmd, off_t *offset, off_t *length, int flags,
+    struct ucred *cred, struct thread *td)
+{
+	struct mount *mp;
+	struct vnode *vp;
+	struct vattr va;
+	void *rl_cookie;
+	off_t lastlen;
+	int error, ioflag;
+#ifdef AUDIT
+	bool audited = false;
+#endif
+
+	MPASS(cmd == SPACECTL_DEALLOC);
+	MPASS((flags & ~SPACECTL_F_SUPPORTED) == 0);
+	MPASS(*offset >= 0 && *length > 0 && *length <= OFF_MAX - *offset);
+
+	vp = fp->f_vnode;
+	if (vp->v_type != VREG)
+		return (ENODEV);
+	ioflag = get_write_ioflag(fp);
+	rl_cookie = vn_rangelock_wlock(vp, *offset, *offset + *length);
+	for (;;) {
+		bwillwrite();
+		error = vn_start_write(vp, &mp, V_WAIT | PCATCH);
+		if (error != 0)
+			break;
+		error = vn_lock(vp, LK_EXCLUSIVE);
+		if (error != 0) {
+			vn_finished_write(mp);
+			break;
+		}
+#ifdef AUDIT
+		if (!audited) {
+			AUDIT_ARG_VNODE1(vp);
+			audited = true;
+		}
+#endif
+#ifdef MAC
+		error = mac_vnode_check_write(cred, fp->f_cred, vp);
+		if (error != 0)
+			goto unlock;
+#endif
+		error = VOP_GETATTR(vp, &va, cred);
+		if (error != 0)
+			goto unlock;
+		if (va.va_flags != (u_long)VNOVAL &&
+		    (va.va_flags & (IMMUTABLE | APPEND)) != 0) {
+			error = EPERM;
+			goto unlock;
+		}
+		lastlen = *length;
+		error = VOP_DEALLOCATE(vp, offset, length, flags, ioflag, cred);
+		if (error == 0 && *length >= lastlen)
+			error = EIO;
+unlock:
+		VOP_UNLOCK(vp);
+		vn_finished_write(mp);
+		if (error != 0 || *length == 0)
+			break;
+		maybe_yield();
+	}
+	vn_rangelock_unlock(vp, rl_cookie);
 	return (error);
 }
 

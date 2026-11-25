@@ -105,6 +105,7 @@ void	mac_bpfdesc_destroy(struct bpf_d *);
 void	mac_bpfdesc_init(struct bpf_d *);
 
 void	mac_cred_associate_nfsd(struct ucred *cred);
+int	mac_cred_check_relabel(struct ucred *cred, struct label *newlabel);
 int	mac_cred_check_setaudit(struct ucred *cred, struct auditinfo *ai);
 int	mac_cred_check_setaudit_addr(struct ucred *cred,
 	    struct auditinfo_addr *aia);
@@ -121,6 +122,10 @@ int	mac_cred_check_setresuid(struct ucred *cred, uid_t ruid, uid_t euid,
 	    uid_t suid);
 int	mac_cred_check_setreuid(struct ucred *cred, uid_t ruid, uid_t euid);
 int	mac_cred_check_setuid(struct ucred *cred, uid_t uid);
+int	mac_cred_label_copyin(const void *user_mac, bool compat32,
+	    struct label **label);
+void	mac_cred_label_free(struct label *label);
+void	mac_cred_relabel(struct ucred *cred, struct label *newlabel);
 int	mac_cred_check_visible(struct ucred *cr1, struct ucred *cr2);
 void	mac_cred_copy(struct ucred *cr1, struct ucred *cr2);
 void	mac_cred_create_init(struct ucred *cred);

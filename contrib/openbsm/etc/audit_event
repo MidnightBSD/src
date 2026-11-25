@@ -613,6 +613,9 @@
 43263:AUE_SHMRENAME:shm_rename(2):ip
 43264:AUE_REALPATHAT:realpathat(2):fa
 43265:AUE_CLOSERANGE:close_range(2):cl
+43269:AUE_FSPACECTL:fspacectl(2):fw
+43271:AUE_SETCRED:setcred(2):pc
+43272:AUE_INOTIFY:inotify(2):fa
 #
 # Solaris userspace events.
 #

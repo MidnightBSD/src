@@ -748,6 +748,8 @@ int	vrecycle(struct vnode *vp);
 int	vrecyclel(struct vnode *vp);
 int	vn_bmap_seekhole(struct vnode *vp, u_long cmd, off_t *off,
 	    struct ucred *cred);
+int	vn_bmap_seekhole_locked(struct vnode *vp, u_long cmd, off_t *off,
+	    struct ucred *cred);
 int	vn_close(struct vnode *vp,
 	    int flags, struct ucred *file_cred, struct thread *td);
 int	vn_copy_file_range(struct vnode *invp, off_t *inoffp,
@@ -881,6 +883,7 @@ int	vop_stdadvise(struct vop_advise_args *ap);
 int	vop_stdadvlock(struct vop_advlock_args *ap);
 int	vop_stdadvlockasync(struct vop_advlockasync_args *ap);
 int	vop_stdadvlockpurge(struct vop_advlockpurge_args *ap);
+int	vop_stddeallocate(struct vop_deallocate_args *ap);
 int	vop_stdallocate(struct vop_allocate_args *ap);
 int	vop_stdset_text(struct vop_set_text_args *ap);
 int	vop_stdpathconf(struct vop_pathconf_args *);
@@ -903,6 +906,7 @@ int	dead_read(struct vop_read_args *ap);
 int	dead_write(struct vop_write_args *ap);
 
 /* These are called from within the actual VOPS. */
+void	vop_deallocate_post(void *a, int rc);
 void	vop_allocate_post(void *a, int rc);
 void	vop_copy_file_range_post(void *ap, int rc);
 void	vop_close_post(void *a, int rc);

@@ -836,6 +836,19 @@ vop_inotify_add_watch {
 	IN struct thread *td;
 };
 
+%% deallocate	vp	L L L
+%! deallocate	post	vop_deallocate_post
+
+vop_deallocate {
+	IN struct vnode *vp;
+	INOUT off_t *offset;
+	INOUT off_t *len;
+	IN int flags;
+	IN int ioflag;
+	IN struct ucred *cred;
+};
+
+
 # The VOPs below are spares at the end of the table to allow new VOPs to be
 # added in stable branches without breaking the KBI.  New VOPs in HEAD should
 # be added above these spares.  When merging a new VOP to a stable branch,

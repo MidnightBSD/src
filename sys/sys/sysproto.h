@@ -1846,6 +1846,13 @@ struct aio_writev_args {
 struct aio_readv_args {
 	char aiocbp_l_[PADL_(struct aiocb *)]; struct aiocb * aiocbp; char aiocbp_r_[PADR_(struct aiocb *)];
 };
+struct fspacectl_args {
+	char fd_l_[PADL_(int)]; int fd; char fd_r_[PADR_(int)];
+	char cmd_l_[PADL_(int)]; int cmd; char cmd_r_[PADR_(int)];
+	char rqsr_l_[PADL_(const struct spacectl_range *)]; const struct spacectl_range * rqsr; char rqsr_r_[PADR_(const struct spacectl_range *)];
+	char flags_l_[PADL_(int)]; int flags; char flags_r_[PADR_(int)];
+	char rmsr_l_[PADL_(struct spacectl_range *)]; struct spacectl_range * rmsr; char rmsr_r_[PADR_(struct spacectl_range *)];
+};
 struct sched_getcpu_args {
 	register_t dummy;
 };
@@ -1881,6 +1888,16 @@ struct kcmp_args {
 	char type_l_[PADL_(int)]; int type; char type_r_[PADR_(int)];
 	char idx1_l_[PADL_(uintptr_t)]; uintptr_t idx1; char idx1_r_[PADR_(uintptr_t)];
 	char idx2_l_[PADL_(uintptr_t)]; uintptr_t idx2; char idx2_r_[PADR_(uintptr_t)];
+};
+struct getrlimitusage_args {
+	char which_l_[PADL_(u_int)]; u_int which; char which_r_[PADR_(u_int)];
+	char flags_l_[PADL_(int)]; int flags; char flags_r_[PADR_(int)];
+	char res_l_[PADL_(rlim_t *)]; rlim_t * res; char res_r_[PADR_(rlim_t *)];
+};
+struct setcred_args {
+	char flags_l_[PADL_(u_int)]; u_int flags; char flags_r_[PADR_(u_int)];
+	char wcred_l_[PADL_(const struct setcred *)]; const struct setcred * wcred; char wcred_r_[PADR_(const struct setcred *)];
+	char size_l_[PADL_(size_t)]; size_t size; char size_r_[PADR_(size_t)];
 };
 struct inotify_add_watch_at_args {
 	char fd_l_[PADL_(int)]; int fd; char fd_r_[PADR_(int)];
@@ -2286,6 +2303,7 @@ int	sys_rpctls_syscall(struct thread *, struct rpctls_syscall_args *);
 int	sys___specialfd(struct thread *, struct __specialfd_args *);
 int	sys_aio_writev(struct thread *, struct aio_writev_args *);
 int	sys_aio_readv(struct thread *, struct aio_readv_args *);
+int	sys_fspacectl(struct thread *, struct fspacectl_args *);
 int	sys_sched_getcpu(struct thread *, struct sched_getcpu_args *);
 int	sys_swapoff(struct thread *, struct swapoff_args *);
 int	sys_kqueuex(struct thread *, struct kqueuex_args *);
@@ -2294,6 +2312,8 @@ int	sys_timerfd_create(struct thread *, struct timerfd_create_args *);
 int	sys_timerfd_gettime(struct thread *, struct timerfd_gettime_args *);
 int	sys_timerfd_settime(struct thread *, struct timerfd_settime_args *);
 int	sys_kcmp(struct thread *, struct kcmp_args *);
+int	sys_getrlimitusage(struct thread *, struct getrlimitusage_args *);
+int	sys_setcred(struct thread *, struct setcred_args *);
 int	sys_inotify_add_watch_at(struct thread *, struct inotify_add_watch_at_args *);
 int	sys_inotify_rm_watch(struct thread *, struct inotify_rm_watch_args *);
 
@@ -3240,6 +3260,7 @@ int	freebsd12_closefrom(struct thread *, struct freebsd12_closefrom_args *);
 #define	SYS_AUE___specialfd	AUE_SPECIALFD
 #define	SYS_AUE_aio_writev	AUE_AIO_WRITEV
 #define	SYS_AUE_aio_readv	AUE_AIO_READV
+#define	SYS_AUE_fspacectl	AUE_FSPACECTL
 #define	SYS_AUE_sched_getcpu	AUE_NULL
 #define	SYS_AUE_swapoff	AUE_SWAPOFF
 #define	SYS_AUE_kqueuex	AUE_KQUEUE
@@ -3248,6 +3269,8 @@ int	freebsd12_closefrom(struct thread *, struct freebsd12_closefrom_args *);
 #define	SYS_AUE_timerfd_gettime	AUE_TIMERFD
 #define	SYS_AUE_timerfd_settime	AUE_TIMERFD
 #define	SYS_AUE_kcmp	AUE_NULL
+#define	SYS_AUE_getrlimitusage	AUE_NULL
+#define	SYS_AUE_setcred	AUE_SETCRED
 #define	SYS_AUE_inotify_add_watch_at	AUE_INOTIFY
 #define	SYS_AUE_inotify_rm_watch	AUE_INOTIFY
 
