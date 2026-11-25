@@ -195,6 +195,9 @@ struct prowl_socket {
 	mode_t	mode;
 	bool	mode_set;
 	int	fd;                        /* bound fd; -1 = not yet bound */
+	bool	bound;                     /* AF_UNIX: we created path */
+	dev_t	bound_dev;                 /* identity of that socket file */
+	ino_t	bound_ino;
 	job_t  *job;                       /* owning job (back-pointer) */
 };
 

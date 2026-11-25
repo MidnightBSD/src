@@ -38,6 +38,47 @@ start_cmd="geli_start"
 stop_cmd="geli_stop"
 required_modules="geom_eli:g_eli"
 
+# geli(8) reads its passphrase from /dev/tty. A boot job under prowld has
+# the console on standard input but no controlling terminal, so ask on
+# standard input and pass the answer on.  Options that name a passphrase
+# file (-j) or turn the passphrase off (-p) do not prompt.
+geli_prompts()
+{
+	local opt
+
+	for opt; do
+		case "${opt}" in
+		-*[jp]*)
+			return 1
+			;;
+		esac
+	done
+	return 0
+}
+
+geli_attach()
+{
+	local flags providers pass saved
+
+	flags="$1"
+	shift
+	providers="$*"
+
+	if ! (exec 3</dev/tty) 2>/dev/null && [ -t 0 ] &&
+	    geli_prompts ${flags}; then
+		printf 'Enter passphrase for %s: ' "${providers}"
+		saved=$(stty -g)
+		stty -echo
+		IFS= read -r pass
+		stty "${saved}"
+		echo
+		printf '%s\n' "${pass}" | geli attach -j - ${flags} ${providers}
+		pass=
+	else
+		geli attach ${flags} ${providers}
+	fi
+}
+
 geli_start()
 {
 	devices=`geli_make_list`
@@ -62,7 +103,7 @@ geli_start()
 			echo "Configuring Disk Encryption for ${provider}."
 			count=1
 			while [ ${count} -le ${geli_tries} ]; do
-				geli attach ${flags} ${provider}
+				geli_attach "${flags}" ${provider}
 				if [ -e "/dev/${provider}.eli" ]; then
 					break
 				fi
@@ -90,7 +131,7 @@ geli_start()
 			echo "Configuring Disk Encryption for geli group ${group}, containing ${providers}."
 			count=1
 			while [ ${count} -le ${geli_tries} ]; do
-				geli attach ${flags} ${providers}
+				geli_attach "${flags}" ${providers}
 				if [ -e "/dev/${providers%% *}.eli" ]; then
 					break
 				fi

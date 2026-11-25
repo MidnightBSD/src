@@ -1696,6 +1696,8 @@ supervisor_replace_unit(job_t *job, job_t *replacement)
 	}
 	notify_socket_close(job);
 	socket_close_all(job);
+	/* The replacement starts idle; do not keep the old job's slot. */
+	release_start_slot(job);
 	job_replace(job, replacement);
 	if (job->enabled && job->type == JOB_TYPE_TIMER) {
 		arm_periodic_timer(job);
