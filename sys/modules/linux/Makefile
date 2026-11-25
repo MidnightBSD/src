@@ -31,6 +31,7 @@ SRCS=	linux${SFX}_dummy_machdep.c \
 	linux${SFX}_sysvec.c \
 	linux_time.c \
 	linux_timer.c \
+	linux_xattr.c \
 	linux_uid16.c \
 	linux_vdso.c \
 	opt_inet.h \

@@ -29,6 +29,7 @@
 #include <sys/cdefs.h>
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/capsicum.h>
 #include <sys/dirent.h>
 #include <sys/fcntl.h>
 #include <sys/file.h>
@@ -43,6 +44,7 @@
 #include <sys/stat.h>
 #include <sys/sx.h>
 #include <sys/syscallsubr.h>
+#include <sys/sysproto.h>
 #include <sys/tty.h>
 #include <sys/unistd.h>
 #include <sys/vnode.h>
@@ -1243,6 +1245,53 @@ linux_pread(struct thread *td, struct linux_pread_args *uap)
 	return (error);
 }
 
+/*
+ * Linux applications retry nonblocking writes after EAGAIN, including
+ * socket backpressure that can produce ENOBUFS on MidnightBSD.
+ */
+static int
+linux_write_error(struct thread *td, int fd, int error)
+{
+	struct file *fp;
+
+	if (error != ENOBUFS || fget(td, fd, &cap_no_rights, &fp) != 0)
+		return (error);
+	if (fp->f_type == DTYPE_SOCKET && (fp->f_flag & FNONBLOCK) != 0)
+		error = EAGAIN;
+	fdrop(fp, td);
+	return (error);
+}
+
+int
+linux_write(struct thread *td, struct linux_write_args *args)
+{
+	struct write_args bargs = {
+		.fd = args->fd,
+		.buf = args->buf,
+		.nbyte = args->nbyte,
+	};
+
+	return (linux_write_error(td, args->fd, sys_write(td, &bargs)));
+}
+
+int
+linux_writev(struct thread *td, struct linux_writev_args *args)
+{
+	struct uio *auio;
+	int error;
+
+#ifdef COMPAT_LINUX32
+	error = linux32_copyinuio(args->iovp, args->iovcnt, &auio);
+#else
+	error = copyinuio(args->iovp, args->iovcnt, &auio);
+#endif
+	if (error != 0)
+		return (error);
+	error = kern_writev(td, args->fd, auio);
+	free(auio, M_IOV);
+	return (linux_write_error(td, args->fd, error));
+}
+
 int
 linux_pwrite(struct thread *td, struct linux_pwrite_args *uap)
 {
@@ -1254,7 +1303,8 @@ linux_pwrite(struct thread *td, struct linux_pwrite_args *uap)
 	offset = uap->offset;
 #endif
 
-	return (kern_pwrite(td, uap->fd, uap->buf, uap->nbyte, offset));
+	return (linux_write_error(td, uap->fd,
+	    kern_pwrite(td, uap->fd, uap->buf, uap->nbyte, offset)));
 }
 
 #define HALF_LONG_BITS ((sizeof(l_long) * NBBY / 2))
@@ -1317,7 +1367,7 @@ linux_pwritev(struct thread *td, struct linux_pwritev_args *uap)
 		return (error);
 	error = kern_pwritev(td, uap->fd, auio, offset);
 	free(auio, M_IOV);
-	return (error);
+	return (linux_write_error(td, uap->fd, error));
 }
 
 int

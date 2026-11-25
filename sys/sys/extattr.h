@@ -60,6 +60,9 @@
 #define	EXTATTR_MAXNAMELEN	NAME_MAX
 
 #ifdef _KERNEL
+#define	EXTATTR_CREATE	0x01
+#define	EXTATTR_REPLACE	0x02
+
 #include <sys/types.h>
 
 struct thread;

@@ -53,13 +53,13 @@
 		    u_int nbyte
 		);
 	}
-4	AUE_NULL	NOPROTO {
-		int write(
+4	AUE_NULL	STD {
+		int linux_write(
 		    int fd,
 		    char *buf,
 		    u_int nbyte
 		);
-	}
+	} write linux_write_args int
 5	AUE_OPEN_RWTC	STD {
 		int linux_open(
 		    char *path,
@@ -788,13 +788,13 @@
 		    u_int iovcnt
 		);
 	}
-146	AUE_WRITEV	NOPROTO {
-		int writev(
+146	AUE_WRITEV	STD {
+		int linux_writev(
 		    int fd,
 		    struct iovec *iovp,
 		    u_int iovcnt
 		);
-	}
+	} writev linux_writev_args int
 147	AUE_GETSID	STD {
 		int linux_getsid(
 		    l_pid_t pid

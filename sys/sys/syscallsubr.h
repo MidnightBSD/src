@@ -139,6 +139,28 @@ int	kern_cpuset_setid(struct thread *td, cpuwhich_t which,
 int	kern_dup(struct thread *td, u_int mode, int flags, int old, int new);
 int	kern_execve(struct thread *td, struct image_args *args,
 	    struct mac *mac_p, struct vmspace *oldvmspace);
+int	kern_extattr_delete_fd(struct thread *td, int fd, int attrnamespace,
+	    const char *attrname);
+int	kern_extattr_delete_path(struct thread *td, const char *path,
+	    int attrnamespace, const char *attrname, int follow,
+	    enum uio_seg pathseg);
+int	kern_extattr_get_fd(struct thread *td, int fd, int attrnamespace,
+	    const char *attrname, void *data, size_t nbytes, bool check_size);
+int	kern_extattr_get_path(struct thread *td, const char *path,
+	    int attrnamespace, const char *attrname, void *data, size_t nbytes,
+	    int follow,
+	    enum uio_seg pathseg, bool check_size);
+int	kern_extattr_list_fd(struct thread *td, int fd, int attrnamespace,
+	    void *data, size_t nbytes, enum uio_seg seg);
+int	kern_extattr_list_path(struct thread *td, const char *path,
+	    int attrnamespace, void *data, size_t nbytes, int follow,
+	    enum uio_seg pathseg, enum uio_seg seg);
+int	kern_extattr_set_fd(struct thread *td, int fd, int attrnamespace,
+	    const char *attrname, void *data, size_t nbytes, int flags);
+int	kern_extattr_set_path(struct thread *td, const char *path,
+	    int attrnamespace, const char *attrname, void *data, size_t nbytes,
+	    int follow,
+	    enum uio_seg pathseg, int flags);
 int	kern_fchmodat(struct thread *td, int fd, const char *path,
 	    enum uio_seg pathseg, mode_t mode, int flag);
 int	kern_fchownat(struct thread *td, int fd, const char *path,
