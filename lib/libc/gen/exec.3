@@ -37,6 +37,7 @@
 .Nm exect ,
 .Nm execv ,
 .Nm execvp ,
+.Nm execvpe ,
 .Nm execvP
 .Nd execute a file
 .Sh LIBRARY
@@ -50,13 +51,14 @@
 .Fn execlp "const char *file" "const char *arg" ... NULL
 .Ft int
 .Fn execle "const char *path" "const char *arg" ... NULL "char *const envp[]"
-.Fc
 .Ft int
 .Fn exect "const char *path" "char *const argv[]" "char *const envp[]"
 .Ft int
 .Fn execv "const char *path" "char *const argv[]"
 .Ft int
 .Fn execvp "const char *file" "char *const argv[]"
+.Ft int
+.Fn execvpe "const char *file" "char *const argv[]" "char *const envp[]"
 .Ft int
 .Fn execvP "const char *file" "const char *search_path" "char *const argv[]"
 .Sh DESCRIPTION
@@ -99,6 +101,7 @@ The
 .Fn exect ,
 .Fn execv ,
 .Fn execvp ,
+.Fn execvpe ,
 and
 .Fn execvP
 functions provide an array of pointers to null-terminated strings that
@@ -112,18 +115,22 @@ be terminated by a
 pointer.
 .Pp
 The
-.Fn execle
+.Fn execle ,
+.Fn exect ,
 and
-.Fn exect
-functions also specify the environment of the executed process by following
-the
+.Fn execvpe
+functions take the new process environment from the
+.Fa envp
+argument.
+For
+.Fn execle ,
+this argument follows the
 .Dv NULL
-pointer that terminates the list of arguments in the argument list
-or the pointer to the argv array with an additional argument.
-This additional argument is an array of pointers to null-terminated strings
-and
-.Em must
-be terminated by a
+pointer that terminates the argument list.
+The
+.Fa envp
+argument points to an array of pointers to null-terminated strings.
+The array must be terminated by a
 .Dv NULL
 pointer.
 The other functions take the environment for the new process image from the
@@ -136,6 +143,7 @@ Some of these functions have special semantics.
 The functions
 .Fn execlp ,
 .Fn execvp ,
+.Fn execvpe ,
 and
 .Fn execvP
 will duplicate the actions of the shell in searching for an executable file
@@ -143,12 +151,20 @@ if the specified file name does not contain a slash
 .Dq Li /
 character.
 For
-.Fn execlp
-and
+.Fn execlp ,
 .Fn execvp ,
-search path is the path specified in the environment by
+and
+.Fn execvpe ,
+the search path is the path specified in the environment by
 .Dq Ev PATH
 variable.
+The
+.Fn execvpe
+function reads
+.Ev PATH
+from the calling process environment and passes
+.Fa envp
+to the new process.
 If this variable is not specified,
 the default path is set according to the
 .Dv _PATH_DEFPATH
@@ -309,6 +325,9 @@ and
 functions
 conform to
 .St -p1003.1-88 .
+The
+.Fn execvpe
+function is a GNU extension.
 .Sh HISTORY
 The
 .Fn exec
@@ -342,6 +361,7 @@ parameters to
 .Fn exect ,
 .Fn execv ,
 .Fn execvp ,
+.Fn execvpe ,
 and
 .Fn execvP
 is a historical accident and no sane implementation should modify the provided

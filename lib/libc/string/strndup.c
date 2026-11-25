@@ -36,3 +36,5 @@ strndup(const char *str, size_t maxlen)
 
 	return copy;
 }
+
+__sym_compat(strndup, strndup, FBSD_1.1);

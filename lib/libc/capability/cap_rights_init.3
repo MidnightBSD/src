@@ -33,6 +33,7 @@
 .Nm cap_rights_set ,
 .Nm cap_rights_clear ,
 .Nm cap_rights_is_set ,
+.Nm cap_rights_is_empty ,
 .Nm cap_rights_is_valid ,
 .Nm cap_rights_intersect ,
 .Nm cap_rights_merge ,
@@ -51,6 +52,8 @@
 .Fn cap_rights_clear "cap_rights_t *rights" "..."
 .Ft bool
 .Fn cap_rights_is_set "const cap_rights_t *rights" "..."
+.Ft bool
+.Fn cap_rights_is_empty "const cap_rights_t *rights"
 .Ft bool
 .Fn cap_rights_is_valid "const cap_rights_t *rights"
 .Ft cap_rights_t *
@@ -118,6 +121,12 @@ The
 .Fn cap_rights_is_set
 function checks if all the given capability rights are set for the given
 .Vt cap_rights_t
+structure.
+.Pp
+The
+.Fn cap_rights_is_empty
+function returns true if no capability rights are set in the
+.Fa rights
 structure.
 .Pp
 The

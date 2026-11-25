@@ -434,6 +434,12 @@ int		__sys_futimens(int fd, const struct timespec *times) __hidden;
 int		__sys_utimensat(int fd, const char *path,
 		    const struct timespec *times, int flag) __hidden;
 
+struct itimerspec;
+int	timerfd_create_compat(int, int);
+int	timerfd_gettime_compat(int, struct itimerspec *);
+int	timerfd_settime_compat(int, int, const struct itimerspec *,
+	    struct itimerspec *);
+
 /* execve() with PATH processing to implement posix_spawnp() */
 int _execvpe(const char *, char * const *, char * const *);
 

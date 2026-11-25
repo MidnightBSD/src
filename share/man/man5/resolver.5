@@ -27,7 +27,7 @@
 .\"
 .\"     @(#)resolver.5	8.1 (Berkeley) 6/5/93
 .\"
-.Dd November 23, 2022
+.Dd November 24, 2026
 .Dt RESOLVER 5
 .Os
 .Sh NAME
@@ -103,18 +103,24 @@ for one of the domains.
 The search list is currently limited to six domains
 with a total of 256 characters.
 .It Sy sortlist
-Sortlist allows addresses returned by gethostbyname to be sorted.
-A sortlist is specified by IP address netmask pairs.
-If the netmask is not specified,
-it defaults to the historical Class A/B/C netmask of the net;
-this usage is deprecated.
-The IP address
-and network pairs are separated by slashes.
-Up to 10 pairs may
-be specified.
-E.g.,
+Sort order for query results in the form of address and network pairs:
+.Bd -literal
+sortlist 198.51.100.0/24 203.0.113.0/255.255.255.0 2001:db8::/32
+.Ed
 .Pp
-.Dl "sortlist 10.9.1.0/255.255.240.0 10.9.0.0/255.255.0.0"
+Use a prefix length with IPv4 or IPv6 addresses.
+IPv4 also accepts a dotted-decimal mask.
+If the mask or prefix length is omitted, IPv4 uses its historical
+class-based network mask and IPv6 uses a prefix length of 64.
+The historical
+.Ql &
+separator also accepts explicit address masks for either family.
+.Pp
+Addresses matching an entry in the sort list are returned ahead of
+unmatched addresses.
+Entries from multiple
+.Sy sortlist
+lines are appended in input order, up to a maximum of ten.
 .It Sy options
 Options allows certain internal resolver variables to be modified.
 The syntax is
@@ -129,6 +135,16 @@ is one of the following:
 sets
 .Dv RES_DEBUG
 in _res.options.
+.It Sy no-debug
+clears
+.Dv RES_DEBUG .
+.It Sy rotate
+sets
+.Dv RES_ROTATE
+to rotate the order of name servers used for queries.
+.It Sy no-rotate
+clears
+.Dv RES_ROTATE .
 .It Sy usevc
 sets
 .Dv RES_USEVC
@@ -195,6 +211,8 @@ The default for
 is two seconds.
 Setting it to zero disables the file check.
 .El
+.Pp
+The resolver ignores unrecognized option names and invalid numeric values.
 .Pp
 Options may also be specified as a space or tab separated list using the
 .Dv RES_OPTIONS

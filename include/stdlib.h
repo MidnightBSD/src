@@ -309,14 +309,15 @@ int	 mergesort_b(void *, size_t, size_t, int (^)(const void *, const void *));
 int	 mkostemp(char *, int);
 int	 mkostemps(char *, int, int);
 int	 mkostempsat(int, char *, int, int);
-void	 qsort_r(void *, size_t, size_t, void *,
-	    int (*)(void *, const void *, const void *));
+void	 qsort_r(void *, size_t, size_t,
+	    int (*)(const void *, const void *, void *), void *);
 int	 radixsort(const unsigned char **, int, const unsigned char *,
 	    unsigned);
 void	*reallocarray(void *, size_t, size_t) __result_use_check
 	    __alloc_size2(2, 3);
 void	*reallocf(void *, size_t) __result_use_check __alloc_size(2);
 int	 rpmatch(const char *);
+char	*secure_getenv(const char *);
 void	 setprogname(const char *);
 int	 sradixsort(const unsigned char **, int, const unsigned char *,
 	    unsigned);
@@ -329,6 +330,30 @@ __int64_t
 	 strtoq(const char *, char **, int);
 __uint64_t
 	 strtouq(const char *, char **, int);
+
+/*
+ * Select the historical qsort_r@FBSD_1.0 calling convention when the
+ * final argument has the historical BSD comparator type.
+ */
+#if defined(__generic) || defined(__cplusplus)
+void __qsort_r_compat(void *, size_t, size_t, void *,
+	    int (*)(void *, const void *, const void *));
+__sym_compat(qsort_r, __qsort_r_compat, FBSD_1.0);
+#endif
+#if defined(__generic) && !defined(__cplusplus)
+#define	qsort_r(base, nel, width, arg4, arg5)				\
+    __generic(arg5, int (*)(void *, const void *, const void *),	\
+        __qsort_r_compat, qsort_r)(base, nel, width, arg4, arg5)
+#elif defined(__cplusplus)
+__END_DECLS
+extern "C++" {
+static inline void qsort_r(void *base, size_t nmemb, size_t size,
+    void *thunk, int (*compar)(void *, const void *, const void *)) {
+	__qsort_r_compat(base, nmemb, size, thunk, compar);
+}
+}
+__BEGIN_DECLS
+#endif
 
 extern char *suboptarg;			/* getsubopt(3) external variable */
 #endif /* __BSD_VISIBLE */

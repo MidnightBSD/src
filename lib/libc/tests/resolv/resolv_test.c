@@ -33,12 +33,15 @@ __RCSID("$NetBSD: resolv.c,v 1.6 2004/05/23 16:59:11 christos Exp $");
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/nameser.h>
 #include <assert.h>
 #include <errno.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdatomic.h>
 #include <netdb.h>
+#include <resolv.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
@@ -343,12 +346,32 @@ ATF_TC_BODY(getipnodeby_test, tc)
 	RUN_TESTS(tc, METHOD_GETIPNODEBY);
 }
 
+ATF_TC_WITHOUT_HEAD(resolver_options);
+ATF_TC_BODY(resolver_options, tc)
+{
+	struct __res_state state = {0};
+
+	ATF_REQUIRE(setenv("RES_OPTIONS",
+	    "ndots:5 timeout:4 attempts:3 rotate no-rotate\r\n"
+	    "ndots: ndots:-1 timeout:2junk timeout:99999999999999999999 "
+	    "attempts:0 rotate:1 no-debug debugger", 1) == 0);
+	ATF_REQUIRE(res_ninit(&state) == 0);
+
+	ATF_CHECK_EQ(state.ndots, 5);
+	ATF_CHECK_EQ(state.retrans, 4);
+	ATF_CHECK_EQ(state.retry, 3);
+	ATF_CHECK_EQ(state.options & (RES_ROTATE | RES_DEBUG), 0);
+
+	res_ndestroy(&state);
+}
+
 ATF_TP_ADD_TCS(tp)
 {
 
 	ATF_TP_ADD_TC(tp, getaddrinfo_test);
 	ATF_TP_ADD_TC(tp, gethostby_test);
 	ATF_TP_ADD_TC(tp, getipnodeby_test);
+	ATF_TP_ADD_TC(tp, resolver_options);
 
 	return (atf_no_error());
 }
