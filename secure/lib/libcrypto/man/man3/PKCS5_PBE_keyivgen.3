@@ -58,7 +58,7 @@
 .\" ========================================================================
 .\"
 .IX Title "PKCS5_PBE_KEYIVGEN 3ossl"
-.TH PKCS5_PBE_KEYIVGEN 3ossl 2026-04-07 3.0.20 OpenSSL
+.TH PKCS5_PBE_KEYIVGEN 3ossl 2026-09-29 3.5.9 OpenSSL
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -196,6 +196,12 @@ associated parameters for the PBKDF2 algorithm.
 .PP
 \&\fBPKCS5_pbe_set0_algor()\fR and \fBPKCS5_pbe_set0_algor_ex()\fR set the PBE algorithm OID and
 parameters into the supplied \fBX509_ALGOR\fR.
+.PP
+If \fIsalt\fR is NULL, then \fIsaltlen\fR specifies the size in bytes of the random salt to
+generate. If \fIsaltlen\fR is 0 then a default size is used.
+For PBE related functions such as \fBPKCS5_pbe_set_ex()\fR the default salt length is 8 bytes.
+For PBE2 related functions that use PBKDF2 such as \fBPKCS5_pbkdf2_set()\fR,
+\&\fBPKCS5_pbe2_set_scrypt()\fR and \fBPKCS5_pbe2_set()\fR the default salt length is 16 bytes.
 .SH NOTES
 .IX Header "NOTES"
 The *\fB_keyivgen()\fR functions are typically used in PKCS#12 to encrypt objects.
@@ -229,6 +235,10 @@ IETF RFC 8018 (<https://tools.ietf.org/html/rfc8018>)
 .PP
 From OpenSSL 3.0 the PBKDF1 algorithm used in \fBPKCS5_PBE_keyivgen()\fR and
 \&\fBPKCS5_PBE_keyivgen_ex()\fR has been moved to the legacy provider as an EVP_KDF.
+.PP
+In OpenSSL 3.2 the default salt length changed from 8 bytes to 16 bytes for PBE2
+related functions such as \fBPKCS5_pbe2_set()\fR.
+This is required for PBKDF2 FIPS compliance.
 .SH COPYRIGHT
 .IX Header "COPYRIGHT"
 Copyright 2021\-2026 The OpenSSL Project Authors. All Rights Reserved.

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2024 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2016-2025 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -15,6 +15,7 @@
 #include <openssl/core_names.h>
 
 #include "../../ssl/ssl_local.h"
+#include "internal/ssl_unwrap.h"
 #include "internal/sockets.h"
 #include "internal/nelem.h"
 #include "handshake.h"
@@ -171,7 +172,7 @@ static int client_hello_select_server_ctx(SSL *s, void *arg, int ignore)
     remaining = len;
     servername = (const char *)p;
 
-    if (len == strlen("server2") && strncmp(servername, "server2", len) == 0) {
+    if (len == strlen("server2") && HAS_PREFIX(servername, "server2")) {
         SSL_CTX *new_ctx = arg;
         SSL_set_SSL_CTX(s, new_ctx);
         /*
@@ -184,7 +185,7 @@ static int client_hello_select_server_ctx(SSL *s, void *arg, int ignore)
 
         ex_data->servername = SSL_TEST_SERVERNAME_SERVER2;
         return 1;
-    } else if (len == strlen("server1") && strncmp(servername, "server1", len) == 0) {
+    } else if (len == strlen("server1") && HAS_PREFIX(servername, "server1")) {
         ex_data->servername = SSL_TEST_SERVERNAME_SERVER1;
         return 1;
     } else if (ignore) {
@@ -645,6 +646,8 @@ static int configure_handshake_ctx(SSL_CTX *server_ctx, SSL_CTX *server2_ctx,
 
     if (extra->server.session_ticket_app_data != NULL) {
         server_ctx_data->session_ticket_app_data = OPENSSL_strdup(extra->server.session_ticket_app_data);
+        if (!TEST_ptr(server_ctx_data->session_ticket_app_data))
+            goto err;
         SSL_CTX_set_session_ticket_cb(server_ctx, generate_session_ticket_cb,
             decrypt_session_ticket_cb, server_ctx_data);
     }
@@ -652,6 +655,8 @@ static int configure_handshake_ctx(SSL_CTX *server_ctx, SSL_CTX *server2_ctx,
         if (!TEST_ptr(server2_ctx))
             goto err;
         server2_ctx_data->session_ticket_app_data = OPENSSL_strdup(extra->server2.session_ticket_app_data);
+        if (!TEST_ptr(server2_ctx_data->session_ticket_app_data))
+            goto err;
         SSL_CTX_set_session_ticket_cb(server2_ctx, NULL,
             decrypt_session_ticket_cb, server2_ctx_data);
     }
@@ -695,6 +700,14 @@ static int configure_handshake_ctx(SSL_CTX *server_ctx, SSL_CTX *server2_ctx,
             server2_ctx_data, client_ctx_data))
         goto err;
 #endif /* !OPENSSL_NO_SRP */
+#ifndef OPENSSL_NO_COMP_ALG
+    if (test->compress_certificates) {
+        if (!TEST_true(SSL_CTX_compress_certs(server_ctx, 0)))
+            goto err;
+        if (server2_ctx != NULL && !TEST_true(SSL_CTX_compress_certs(server2_ctx, 0)))
+            goto err;
+    }
+#endif
     return 1;
 err:
     return 0;
@@ -977,9 +990,15 @@ static void do_reneg_setup_step(const SSL_TEST_CTX *test_ctx, PEER *peer)
         return;
     } else if (test_ctx->handshake_mode == SSL_TEST_HANDSHAKE_POST_HANDSHAKE_AUTH) {
         if (SSL_is_server(peer->ssl)) {
+            SSL_CONNECTION *sc = SSL_CONNECTION_FROM_SSL_ONLY(peer->ssl);
+
+            if (sc == NULL) {
+                peer->status = PEER_ERROR;
+                return;
+            }
             /* Make the server believe it's received the extension */
             if (test_ctx->extra.server.force_pha)
-                peer->ssl->post_handshake_auth = SSL_PHA_EXT_RECEIVED;
+                sc->post_handshake_auth = SSL_PHA_EXT_RECEIVED;
             ret = SSL_verify_client_post_handshake(peer->ssl);
             if (!ret) {
                 peer->status = PEER_ERROR;

@@ -58,7 +58,7 @@
 .\" ========================================================================
 .\"
 .IX Title "EVP_MAC-HMAC 7ossl"
-.TH EVP_MAC-HMAC 7ossl 2026-04-07 3.0.20 OpenSSL
+.TH EVP_MAC-HMAC 7ossl 2026-09-29 3.5.9 OpenSSL
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -82,7 +82,7 @@ used with \fBEVP_MAC_fetch()\fR:
 The general description of these parameters can be found in
 "PARAMETERS" in \fBEVP_MAC\fR\|(3).
 .PP
-The following parameter can be set with \fBEVP_MAC_CTX_set_params()\fR:
+The following parameters can be set with \fBEVP_MAC_CTX_set_params()\fR:
 .IP """key"" (\fBOSSL_MAC_PARAM_KEY\fR) <octet string>" 4
 .IX Item """key"" (OSSL_MAC_PARAM_KEY) <octet string>"
 Sets the MAC key.
@@ -100,14 +100,23 @@ This must be given together with the digest naming parameter ("digest", or
 A flag to set the MAC digest to not initialise the implementation
 specific data.
 The value 0 or 1 is expected.
+This option is deprecated and will be removed in a future release.
+It may be set but is currently ignored
 .IP """digest\-oneshot"" (\fBOSSL_MAC_PARAM_DIGEST_ONESHOT\fR) <integer>" 4
 .IX Item """digest-oneshot"" (OSSL_MAC_PARAM_DIGEST_ONESHOT) <integer>"
 A flag to set the MAC digest to be a one\-shot operation.
 The value 0 or 1 is expected.
+This option is deprecated and will be removed in a future release.
+It may be set but is currently ignored.
 .IP """tls\-data\-size"" (\fBOSSL_MAC_PARAM_TLS_DATA_SIZE\fR) <unsigned integer>" 4
 .IX Item """tls-data-size"" (OSSL_MAC_PARAM_TLS_DATA_SIZE) <unsigned integer>"
+.PD 0
+.IP """key\-check"" (\fBOSSL_MAC_PARAM_FIPS_KEY_CHECK\fR) <integer>" 4
+.IX Item """key-check"" (OSSL_MAC_PARAM_FIPS_KEY_CHECK) <integer>"
+.PD
+See "Mac Parameters" in \fBprovider\-mac\fR\|(7).
 .PP
-The following parameter can be retrieved with \fBEVP_MAC_CTX_get_params()\fR:
+The following parameters can be retrieved with \fBEVP_MAC_CTX_get_params()\fR:
 .IP """size"" (\fBOSSL_MAC_PARAM_SIZE\fR) <unsigned integer>" 4
 .IX Item """size"" (OSSL_MAC_PARAM_SIZE) <unsigned integer>"
 The "size" parameter can also be retrieved with \fBEVP_MAC_CTX_get_mac_size()\fR.
@@ -116,13 +125,16 @@ The length of the "size" parameter is equal to that of an \fBunsigned int\fR.
 .IX Item """block-size"" (OSSL_MAC_PARAM_BLOCK_SIZE) <unsigned integer>"
 Gets the MAC block size.  The "block\-size" parameter can also be retrieved with
 \&\fBEVP_MAC_CTX_get_block_size()\fR.
+.IP """fips\-indicator"" (\fBOSSL_MAC_PARAM_FIPS_APPROVED_INDICATOR\fR) <integer>" 4
+.IX Item """fips-indicator"" (OSSL_MAC_PARAM_FIPS_APPROVED_INDICATOR) <integer>"
+See "Mac Parameters" in \fBprovider\-mac\fR\|(7).
 .SH "SEE ALSO"
 .IX Header "SEE ALSO"
 \&\fBEVP_MAC_CTX_get_params\fR\|(3), \fBEVP_MAC_CTX_set_params\fR\|(3),
 "PARAMETERS" in \fBEVP_MAC\fR\|(3), \fBOSSL_PARAM\fR\|(3), \fBHMAC\fR\|(3)
 .SH COPYRIGHT
 .IX Header "COPYRIGHT"
-Copyright 2018\-2021 The OpenSSL Project Authors. All Rights Reserved.
+Copyright 2018\-2026 The OpenSSL Project Authors. All Rights Reserved.
 .PP
 Licensed under the Apache License 2.0 (the "License").  You may not use
 this file except in compliance with the License.  You can obtain a copy

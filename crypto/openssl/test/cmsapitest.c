@@ -13,7 +13,8 @@
 #include <openssl/cms.h>
 #include <openssl/bio.h>
 #include <openssl/x509.h>
-#include <internal/nelem.h>
+#include "../crypto/cms/cms_local.h" /* for d.signedData and d.envelopedData */
+
 #include "testutil.h"
 
 static X509 *cert = NULL;
@@ -21,6 +22,7 @@ static EVP_PKEY *privkey = NULL;
 static char *derin = NULL;
 static char *too_long_iv_cms_in = NULL;
 static char *pwri_kek_oob_der_in = NULL;
+static char *pwri_kek_no_iv_in = NULL;
 static char *ec_recip_in = NULL;
 
 /*
@@ -216,6 +218,7 @@ static int test_encrypt_decrypt(const EVP_CIPHER *cipher)
     BIO *msgbio = BIO_new_mem_buf(msg, strlen(msg));
     BIO *outmsgbio = BIO_new(BIO_s_mem());
     CMS_ContentInfo *content = NULL;
+    BIO *contentbio = NULL;
     char buf[80];
 
     if (!TEST_ptr(certstack) || !TEST_ptr(msgbio) || !TEST_ptr(outmsgbio))
@@ -232,6 +235,12 @@ static int test_encrypt_decrypt(const EVP_CIPHER *cipher)
             CMS_TEXT)))
         goto end;
 
+    if (!(EVP_CIPHER_get_flags(cipher) & EVP_CIPH_FLAG_AEAD_CIPHER)
+        && !TEST_ptr(contentbio = CMS_EnvelopedData_decrypt(content->d.envelopedData,
+                         NULL, privkey, cert, NULL,
+                         CMS_TEXT, NULL, NULL)))
+        goto end;
+
     /* Check we got the message we first started with */
     if (!TEST_int_eq(BIO_gets(outmsgbio, buf, sizeof(buf)), strlen(msg))
         || !TEST_int_eq(strcmp(buf, msg), 0))
@@ -239,6 +248,7 @@ static int test_encrypt_decrypt(const EVP_CIPHER *cipher)
 
     testresult = 1;
 end:
+    BIO_free(contentbio);
     sk_X509_free(certstack);
     BIO_free(msgbio);
     BIO_free(outmsgbio);
@@ -267,10 +277,24 @@ static int test_encrypt_decrypt_aes_256_gcm(void)
     return test_encrypt_decrypt(EVP_aes_256_gcm());
 }
 
+static int test_CMS_add1_cert(void)
+{
+    CMS_ContentInfo *cms = NULL;
+    int ret = 0;
+
+    ret = TEST_ptr(cms = CMS_ContentInfo_new())
+        && TEST_ptr(CMS_add1_signer(cms, cert, privkey, NULL, 0))
+        && TEST_true(CMS_add1_cert(cms, cert)); /* add cert again */
+
+    CMS_ContentInfo_free(cms);
+    return ret;
+}
+
 static int test_d2i_CMS_bio_NULL(void)
 {
-    BIO *bio;
+    BIO *bio, *content = NULL;
     CMS_ContentInfo *cms = NULL;
+    unsigned int flags = CMS_NO_SIGNER_CERT_VERIFY;
     int ret = 0;
 
     /*
@@ -470,8 +494,10 @@ static int test_d2i_CMS_bio_NULL(void)
 
     ret = TEST_ptr(bio = BIO_new_mem_buf(cms_data, sizeof(cms_data)))
         && TEST_ptr(cms = d2i_CMS_bio(bio, NULL))
-        && TEST_true(CMS_verify(cms, NULL, NULL, NULL, NULL,
-            CMS_NO_SIGNER_CERT_VERIFY));
+        && TEST_true(CMS_verify(cms, NULL, NULL, NULL, NULL, flags))
+        && TEST_ptr(content = CMS_SignedData_verify(cms->d.signedData, NULL, NULL, NULL,
+                        NULL, NULL, flags, NULL, NULL));
+    BIO_free(content);
     CMS_ContentInfo_free(cms);
     BIO_free(bio);
     return ret && TEST_int_eq(ERR_peek_error(), 0);
@@ -492,6 +518,9 @@ static unsigned char *read_all(BIO *bio, long *p_len)
         buf = tmp;
         ret = BIO_read(bio, buf + *p_len, step);
         if (ret < 0)
+            break;
+
+        if (LONG_MAX - ret < *p_len)
             break;
 
         *p_len += ret;
@@ -712,6 +741,39 @@ end:
     return ret;
 }
 
+static int test_pwri_kek_unwrap_no_iv_key(void)
+{
+    BIO *in = NULL;
+    CMS_ContentInfo *cms = NULL;
+    unsigned long err = 0;
+    int ret = 0;
+
+    if (!TEST_ptr(in = BIO_new_file(pwri_kek_no_iv_in, "rb"))
+        || !TEST_ptr(cms = d2i_CMS_bio(in, NULL)))
+        goto end;
+
+    /*
+     * Due to the missing IV, the unwrap must fail with
+     * CMS_R_CIPHER_PARAMETER_INITIALISATION_ERROR.
+     */
+    if (!TEST_false(CMS_decrypt_set1_password(cms,
+            (unsigned char *)"password", -1)))
+        goto end;
+
+    err = ERR_peek_last_error();
+    if (!TEST_int_eq(ERR_GET_LIB(err), ERR_LIB_CMS)
+        || !TEST_int_eq(ERR_GET_REASON(err),
+            CMS_R_CIPHER_PARAMETER_INITIALISATION_ERROR))
+        goto end;
+
+    ERR_clear_error();
+    ret = 1;
+end:
+    CMS_ContentInfo_free(cms);
+    BIO_free(in);
+    return ret;
+}
+
 #ifndef OPENSSL_NO_EC
 
 /*
@@ -805,7 +867,7 @@ end:
 }
 #endif
 
-OPT_TEST_DECLARE_USAGE("certfile privkeyfile derfile tooLongIVpem pwriKekOobDer ecrecip\n")
+OPT_TEST_DECLARE_USAGE("certfile privkeyfile derfile tooLongIVpem pwriKekOobDer pwriKekNoIv ecrecip\n")
 
 int setup_tests(void)
 {
@@ -822,7 +884,8 @@ int setup_tests(void)
         || !TEST_ptr(derin = test_get_argument(2))
         || !TEST_ptr(too_long_iv_cms_in = test_get_argument(3))
         || !TEST_ptr(pwri_kek_oob_der_in = test_get_argument(4))
-        || !TEST_ptr(ec_recip_in = test_get_argument(5)))
+        || !TEST_ptr(pwri_kek_no_iv_in = test_get_argument(5))
+        || !TEST_ptr(ec_recip_in = test_get_argument(6)))
         return 0;
 
     certbio = BIO_new_file(certin, "r");
@@ -855,6 +918,7 @@ int setup_tests(void)
     ADD_TEST(test_non_aead_on_auth_envelope_enc);
     ADD_TEST(test_non_aead_on_auth_envelope_dec);
     ADD_TEST(test_short_mac_on_auth_envelope_data);
+    ADD_TEST(test_CMS_add1_cert);
     ADD_TEST(test_d2i_CMS_bio_NULL);
     ADD_TEST(test_CMS_set1_key_mem_leak);
     ADD_TEST(test_encrypted_data);
@@ -862,6 +926,7 @@ int setup_tests(void)
     ADD_ALL_TESTS(test_d2i_CMS_decode, 2);
     ADD_TEST(test_cms_aesgcm_iv_too_long);
     ADD_TEST(test_pwri_kek_unwrap_short_encrypted_key);
+    ADD_TEST(test_pwri_kek_unwrap_no_iv_key);
 
 #ifndef OPENSSL_NO_EC
     ADD_TEST(test_kari_wrap_pad_unwrap_overflow);

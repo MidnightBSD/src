@@ -329,6 +329,9 @@ static int generate_q_fips186_4(BN_CTX *ctx, BIGNUM *q, const EVP_MD *evpmd,
     unsigned char *pmd;
     OSSL_LIB_CTX *libctx = ossl_bn_get_libctx(ctx);
 
+    if (mdsize <= 0)
+        goto err;
+
     /* find q */
     for (;;) {
         if (!BN_GENCB_call(cb, 0, m++))
@@ -628,7 +631,7 @@ int ossl_ffc_params_FIPS186_4_gen_verify(OSSL_LIB_CTX *libctx,
         p = params->p;
         q = params->q;
         goto g_only;
-        /* otherwise fall thru to validate p & q */
+        /* otherwise fall through to validate p & q */
     }
 
     /* p & q will be used for generation and validation */
@@ -821,6 +824,7 @@ int ossl_ffc_params_FIPS186_2_gen_verify(OSSL_LIB_CTX *libctx,
     BIGNUM *r0, *test, *tmp, *g = NULL, *q = NULL, *p = NULL;
     BN_MONT_CTX *mont = NULL;
     EVP_MD *md = NULL;
+    int md_size;
     size_t qsize;
     int n = 0, m = 0;
     int counter = 0, pcounter = 0, use_random_seed;
@@ -849,8 +853,11 @@ int ossl_ffc_params_FIPS186_2_gen_verify(OSSL_LIB_CTX *libctx,
     }
     if (md == NULL)
         goto err;
+    md_size = EVP_MD_get_size(md);
+    if (md_size <= 0)
+        goto err;
     if (N == 0)
-        N = EVP_MD_get_size(md) * 8;
+        N = md_size * 8;
     qsize = N >> 3;
 
     /*
@@ -929,7 +936,7 @@ int ossl_ffc_params_FIPS186_2_gen_verify(OSSL_LIB_CTX *libctx,
         p = params->p;
         q = params->q;
         goto g_only;
-        /* otherwise fall thru to validate p and q */
+        /* otherwise fall through to validate p and q */
     }
 
     use_random_seed = (seed_in == NULL);

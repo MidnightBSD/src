@@ -160,7 +160,7 @@ int ASN1_mbstring_ncopy(ASN1_STRING **out, const unsigned char *in, int len,
         free_out = 1;
         dest = ASN1_STRING_type_new(str_type);
         if (dest == NULL) {
-            ERR_raise(ERR_LIB_ASN1, ERR_R_MALLOC_FAILURE);
+            ERR_raise(ERR_LIB_ASN1, ERR_R_ASN1_LIB);
             return -1;
         }
         *out = dest;
@@ -172,7 +172,7 @@ int ASN1_mbstring_ncopy(ASN1_STRING **out, const unsigned char *in, int len,
                 ASN1_STRING_free(dest);
                 *out = NULL;
             }
-            ERR_raise(ERR_LIB_ASN1, ERR_R_MALLOC_FAILURE);
+            ERR_raise(ERR_LIB_ASN1, ERR_R_ASN1_LIB);
             return -1;
         }
         return str_type;
@@ -229,7 +229,6 @@ int ASN1_mbstring_ncopy(ASN1_STRING **out, const unsigned char *in, int len,
             ASN1_STRING_free(dest);
             *out = NULL;
         }
-        ERR_raise(ERR_LIB_ASN1, ERR_R_MALLOC_FAILURE);
         return -1;
     }
     dest->length = outlen;

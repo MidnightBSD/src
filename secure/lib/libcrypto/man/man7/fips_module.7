@@ -58,7 +58,7 @@
 .\" ========================================================================
 .\"
 .IX Title "FIPS_MODULE 7ossl"
-.TH FIPS_MODULE 7ossl 2026-04-07 3.0.20 OpenSSL
+.TH FIPS_MODULE 7ossl 2026-09-29 3.5.9 OpenSSL
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -92,7 +92,7 @@ Any functions that create or modify custom "METHODS" (for example
 \&\fBEC_KEY_METHOD_new()\fR, etc.)
 .PP
 All of the above APIs are deprecated in OpenSSL 3.0 \- so a simple rule is to
-avoid using all deprecated functions. See \fBmigration_guide\fR\|(7) for a list of
+avoid using all deprecated functions. See \fBossl\-guide\-migration\fR\|(7) for a list of
 deprecated functions.
 .SS "Making all applications use the FIPS module by default"
 .IX Subsection "Making all applications use the FIPS module by default"
@@ -137,6 +137,7 @@ Edit the config file to add the following lines near the beginning:
 \&
 \&    [openssl_init]
 \&    providers = provider_sect
+\&    alg_section = algorithm_sect
 \&
 \&    [provider_sect]
 \&    fips = fips_sect
@@ -144,6 +145,9 @@ Edit the config file to add the following lines near the beginning:
 \&
 \&    [base_sect]
 \&    activate = 1
+\&
+\&    [algorithm_sect]
+\&    default_properties = fips=yes
 .Ve
 .PP
 Obviously the include file location above should match the path and name of the
@@ -253,7 +257,7 @@ application. If any OpenSSL functions get called that require the use of
 cryptographic functions before this occurs then, if no provider has yet been
 loaded, then the default provider will be automatically loaded. If you then
 later explicitly load the FIPS provider then you will have both the FIPS and the
-default provider loaded at the same time. It is undefined which implementation
+default provider loaded at the same time. It is unspecified which implementation
 of an algorithm will be used if multiple implementations are available and you
 have not explicitly specified via a property query (see below) which one should
 be used.
@@ -286,7 +290,7 @@ standards you can specify the property query \f(CW\*(C`fips=yes\*(C'\fR like thi
 .Ve
 .PP
 If no property query is specified, or more than one implementation matches the
-property query then it is undefined which implementation of a particular
+property query then it is unspecified which implementation of a particular
 algorithm will be returned.
 .PP
 This example shows an explicit request for an implementation of SHA256 from the
@@ -386,6 +390,14 @@ base providers. The other library context will just use the default provider.
 \&        goto err;
 \&
 \&    /*
+\&     * Set the default property query on the FIPS library context to
+\&     * ensure that only FIPS algorithms can be used.  There are a few non\-FIPS
+\&     * approved algorithms in the FIPS provider for backward compatibility reasons.
+\&     */
+\&    if (!EVP_set_default_properties(fips_libctx, "fips=yes"))
+\&        goto err;
+\&
+\&    /*
 \&     * We don\*(Aqt need to do anything special to load the default
 \&     * provider into nonfips_libctx. This happens automatically if no
 \&     * other providers are loaded.
@@ -434,7 +446,7 @@ explicitly loaded, the default provider will not automatically load. This means
 code using the default context by accident will fail because no algorithms will
 be available.
 .PP
-See "Library Context" in \fBmigration_guide\fR\|(7) for additional information about the
+See "Library Context" in \fBossl\-guide\-migration\fR\|(7) for additional information about the
 Library Context.
 .SS "Using Encoders and Decoders with the FIPS module"
 .IX Subsection "Using Encoders and Decoders with the FIPS module"
@@ -474,7 +486,7 @@ contexts.
 \&     * We assume that a nondefault library context with the FIPS
 \&     * provider loaded has been created called fips_libctx.
 \&     */
-\&    SSL_CTX *fips_ssl_ctx = SSL_CTX_new_ex(fips_libctx, NULL, TLS_method());
+\&    SSL_CTX *fips_ssl_ctx = SSL_CTX_new_ex(fips_libctx, "fips=yes", TLS_method());
 \&    /*
 \&     * We assume that a nondefault library context with the default
 \&     * provider loaded has been created called non_fips_libctx.
@@ -512,29 +524,158 @@ To go from the \fBEVP_MD\fR to its \fBOSSL_PROVIDER\fR,
 use \fBEVP_MD_get0_provider\fR\|(3).
 To extract the name from the \fBOSSL_PROVIDER\fR, use
 \&\fBOSSL_PROVIDER_get0_name\fR\|(3).
+.SS "FIPS indicators"
+.IX Subsection "FIPS indicators"
+FIPS indicators have been added to the FIPS provider in OpenSSL 3.4.
+FIPS 140\-3 requires indicators to be used if the FIPS provider allows non
+approved algorithms. An algorithm is approved if it passes all required checks
+such as minimum key size. By default an error will occur if any check fails.
+For backwards compatibility individual algorithms may override the checks by
+using either an option in the FIPS configuration (See
+"FIPS indicator options" in \fBfips_config\fR\|(5)) OR in code using an algorithm context
+setter. Overriding the check means that the algorithm is not FIPS compliant.
+\&\fBOSSL_INDICATOR_set_callback\fR\|(3) can be called to register a callback to log
+unapproved algorithms. At the end of any algorithm operation the approved status
+can be queried using an algorithm context getter to retrieve the indicator
+(e.g. "fips\-indicator").
+An example of an algorithm context setter is "key\-check"
+in "Supported parameters" in \fBEVP_KDF\-HKDF\fR\|(7).
+.PP
+Every algorithm implementation advertised with the property \f(CW\*(C`fips=yes\*(C'\fR by
+the OpenSSL FIPS provider exposes "fips\-indicator" as a gettable context
+parameter.  The getter returns 1 when the operation is approved.  An absent
+indicator must not be interpreted as approval.
+.PP
+Algorithms advertised with \f(CW\*(C`fips=no\*(C'\fR are unapproved.  When such an
+implementation exposes "fips\-indicator", its getter returns 0.  Providers
+other than the OpenSSL FIPS provider are not required to expose this parameter;
+an absent indicator, or an indicator value of 0, does not assert FIPS approval.
+.PP
+Some algorithms can change from approved to unapproved as a result of their
+parameters or the operation performed.  The following algorithms perform such
+additional checks:
+.IP "DSA Key generation" 4
+.IX Item "DSA Key generation"
+DSA Key generation is no longer approved.
+See "DSA parameters" in \fBEVP_PKEY\-DSA\fR\|(7)
+.IP "DSA Signatures" 4
+.IX Item "DSA Signatures"
+DSA Signature generation is no longer approved.
+See "Signature Parameters" in \fBEVP_SIGNATURE\-DSA\fR\|(7)
+.IP "ECDSA Signatures" 4
+.IX Item "ECDSA Signatures"
+See "ECDSA Signature Parameters" in \fBEVP_SIGNATURE\-ECDSA\fR\|(7)
+.IP "EC Key Generation" 4
+.IX Item "EC Key Generation"
+See "Common EC parameters" in \fBEVP_PKEY\-EC\fR\|(7)
+.IP "ML\-KEM Key Encapsulation" 4
+.IX Item "ML-KEM Key Encapsulation"
+Supplying the test\-only "ikme" parameter makes the operation unapproved.
+See "ML\-KEM KEM parameters" in \fBEVP_KEM\-ML\-KEM\fR\|(7).
+.IP "ML\-DSA and SLH\-DSA Signatures" 4
+.IX Item "ML-DSA and SLH-DSA Signatures"
+Supplying test entropy makes the operation unapproved.  ML\-DSA operations
+that disable the standard message encoding are also unapproved.
+See "FIPS indicator" in \fBEVP_SIGNATURE\-ML\-DSA\fR\|(7) and
+"FIPS indicator" in \fBEVP_SIGNATURE\-SLH\-DSA\fR\|(7).
+.IP "RSA Key Generation" 4
+.IX Item "RSA Key Generation"
+Supplying the parameters reserved for FIPS module testing makes the operation
+unapproved.  See "RSA key generation FIPS indicator" in \fBEVP_PKEY\-RSA\fR\|(7).
+.IP "RSA Encryption" 4
+.IX Item "RSA Encryption"
+"pkcs1" padding is no longer approved.
+.Sp
+See "RSA Asymmetric Cipher parameters" in \fBEVP_ASYM_CIPHER\-RSA\fR\|(7) and
+"RSA KEM parameters" in \fBEVP_KEM\-RSA\fR\|(7)
+.IP "RSA Signatures" 4
+.IX Item "RSA Signatures"
+See "Signature Parameters" in \fBEVP_SIGNATURE\-RSA\fR\|(7)
+.IP DRBGS 4
+.IX Item "DRBGS"
+See "Supported parameters" in \fBEVP_RAND\-HASH\-DRBG\fR\|(7) and
+\&\fBEVP_RAND\-HMAC\-DRBG\fR\|(7)/Supported parameters>
+.IP DES 4
+.IX Item "DES"
+Triple\-DES is not longer approved for encryption.
+See "Parameters" in \fBEVP_CIPHER\-DES\fR\|(7)
+.IP DH 4
+.IX Item "DH"
+See "DH and DHX key exchange parameters" in \fBEVP_KEYEXCH\-DH\fR\|(7)
+.IP ECDH 4
+.IX Item "ECDH"
+See "ECDH Key Exchange parameters" in \fBEVP_KEYEXCH\-ECDH\fR\|(7)
+.IP KDFS 4
+.IX Item "KDFS"
+See relevant KDF documentation e.g. "Supported parameters" in \fBEVP_KDF\-HKDF\fR\|(7)
+.IP "CMAC and KMAC" 4
+.IX Item "CMAC and KMAC"
+See "Supported parameters" in \fBEVP_MAC\-CMAC\fR\|(7) and
+"Supported parameters" in \fBEVP_MAC\-KMAC\fR\|(7)
+.PP
+The following FIPS algorithms are unapproved and use the "fips\-indicator".
+.IP RAND\-TEST\-RAND 4
+.IX Item "RAND-TEST-RAND"
+See "Supported parameters" in \fBEVP_RAND\-TEST\-RAND\fR\|(7)
+The indicator callback is NOT triggered for this algorithm since it is used
+internally for non security purposes.
+.IP "X25519 and X448 Key Generation and Key Exchange" 4
+.IX Item "X25519 and X448 Key Generation and Key Exchange"
+.PD 0
+.IP "X448MLKEM1024 Key Generation and Key Encapsulation" 4
+.IX Item "X448MLKEM1024 Key Generation and Key Encapsulation"
+.PD
+The other hybrid ML\-KEM algorithms supplied by the FIPS provider are approved,
+including X25519MLKEM768, SecP256r1MLKEM768 and SecP384r1MLKEM1024.
+.PP
+The unapproved (non FIPS validated) algorithms have a property query value of
+"fips=no".
+.PP
+The following algorithms use a unique indicator and do not trigger the
+indicator callback.
+.IP "AES\-GCM ciphers support the indicator ""iv\-generated""" 4
+.IX Item "AES-GCM ciphers support the indicator ""iv-generated"""
+See "PARAMETERS" in \fBEVP_EncryptInit\fR\|(3) for further information.
+The AES\-GCM "fips\-indicator" also accounts for the IV source and returns 0
+after encryption with an externally supplied IV.  It also returns 0 for GCM
+tag lengths other than 4, 8, or 12 through 16 bytes.
+.IP "ECDSA and RSA Signatures support the indicator ""verify\-message""." 4
+.IX Item "ECDSA and RSA Signatures support the indicator ""verify-message""."
+See "ECDSA Signature Parameters" in \fBEVP_SIGNATURE\-ECDSA\fR\|(7) and
+"Signature Parameters" in \fBEVP_SIGNATURE\-RSA\fR\|(7) for further information.
+The signature "fips\-indicator" also accounts for this value and returns 0
+when verification is performed directly on a caller\-supplied digest.
 .SH NOTES
 .IX Header "NOTES"
 Some released versions of OpenSSL do not include a validated
 FIPS provider.  To determine which versions have undergone
 the validation process, please refer to the
-OpenSSL Downloads page <https://www.openssl.org/source/>.  If you
+OpenSSL Downloads page <https://openssl-library.org/source/>.  If you
 require FIPS\-approved functionality, it is essential to build your FIPS
 provider using one of the validated versions listed there.  Normally,
 it is possible to utilize a FIPS provider constructed from one of the
 validated versions alongside \fIlibcrypto\fR and \fIlibssl\fR compiled from any
-release within the same major release series.  This flexibility enables
-you to address bug fixes and CVEs that fall outside the FIPS boundary.
+supported release from OpenSSL 3.0 onwards; provider compatibility is
+maintained backward and forward across these releases, including future
+major release series, for as long as the module remains supported.  This
+flexibility enables you to address bug fixes and CVEs that fall outside
+the FIPS boundary.
+.PP
+As the FIPS provider still supports non\-FIPS validated algorithms,
+The property query \f(CW\*(C`fips=yes\*(C'\fR is mandatory for applications that
+want to operate in a FIPS approved manner.
 .SH "SEE ALSO"
 .IX Header "SEE ALSO"
-\&\fBmigration_guide\fR\|(7), \fBcrypto\fR\|(7), \fBfips_config\fR\|(5),
+\&\fBossl\-guide\-migration\fR\|(7), \fBcrypto\fR\|(7), \fBfips_config\fR\|(5),
 <https://www.openssl.org/source/>
 .SH HISTORY
 .IX Header "HISTORY"
 The FIPS module guide was created for use with the new FIPS provider
 in OpenSSL 3.0.
+FIPS indicators were added in OpenSSL 3.4.
 .SH COPYRIGHT
 .IX Header "COPYRIGHT"
-Copyright 2021\-2023 The OpenSSL Project Authors. All Rights Reserved.
+Copyright 2021\-2026 The OpenSSL Project Authors. All Rights Reserved.
 .PP
 Licensed under the Apache License 2.0 (the "License").  You may not use
 this file except in compliance with the License.  You can obtain a copy

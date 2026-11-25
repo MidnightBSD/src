@@ -46,6 +46,13 @@
 
 #include "helpers/cmp_testlib.h"
 
+#ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+/*
+ * In fuzzing builds ossl_cmp_msg_check_update() deliberately lets invalid
+ * messages pass (see cmp_vfy.c), so the rejection path under test here
+ * cannot be exercised.
+ */
+
 #define NUM_REJECTED_REQUESTS 25 /* "attacker" sends this many distinct certs */
 
 typedef struct test_fixture {
@@ -246,11 +253,6 @@ static int execute_no_unbounded_growth_test(CMP_DOS_TEST_FIXTURE *fixture)
     OSSL_CMP_CTX *server_ctx = fixture->server_ctx;
     int count_before, count_after, i;
 
-#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
-    TEST_skip("The unbounded growth test is invalid when FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION is defined\n");
-    return 1;
-#endif
-
     count_before = sk_X509_num(OSSL_CMP_CTX_get0_untrusted(server_ctx));
     if (count_before < 0)
         count_before = 0;
@@ -301,11 +303,6 @@ static int execute_single_rejected_request_test(CMP_DOS_TEST_FIXTURE *fixture)
     OSSL_CMP_MSG *msg = build_rejectable_msg_with_unique_cert(999);
     int count_before, count_after;
 
-#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
-    TEST_skip("The cmp reject test is invalid when FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION is defined\n");
-    OSSL_CMP_MSG_free(msg);
-    return 1;
-#endif
     if (!TEST_ptr(msg))
         return 0;
 
@@ -340,9 +337,13 @@ static int test_no_unbounded_growth_on_rejected_requests(void)
     return result;
 }
 
+#endif
+
 int setup_tests(void)
 {
+#ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
     ADD_TEST(test_single_rejected_request_leaves_no_residue);
     ADD_TEST(test_no_unbounded_growth_on_rejected_requests);
+#endif
     return 1;
 }

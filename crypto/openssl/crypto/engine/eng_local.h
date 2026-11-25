@@ -25,14 +25,14 @@ extern CRYPTO_RWLOCK *global_engine_lock;
  * the file:line-number pair. The "ENGINE_REF_PRINT" statements must come
  * *after* the change.
  */
-#define ENGINE_REF_PRINT(e, isfunct, diff)              \
-    OSSL_TRACE6(ENGINE_REF_COUNT,                       \
-        "engine: %p %s from %d to %d (%s:%d)\n",        \
-        (void *)(e), (isfunct ? "funct" : "struct"),    \
-        ((isfunct)                                      \
-                ? ((e)->funct_ref - (diff))             \
-                : ((e)->struct_ref - (diff))),          \
-        ((isfunct) ? (e)->funct_ref : (e)->struct_ref), \
+#define ENGINE_REF_PRINT(e, isfunct, diff)                \
+    OSSL_TRACE6(ENGINE_REF_COUNT,                         \
+        "engine: %p %s from %d to %d (%s:%d)\n",          \
+        (void *)(e), (isfunct ? "funct" : "struct"),      \
+        ((isfunct)                                        \
+                ? ((e)->funct_ref - (diff))               \
+                : (eng_struct_ref(e) - (diff))),          \
+        ((isfunct) ? (e)->funct_ref : eng_struct_ref(e)), \
         (OPENSSL_FILE), (OPENSSL_LINE))
 
 /*
@@ -156,6 +156,14 @@ struct engine_st {
 
 typedef struct st_engine_pile ENGINE_PILE;
 
-DEFINE_LHASH_OF(ENGINE_PILE);
+DEFINE_LHASH_OF_EX(ENGINE_PILE);
+
+static ossl_unused ossl_inline int eng_struct_ref(ENGINE *e)
+{
+    int res;
+
+    CRYPTO_GET_REF(&e->struct_ref, &res);
+    return res;
+}
 
 #endif /* OSSL_CRYPTO_ENGINE_ENG_LOCAL_H */
