@@ -38,3 +38,5 @@ reallocarray(void *optr, size_t nmemb, size_t size)
 	}
 	return (realloc(optr, size * nmemb));
 }
+
+__sym_compat(reallocarray, reallocarray, FBSD_1.4);

@@ -11,6 +11,10 @@ Updating Information for MidnightBSD users.
 	FreeBSD. Update the kernel and world together. Rebuild binaries
 	statically linked against the earlier development inotify ABI.
 
+	The libc qsort_r() header now defaults to the POSIX calling convention.
+	The historical FBSD_1.0 symbol remains available. Code with its own
+	declaration of qsort_r() should use the declaration in <stdlib.h>.
+
 20261123:
 	prowld now applies administrator drop-ins after packaged policy. If it
 	rejects a known native service, it also blocks the matching rc.d

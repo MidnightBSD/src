@@ -252,3 +252,9 @@ scandir_thunk_cmp(void *thunk, const void *p1, const void *p2)
 	return (dc((const struct dirent **)p1, (const struct dirent **)p2));
 }
 #endif
+#ifdef I_AM_SCANDIR_B
+__sym_compat(fdscandir_b, fdscandir_b, FBSD_1.8);
+__sym_compat(scandirat_b, scandirat_b, FBSD_1.8);
+#else
+__sym_compat(fdscandir, fdscandir, FBSD_1.8);
+#endif

@@ -444,6 +444,14 @@ getenv(const char *name)
 }
 
 
+char *
+secure_getenv(const char *name)
+{
+	if (issetugid())
+		return (NULL);
+	return (getenv(name));
+}
+
 /*
  * Set the value of a variable.  Older settings are labeled as inactive.  If an
  * older setting has enough room to store the new value, it will be reused.  No
@@ -696,3 +704,5 @@ clearenv(void)
 
 	return (0);
 }
+
+__sym_compat(clearenv, clearenv, FBSD_1.7);

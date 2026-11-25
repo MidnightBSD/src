@@ -38,6 +38,7 @@
 .Nm clearenv,
 .Nm getenv ,
 .Nm putenv ,
+.Nm secure_getenv ,
 .Nm setenv ,
 .Nm unsetenv
 .Nd environment variable functions
@@ -49,6 +50,8 @@
 .Fn clearenv "void"
 .Ft char *
 .Fn getenv "const char *name"
+.Ft char *
+.Fn secure_getenv "const char *name"
 .Ft int
 .Fn setenv "const char *name" "const char *value" "int overwrite"
 .Ft int
@@ -122,6 +125,16 @@ and
 .Fn putenv
 will output a warning to stderr about the issue, drop the corrupt entry and
 complete the task without error.
+.Pp
+The
+.Fn secure_getenv
+function returns
+.Dv NULL
+when
+.Xr issetugid 2
+indicates a tainted process.
+Otherwise it behaves like
+.Fn getenv .
 .Sh RETURN VALUES
 The
 .Fn getenv

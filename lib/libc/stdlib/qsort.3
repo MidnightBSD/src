@@ -66,8 +66,8 @@
 .Fa "void *base"
 .Fa "size_t nmemb"
 .Fa "size_t size"
+.Fa "int \*[lp]*compar\*[rp]\*[lp]const void *, const void *, void *\*[rp]"
 .Fa "void *thunk"
-.Fa "int \*[lp]*compar\*[rp]\*[lp]void *, const void *, const void *\*[rp]"
 .Fc
 .Ft int
 .Fo heapsort
@@ -156,7 +156,7 @@ function behaves identically to
 .Fn qsort ,
 except that it takes an additional argument,
 .Fa thunk ,
-which is passed unchanged as the first argument to function pointed to
+which is passed unchanged as the last argument to the function pointed to
 .Fa compar .
 This allows the comparison function to access additional
 data without using global variables, and thus

@@ -300,3 +300,10 @@ _execvpe(const char *name, char * const argv[], char * const envp[])
 
 	return (execvPe(name, path, argv, envp));
 }
+
+int
+execvpe(const char *name, char * const argv[], char * const envp[])
+{
+
+	return (_execvpe(name, argv, envp));
+}

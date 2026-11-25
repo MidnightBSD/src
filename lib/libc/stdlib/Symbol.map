@@ -48,7 +48,6 @@ FBSD_1.0 {
 	lfind;
 	mergesort;
 	putenv;
-	qsort_r;
 	qsort;
 	radixsort;
 	sradixsort;
@@ -124,6 +123,11 @@ FBSD_1.6 {
 	qsort_s;
 	rand;
 	srand;
+};
+
+FBSD_1.7 {
+	qsort_r;
+	secure_getenv;
 };
 
 MNBSD_1.1 {

@@ -85,6 +85,7 @@ static const char rcsid[] = "$Id: res_init.c,v 1.26 2008/12/11 09:59:00 marka Ex
 #include <arpa/nameser.h>
 
 #include <ctype.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -125,14 +126,13 @@ static const char rcsid[] = "$Id: res_init.c,v 1.26 2008/12/11 09:59:00 marka Ex
 
 static void res_setoptions(res_state, const char *, const char *);
 
-#ifdef RESOLVSORT
-static const char sort_mask[] = "/&";
-#define ISSORTMASK(ch) (strchr(sort_mask, ch) != NULL)
-static u_int32_t net_mask(struct in_addr);
-#endif
+#define res_space(ch) isspace((unsigned char)(ch))
+#define res_match(str, end, word) \
+	((size_t)((end) - (str)) == sizeof(word) - 1 && \
+	    memcmp((str), (word), sizeof(word) - 1) == 0)
 
-#if !defined(isascii)	/*%< XXX - could be a function */
-# define isascii(c) (!(c & 0200))
+#ifdef RESOLVSORT
+static int res_setsortlist(res_state, int, const char *, const char *);
 #endif
 
 /*
@@ -179,7 +179,6 @@ __res_vinit(res_state statp, int preinit) {
 	int havesearch = 0;
 #ifdef RESOLVSORT
 	int nsort = 0;
-	char *net;
 #endif
 	int dots;
 	union res_sockaddr_union u[2];
@@ -424,105 +423,24 @@ __res_vinit(res_state statp, int preinit) {
 		}
 #ifdef RESOLVSORT
 		if (MATCH(buf, "sortlist")) {
-		    struct in_addr a;
-		    struct in6_addr a6;
-		    int m, i;
-		    u_char *u;
-		    struct __res_state_ext *ext = statp->_u._ext.ext;
+		    const char *entry, *end;
 
-		    cp = buf + sizeof("sortlist") - 1;
+		    entry = buf + sizeof("sortlist") - 1;
 		    while (nsort < MAXRESOLVSORT) {
-			while (*cp == ' ' || *cp == '\t')
-			    cp++;
-			if (*cp == '\0' || *cp == '\n' || *cp == ';')
+			entry += strspn(entry, " \t\r\n");
+			if (*entry == '\0' || *entry == ';' || *entry == '#')
 			    break;
-			net = cp;
-			while (*cp && !ISSORTMASK(*cp) && *cp != ';' &&
-			       isascii(*cp) && !isspace((unsigned char)*cp))
-				cp++;
-			n = *cp;
-			*cp = 0;
-			if (inet_aton(net, &a)) {
-			    statp->sort_list[nsort].addr = a;
-			    if (ISSORTMASK(n)) {
-				*cp++ = n;
-				net = cp;
-				while (*cp && *cp != ';' &&
-					isascii(*cp) &&
-					!isspace((unsigned char)*cp))
-				    cp++;
-				n = *cp;
-				*cp = 0;
-				if (inet_aton(net, &a)) {
-				    statp->sort_list[nsort].mask = a.s_addr;
-				} else {
-				    statp->sort_list[nsort].mask = 
-					net_mask(statp->sort_list[nsort].addr);
-				}
-			    } else {
-				statp->sort_list[nsort].mask = 
-				    net_mask(statp->sort_list[nsort].addr);
-			    }
-			    ext->sort_list[nsort].af = AF_INET;
-			    ext->sort_list[nsort].addr.ina =
-				statp->sort_list[nsort].addr;
-			    ext->sort_list[nsort].mask.ina.s_addr =
-				statp->sort_list[nsort].mask;
-			    nsort++;
-			}
-			else if (inet_pton(AF_INET6, net, &a6) == 1) {
-
-			    ext->sort_list[nsort].af = AF_INET6;
-			    ext->sort_list[nsort].addr.in6a = a6;
-			    u = (u_char *)&ext->sort_list[nsort].mask.in6a;
-			    *cp++ = n;
-			    net = cp;
-			    while (*cp && *cp != ';' &&
-				    isascii(*cp) && !isspace(*cp))
-				cp++;
-			    m = n;
-			    n = *cp;
-			    *cp = 0;
-			    switch (m) {
-			    case '/':
-				m = atoi(net);
-				break;
-			    case '&':
-				if (inet_pton(AF_INET6, net, u) == 1) {
-				    m = -1;
-				    break;
-				}
-				/*FALLTHROUGH*/
-			    default:
-				m = sizeof(struct in6_addr) * CHAR_BIT;
-				break;
-			    }
-			    if (m >= 0) {
-				for (i = 0; i < sizeof(struct in6_addr); i++) {
-				    if (m <= 0) {
-					*u = 0;
-				    } else {
-					m -= CHAR_BIT;
-					*u = (u_char)~0;
-					if (m < 0)
-					    *u <<= -m;
-				    }
-				    u++;
-				}
-			    }
-			    statp->sort_list[nsort].addr.s_addr =
-				(u_int32_t)0xffffffff;
-			    statp->sort_list[nsort].mask =
-				(u_int32_t)0xffffffff;
-			    nsort++;
-			}
-			*cp = n;
+			end = entry + strcspn(entry, " \t\r\n;#");
+			nsort += res_setsortlist(statp, nsort, entry, end);
+			entry = end;
 		    }
 		    continue;
 		}
 #endif
 		if (MATCH(buf, "options")) {
-		    res_setoptions(statp, buf + sizeof("options") - 1, "conf");
+		    cp = buf + sizeof("options") - 1;
+		    cp[strcspn(cp, "#;")] = '\0';
+		    res_setoptions(statp, cp, "conf");
 		    continue;
 		}
 	    }
@@ -584,165 +502,241 @@ __res_vinit(res_state statp, int preinit) {
 	return (statp->res_h_errno);
 }
 
-static void
-res_setoptions(res_state statp, const char *options, const char *source)
+#ifdef RESOLVSORT
+/*
+ * Add one address and mask to the sort list.  Retain the historical "&"
+ * separator, including IPv6 literal masks, alongside CIDR prefix syntax.
+ */
+static int
+res_setsortlist(res_state statp, int i, const char *entry, const char *end)
 {
-	const char *cp = options;
-	int i;
+	struct __res_state_ext *ext = statp->_u._ext.ext;
+	char address[INET6_ADDRSTRLEN], mask[INET6_ADDRSTRLEN], *numend;
+	const char *sep;
+	struct in_addr a4, m4;
+	struct in6_addr a6, m6;
+	long prefix;
+	size_t len, byte;
+
+	for (sep = entry; sep < end && *sep != '/' && *sep != '&'; sep++)
+		;
+	len = sep - entry;
+	if (len == 0 || len >= sizeof(address))
+		return (0);
+	memcpy(address, entry, len);
+	address[len] = '\0';
+	if (sep < end) {
+		len = end - sep - 1;
+		if (len == 0 || len >= sizeof(mask))
+			return (0);
+		memcpy(mask, sep + 1, len);
+		mask[len] = '\0';
+	}
+
+	if (inet_pton(AF_INET, address, &a4) == 1) {
+		if (sep == end) {
+			if (IN_CLASSA(ntohl(a4.s_addr)))
+				m4.s_addr = htonl(IN_CLASSA_NET);
+			else if (IN_CLASSB(ntohl(a4.s_addr)))
+				m4.s_addr = htonl(IN_CLASSB_NET);
+			else
+				m4.s_addr = htonl(IN_CLASSC_NET);
+		} else if (inet_pton(AF_INET, mask, &m4) != 1) {
+			prefix = strtol(mask, &numend, 10);
+			if (*sep != '/' || numend == mask || *numend != '\0' ||
+			    prefix < 0 || prefix > 32)
+				return (0);
+			m4.s_addr = prefix == 0 ? 0 :
+			    htonl(UINT32_MAX << (32 - prefix));
+		}
+		a4.s_addr &= m4.s_addr;
+		statp->sort_list[i].addr = a4;
+		statp->sort_list[i].mask = m4.s_addr;
+		if (ext != NULL) {
+			ext->sort_list[i].af = AF_INET;
+			ext->sort_list[i].addr.ina = a4;
+			ext->sort_list[i].mask.ina = m4;
+		}
+		return (1);
+	}
+
+	if (ext == NULL || inet_pton(AF_INET6, address, &a6) != 1)
+		return (0);
+	if (sep < end && *sep == '&') {
+		if (inet_pton(AF_INET6, mask, &m6) != 1)
+			return (0);
+	} else {
+		prefix = 64;
+		if (sep < end) {
+			prefix = strtol(mask, &numend, 10);
+			if (numend == mask || *numend != '\0' ||
+			    prefix < 0 || prefix > 128)
+				return (0);
+		}
+		m6 = (struct in6_addr)IN6ADDR_ANY_INIT;
+		for (byte = 0; prefix > 0; byte++, prefix -= 8)
+			m6.s6_addr[byte] = prefix >= 8 ? 0xff :
+			    (uint8_t)(0xffU << (8 - prefix));
+	}
+	for (byte = 0; byte < sizeof(a6.s6_addr); byte++)
+		a6.s6_addr[byte] &= m6.s6_addr[byte];
+	ext->sort_list[i].af = AF_INET6;
+	ext->sort_list[i].addr.in6a = a6;
+	ext->sort_list[i].mask.in6a = m6;
+	/* This entry must never match in the IPv4-only sort list. */
+	statp->sort_list[i].addr.s_addr = INADDR_NONE;
+	statp->sort_list[i].mask = 0;
+	return (1);
+}
+#endif /* RESOLVSORT */
+
+/*
+ * Split the string up into words and interpret them as resolver options.
+ */
+static void
+res_setoptions(res_state statp, const char *options,
+    const char *source __unused)
+{
+	const char *cp = options, *sp, *ep;
+	char *numend;
+	long num;
 	struct __res_state_ext *ext = statp->_u._ext.ext;
 
 #ifdef DEBUG
-	if (statp->options & RES_DEBUG)
+	if (statp->options & RES_DEBUG) {
 		printf(";; res_setoptions(\"%s\", \"%s\")...\n",
 		       options, source);
+	}
 #endif
-	while (*cp) {
+	for (;;) {
 		/* skip leading and inner runs of spaces */
-		while (*cp == ' ' || *cp == '\t')
+		while (res_space(*cp))
 			cp++;
+		/* find the separator if there is one */
+		sp = cp;
+		while (*sp != '\0' && !res_space(*sp) && *sp != ':')
+			sp++;
+		/* find the end of the option */
+		ep = sp;
+		while (*ep != '\0' && !res_space(*ep))
+			ep++;
+		/* end of option line */
+		if (ep == cp)
+			break;
 		/* search for and process individual options */
-		if (!strncmp(cp, "ndots:", sizeof("ndots:") - 1)) {
-			i = atoi(cp + sizeof("ndots:") - 1);
-			if (i <= RES_MAXNDOTS)
-				statp->ndots = i;
-			else
-				statp->ndots = RES_MAXNDOTS;
+		/* A separator before the end of the option is a colon. */
+		if (res_match(cp, sp, "ndots") && ep - sp > 1) {
+			num = strtol(sp + 1, &numend, 10);
+			if (numend == ep && num >= 0 && num <= RES_MAXNDOTS) {
+				statp->ndots = num;
 #ifdef DEBUG
-			if (statp->options & RES_DEBUG)
-				printf(";;\tndots=%d\n", statp->ndots);
+				if (statp->options & RES_DEBUG)
+					printf(";;\tndots=%d\n", statp->ndots);
 #endif
-		} else if (!strncmp(cp, "timeout:", sizeof("timeout:") - 1)) {
-			i = atoi(cp + sizeof("timeout:") - 1);
-			if (i <= RES_MAXRETRANS)
-				statp->retrans = i;
-			else
-				statp->retrans = RES_MAXRETRANS;
+			}
+		} else if (res_match(cp, sp, "timeout") && ep - sp > 1) {
+			num = strtol(sp + 1, &numend, 10);
+			if (numend == ep && num > 0 && num <= RES_MAXRETRANS) {
+				statp->retrans = num;
 #ifdef DEBUG
-			if (statp->options & RES_DEBUG)
-				printf(";;\ttimeout=%d\n", statp->retrans);
+				if (statp->options & RES_DEBUG)
+					printf(";;\ttimeout=%d\n",
+					    statp->retrans);
 #endif
-#ifdef	SOLARIS2
-		} else if (!strncmp(cp, "retrans:", sizeof("retrans:") - 1)) {
-			/*
-		 	 * For backward compatibility, 'retrans' is
-		 	 * supported as an alias for 'timeout', though
-		 	 * without an imposed maximum.
-		 	 */
-			statp->retrans = atoi(cp + sizeof("retrans:") - 1);
-		} else if (!strncmp(cp, "retry:", sizeof("retry:") - 1)){
-			/*
-			 * For backward compatibility, 'retry' is
-			 * supported as an alias for 'attempts', though
-			 * without an imposed maximum.
-			 */
-			statp->retry = atoi(cp + sizeof("retry:") - 1);
-#endif	/* SOLARIS2 */
-		} else if (!strncmp(cp, "attempts:", sizeof("attempts:") - 1)){
-			i = atoi(cp + sizeof("attempts:") - 1);
-			if (i <= RES_MAXRETRY)
-				statp->retry = i;
-			else
-				statp->retry = RES_MAXRETRY;
+			}
+		} else if (res_match(cp, sp, "attempts") && ep - sp > 1) {
+			num = strtol(sp + 1, &numend, 10);
+			if (numend == ep && num > 0 && num <= RES_MAXRETRY) {
+				statp->retry = num;
 #ifdef DEBUG
-			if (statp->options & RES_DEBUG)
-				printf(";;\tattempts=%d\n", statp->retry);
+				if (statp->options & RES_DEBUG)
+					printf(";;\tattempts=%d\n",
+					    statp->retry);
 #endif
-		} else if (!strncmp(cp, "debug", sizeof("debug") - 1)) {
+			}
+		} else if (res_match(cp, ep, "debug")) {
 #ifdef DEBUG
 			if (!(statp->options & RES_DEBUG)) {
 				printf(";; res_setoptions(\"%s\", \"%s\")..\n",
 				       options, source);
-				statp->options |= RES_DEBUG;
 			}
+#endif
+			statp->options |= RES_DEBUG;
+#ifdef DEBUG
 			printf(";;\tdebug\n");
 #endif
-		} else if (!strncmp(cp, "no_tld_query",
-				    sizeof("no_tld_query") - 1) ||
-			   !strncmp(cp, "no-tld-query",
-				    sizeof("no-tld-query") - 1)) {
+		} else if (res_match(cp, ep, "no-debug")) {
+			statp->options &= ~RES_DEBUG;
+		} else if (res_match(cp, ep, "no-rotate")) {
+			statp->options &= ~RES_ROTATE;
+		} else if (res_match(cp, ep, "no-tld-query") ||
+		    res_match(cp, ep, "no_tld_query")) {
 			statp->options |= RES_NOTLDQUERY;
-		} else if (!strncmp(cp, "inet6", sizeof("inet6") - 1)) {
+		} else if (res_match(cp, ep, "inet6")) {
 			statp->options |= RES_USE_INET6;
-		} else if (!strncmp(cp, "insecure1", sizeof("insecure1") - 1)) {
-		       statp->options |= RES_INSECURE1;
-		} else if (!strncmp(cp, "insecure2", sizeof("insecure2") - 1)) {
-		       statp->options |= RES_INSECURE2;
-		} else if (!strncmp(cp, "rotate", sizeof("rotate") - 1)) {
+		} else if (res_match(cp, ep, "insecure1")) {
+			statp->options |= RES_INSECURE1;
+		} else if (res_match(cp, ep, "insecure2")) {
+			statp->options |= RES_INSECURE2;
+		} else if (res_match(cp, ep, "rotate")) {
 			statp->options |= RES_ROTATE;
-		} else if (!strncmp(cp, "usevc", sizeof("usevc") - 1)) {
+		} else if (res_match(cp, ep, "usevc")) {
 			statp->options |= RES_USEVC;
-		} else if (!strncmp(cp, "no-check-names",
-				    sizeof("no-check-names") - 1)) {
+		} else if (res_match(cp, ep, "no-check-names")) {
 			statp->options |= RES_NOCHECKNAME;
-		} else if (!strncmp(cp, "reload-period:",
-				    sizeof("reload-period:") - 1)) {
-			if (ext != NULL) {
-				ext->reload_period = (u_short)
-				    atoi(cp + sizeof("reload-period:") - 1);
+		} else if (res_match(cp, sp, "reload-period") && ep - sp > 1) {
+			num = strtol(sp + 1, &numend, 10);
+			if (numend == ep && num >= 0 && num <= USHRT_MAX) {
+				if (ext != NULL)
+					ext->reload_period = (u_short)num;
+#ifdef DEBUG
+				if (statp->options & RES_DEBUG)
+					printf(";;\treload-period %hu\n",
+					    (u_short)num);
+#endif
 			}
-		}
 #ifdef RES_USE_EDNS0
-		else if (!strncmp(cp, "edns0", sizeof("edns0") - 1)) {
+		} else if (res_match(cp, ep, "edns0")) {
 			statp->options |= RES_USE_EDNS0;
-		}
 #endif
 #ifndef _LIBC
-		else if (!strncmp(cp, "dname", sizeof("dname") - 1)) {
+		} else if (res_match(cp, ep, "dname")) {
 			statp->options |= RES_USE_DNAME;
-		}
-		else if (!strncmp(cp, "nibble:", sizeof("nibble:") - 1)) {
-			if (ext == NULL)
-				goto skip;
-			cp += sizeof("nibble:") - 1;
-			i = MIN(strcspn(cp, " \t"), sizeof(ext->nsuffix) - 1);
-			strncpy(ext->nsuffix, cp, i);
-			ext->nsuffix[i] = '\0';
-		}
-		else if (!strncmp(cp, "nibble2:", sizeof("nibble2:") - 1)) {
-			if (ext == NULL)
-				goto skip;
-			cp += sizeof("nibble2:") - 1;
-			i = MIN(strcspn(cp, " \t"), sizeof(ext->nsuffix2) - 1);
-			strncpy(ext->nsuffix2, cp, i);
-			ext->nsuffix2[i] = '\0';
-		}
-		else if (!strncmp(cp, "v6revmode:", sizeof("v6revmode:") - 1)) {
-			cp += sizeof("v6revmode:") - 1;
-			/* "nibble" and "bitstring" used to be valid */
-			if (!strncmp(cp, "single", sizeof("single") - 1)) {
-				statp->options |= RES_NO_NIBBLE2;
-			} else if (!strncmp(cp, "both", sizeof("both") - 1)) {
-				statp->options &=
-					 ~RES_NO_NIBBLE2;
+		} else if (res_match(cp, sp, "nibble") && sp < ep) {
+			sp++;
+			if (ext != NULL && ep - sp < sizeof(ext->nsuffix)) {
+				memcpy(ext->nsuffix, sp, ep - sp);
+				ext->nsuffix[ep - sp] = '\0';
 			}
-		}
+		} else if (res_match(cp, sp, "nibble2") && sp < ep) {
+			sp++;
+			if (ext != NULL && ep - sp < sizeof(ext->nsuffix2)) {
+				memcpy(ext->nsuffix2, sp, ep - sp);
+				ext->nsuffix2[ep - sp] = '\0';
+			}
+		} else if (res_match(cp, sp, "v6revmode") && sp < ep) {
+			/* "nibble" and "bitstring" used to be valid */
+			if (res_match(sp + 1, ep, "single"))
+				statp->options |= RES_NO_NIBBLE2;
+			else if (res_match(sp + 1, ep, "both"))
+				statp->options &= ~RES_NO_NIBBLE2;
+#ifdef DEBUG
+			else if (statp->options & RES_DEBUG)
+				printf(";;\t%.*s: unrecognized value: %.*s\n",
+				    (int)(sp - cp), cp,
+				    (int)(ep - sp - 1), sp + 1);
 #endif
-		else {
-			/* XXX - print a warning here? */
-		}
-#ifndef _LIBC
-   skip:
+#endif /* !_LIBC */
+		} else {
+#ifdef DEBUG
+			if (statp->options & RES_DEBUG)
+				printf(";;\tunrecognized option: %.*s\n",
+				    (int)(ep - cp), cp);
 #endif
-		/* skip to next run of spaces */
-		while (*cp && *cp != ' ' && *cp != '\t')
-			cp++;
+		}
+		cp = ep;
 	}
 }
-
-#ifdef RESOLVSORT
-/* XXX - should really support CIDR which means explicit masks always. */
-static u_int32_t
-net_mask(struct in_addr in)		/*!< XXX - should really use system's version of this  */
-{
-	u_int32_t i = ntohl(in.s_addr);
-
-	if (IN_CLASSA(i))
-		return (htonl(IN_CLASSA_NET));
-	else if (IN_CLASSB(i))
-		return (htonl(IN_CLASSB_NET));
-	return (htonl(IN_CLASSC_NET));
-}
-#endif
 
 static u_char srnd[16];
 
