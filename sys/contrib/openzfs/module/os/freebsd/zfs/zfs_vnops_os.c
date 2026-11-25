@@ -5051,7 +5051,7 @@ zfs_freebsd_pathconf(struct vop_pathconf_args *ap)
 	case _PC_NAME_MAX:
 		*ap->a_retval = NAME_MAX;
 		return (0);
-#if __FreeBSD_version >= 1400032
+#ifdef _PC_DEALLOC_PRESENT
 	case _PC_DEALLOC_PRESENT:
 		*ap->a_retval = 1;
 		return (0);
@@ -5988,7 +5988,7 @@ zfs_vptocnp(struct vop_vptocnp_args *ap)
 	return (error);
 }
 
-#if __FreeBSD_version >= 1400032
+#ifdef _PC_DEALLOC_PRESENT
 static int
 zfs_deallocate(struct vop_deallocate_args *ap)
 {
@@ -6021,6 +6021,19 @@ zfs_deallocate(struct vop_deallocate_args *ap)
 		*ap->a_len = 0;
 		zfs_exit(zfsvfs, FTAG);
 		return (0);
+	}
+
+	/*
+	 * Unlike zfs_write(), zfs_freesp() does not clear set-id bits.
+	 * Reject an operation that would preserve an executable's set-id bits
+	 * when the caller could not retain them on an ordinary write.
+	 */
+	if ((zp->z_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) != 0 &&
+	    (zp->z_mode & (S_ISUID | S_ISGID)) != 0 &&
+	    secpolicy_vnode_setid_retain(zp, ap->a_cred,
+	    (zp->z_mode & S_ISUID) != 0 && KUID_TO_SUID(ZTOUID(zp)) == 0) != 0) {
+		zfs_exit(zfsvfs, FTAG);
+		return (SET_ERROR(EPERM));
 	}
 
 	error = zfs_freesp(zp, off, len, O_RDWR, TRUE);
@@ -6152,7 +6165,7 @@ struct vop_vector zfs_vnodeops = {
 	.vop_fplookup_symlink = zfs_freebsd_fplookup_symlink,
 	.vop_access =		zfs_freebsd_access,
 	.vop_allocate =		VOP_EINVAL,
-#if __FreeBSD_version >= 1400032
+#ifdef _PC_DEALLOC_PRESENT
 	.vop_deallocate =	zfs_deallocate,
 #endif
 	.vop_lookup =		zfs_cache_lookup,

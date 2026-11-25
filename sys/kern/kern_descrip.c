@@ -4433,12 +4433,43 @@ filedesc_to_leader_share(struct filedesc_to_leader *fdtol, struct filedesc *fdp)
 }
 
 static int
-sysctl_kern_proc_nfds(SYSCTL_HANDLER_ARGS)
+filedesc_nfiles(struct filedesc *fdp)
 {
 	NDSLOTTYPE *map;
+	int count, off;
+
+	if (fdp == NULL)
+		return (0);
+	count = 0;
+	FILEDESC_SLOCK(fdp);
+	map = fdp->fd_map;
+	for (off = NDSLOT(fdp->fd_nfiles - 1); off >= 0; --off)
+		count += bitcountl(map[off]);
+	FILEDESC_SUNLOCK(fdp);
+	return (count);
+}
+
+int
+proc_nfiles(struct proc *p)
+{
 	struct filedesc *fdp;
+	int count;
+
+	PROC_LOCK(p);
+	fdp = fdhold(p);
+	PROC_UNLOCK(p);
+	if (fdp == NULL)
+		return (0);
+	count = filedesc_nfiles(fdp);
+	fddrop(fdp);
+	return (count);
+}
+
+static int
+sysctl_kern_proc_nfds(SYSCTL_HANDLER_ARGS)
+{
 	u_int namelen;
-	int count, off, minoff;
+	int count;
 
 	namelen = arg2;
 	if (namelen != 1)
@@ -4447,15 +4478,7 @@ sysctl_kern_proc_nfds(SYSCTL_HANDLER_ARGS)
 	if (*(int *)arg1 != 0)
 		return (EINVAL);
 
-	fdp = curproc->p_fd;
-	count = 0;
-	FILEDESC_SLOCK(fdp);
-	map = fdp->fd_map;
-	off = NDSLOT(fdp->fd_nfiles - 1);
-	for (minoff = NDSLOT(0); off >= minoff; --off)
-		count += bitcountl(map[off]);
-	FILEDESC_SUNLOCK(fdp);
-
+	count = filedesc_nfiles(curproc->p_fd);
 	return (SYSCTL_OUT(req, &count, sizeof(count)));
 }
 

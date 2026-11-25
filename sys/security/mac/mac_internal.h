@@ -230,7 +230,6 @@ int	mac_allocate_slot(void);
  * namespaces, etc, should work for these, so for now, sort by object type.
  */
 struct label	*mac_cred_label_alloc(void);
-void		 mac_cred_label_free(struct label *label);
 struct label	*mac_pipe_label_alloc(void);
 void		 mac_pipe_label_free(struct label *label);
 struct label	*mac_socket_label_alloc(int flag);
@@ -239,11 +238,9 @@ void		 mac_socketpeer_label_free(struct label *label);
 struct label	*mac_vnode_label_alloc(void);
 void		 mac_vnode_label_free(struct label *label);
 
-int	mac_cred_check_relabel(struct ucred *cred, struct label *newlabel);
 int	mac_cred_externalize_label(struct label *label, char *elements,
 	    char *outbuf, size_t outbuflen);
 int	mac_cred_internalize_label(struct label *label, char *string);
-void	mac_cred_relabel(struct ucred *cred, struct label *newlabel);
 
 struct label	*mac_mbuf_to_label(struct mbuf *m);
 

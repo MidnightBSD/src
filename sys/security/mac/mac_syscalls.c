@@ -161,11 +161,8 @@ sys___mac_get_proc(struct thread *td, struct __mac_get_proc_args *uap)
 }
 
 int
-sys___mac_set_proc(struct thread *td, struct __mac_set_proc_args *uap)
+mac_cred_label_copyin(const void *user_mac, bool compat32, struct label **label)
 {
-	struct ucred *newcred, *oldcred;
-	struct label *intlabel;
-	struct proc *p;
 	struct mac mac;
 	char *buffer;
 	int error;
@@ -173,26 +170,51 @@ sys___mac_set_proc(struct thread *td, struct __mac_set_proc_args *uap)
 	if (!(mac_labeled & MPC_OBJECT_CRED))
 		return (EINVAL);
 
-	error = copyin(uap->mac_p, &mac, sizeof(mac));
-	if (error)
-		return (error);
+	if (compat32) {
+		struct {
+			uint32_t m_buflen;
+			uint32_t m_string;
+		} mac32;
 
+		error = copyin(user_mac, &mac32, sizeof(mac32));
+		if (error != 0)
+			return (error);
+		mac.m_buflen = mac32.m_buflen;
+		mac.m_string = (char *)(uintptr_t)mac32.m_string;
+	} else {
+		error = copyin(user_mac, &mac, sizeof(mac));
+		if (error != 0)
+			return (error);
+	}
 	error = mac_check_structmac_consistent(&mac);
-	if (error)
+	if (error != 0)
 		return (error);
 
 	buffer = malloc(mac.m_buflen, M_MACTEMP, M_WAITOK);
 	error = copyinstr(mac.m_string, buffer, mac.m_buflen, NULL);
-	if (error) {
-		free(buffer, M_MACTEMP);
-		return (error);
+	if (error == 0) {
+		*label = mac_cred_label_alloc();
+		error = mac_cred_internalize_label(*label, buffer);
+		if (error != 0) {
+			mac_cred_label_free(*label);
+			*label = NULL;
+		}
 	}
-
-	intlabel = mac_cred_label_alloc();
-	error = mac_cred_internalize_label(intlabel, buffer);
 	free(buffer, M_MACTEMP);
-	if (error)
-		goto out;
+	return (error);
+}
+
+int
+sys___mac_set_proc(struct thread *td, struct __mac_set_proc_args *uap)
+{
+	struct ucred *newcred, *oldcred;
+	struct label *intlabel;
+	struct proc *p;
+	int error;
+
+	error = mac_cred_label_copyin(uap->mac_p, false, &intlabel);
+	if (error != 0)
+		return (error);
 
 	newcred = crget();
 

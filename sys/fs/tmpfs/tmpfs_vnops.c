@@ -660,6 +660,22 @@ out_smr:
 	return (error);
 }
 
+static void
+tmpfs_write_clear_setid(struct vnode *vp, struct tmpfs_node *node,
+    struct ucred *cred)
+{
+	mode_t newmode;
+
+	if (node->tn_mode & (S_ISUID | S_ISGID)) {
+		if (priv_check_cred(cred, PRIV_VFS_RETAINSUGID)) {
+			newmode = node->tn_mode & ~(S_ISUID | S_ISGID);
+			vn_seqc_write_begin(vp);
+			atomic_store_short(&node->tn_mode, newmode);
+			vn_seqc_write_end(vp);
+		}
+	}
+}
+
 static int
 tmpfs_write(struct vop_write_args *v)
 {
@@ -669,7 +685,6 @@ tmpfs_write(struct vop_write_args *v)
 	off_t oldsize;
 	ssize_t r;
 	int error, ioflag;
-	mode_t newmode;
 
 	vp = v->a_vp;
 	uio = v->a_uio;
@@ -701,14 +716,7 @@ tmpfs_write(struct vop_write_args *v)
 	error = uiomove_object(node->tn_reg.tn_aobj, node->tn_size, uio);
 	node->tn_status |= TMPFS_NODE_MODIFIED | TMPFS_NODE_CHANGED;
 	node->tn_accessed = true;
-	if (node->tn_mode & (S_ISUID | S_ISGID)) {
-		if (priv_check_cred(v->a_cred, PRIV_VFS_RETAINSUGID)) {
-			newmode = node->tn_mode & ~(S_ISUID | S_ISGID);
-			vn_seqc_write_begin(vp);
-			atomic_store_short(&node->tn_mode, newmode);
-			vn_seqc_write_end(vp);
-		}
-	}
+	tmpfs_write_clear_setid(vp, node, v->a_cred);
 	if (error != 0)
 		(void)tmpfs_reg_resize(vp, oldsize, TRUE);
 
@@ -718,6 +726,17 @@ out:
 
 	vn_rlimit_fsizex_res(uio, r);
 	return (error);
+}
+
+static int
+tmpfs_deallocate(struct vop_deallocate_args *v)
+{
+	struct tmpfs_node *node;
+
+	node = VP_TO_TMPFS_NODE(v->a_vp);
+	if (*v->a_offset < node->tn_size)
+		tmpfs_write_clear_setid(v->a_vp, node, v->a_cred);
+	return (tmpfs_reg_punch_hole(v->a_vp, v->a_offset, v->a_len));
 }
 
 static int
@@ -1638,6 +1657,10 @@ tmpfs_pathconf(struct vop_pathconf_args *v)
 		*retval = 64;
 		break;
 
+	case _PC_DEALLOC_PRESENT:
+		*retval = 1;
+		break;
+
 	case _PC_MIN_HOLE_SIZE:
 		*retval = PAGE_SIZE;
 		break;
@@ -1977,6 +2000,7 @@ struct vop_vector tmpfs_vnodeop_entries = {
 	.vop_read =			tmpfs_read,
 	.vop_read_pgcache =		tmpfs_read_pgcache,
 	.vop_write =			tmpfs_write,
+	.vop_deallocate =		tmpfs_deallocate,
 	.vop_fsync =			tmpfs_fsync,
 	.vop_remove =			tmpfs_remove,
 	.vop_link =			tmpfs_link,

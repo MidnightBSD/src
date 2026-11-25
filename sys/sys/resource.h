@@ -171,6 +171,9 @@ struct loadavg {
 #define	CP_IDLE		4
 #define	CPUSTATES	5
 
+/* getrlimitusage flags */
+#define	GETRLIMITUSAGE_EUID	0x0001
+
 #endif	/* __BSD_VISIBLE */
 
 #ifdef _KERNEL
@@ -184,6 +187,9 @@ __BEGIN_DECLS
 /* XXX 2nd arg to [gs]etpriority() should be an id_t */
 int	getpriority(int, int);
 int	getrlimit(int, struct rlimit *);
+#if __BSD_VISIBLE
+int	getrlimitusage(unsigned, int, rlim_t *);
+#endif
 int	getrusage(int, struct rusage *);
 int	setpriority(int, int, int);
 int	setrlimit(int, const struct rlimit *);

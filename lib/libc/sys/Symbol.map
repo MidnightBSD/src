@@ -417,15 +417,18 @@ FBSD_1.6 {
 
 FBSD_1.7 {
 	 _Fork;
+	fspacectl;
 	kqueuex;
 	membarrier;
 	swapoff;
 };
 
 FBSD_1.8 {
+	getrlimitusage;
 	 kcmp;
 	inotify_add_watch_at;
 	inotify_rm_watch;
+	setcred;
 	timerfd_create;
 	timerfd_gettime;
 	timerfd_settime;

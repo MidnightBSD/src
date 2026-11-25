@@ -1175,7 +1175,9 @@
 				    struct aiocb32 *aiocbp); }
 579	AUE_AIO_READV	STD	{ int freebsd32_aio_readv( \
 				    struct aiocb32 *aiocbp); }
-580	AUE_NULL	UNIMPL	fspacectl
+580	AUE_FSPACECTL	NOPROTO|CAPENABLED { int fspacectl(int fd, int cmd, \
+				    const struct spacectl_range *rqsr, int flags, \
+				    struct spacectl_range *rmsr); }
 581	AUE_NULL	NOPROTO	{ int sched_getcpu(void); }
 582	AUE_NULL	UNIMPL	swapoff
 583	AUE_NULL	UNIMPL	kqueuex
@@ -1190,8 +1192,14 @@
 				    struct itimerspec32 *old_value); }
 588	AUE_NULL	NOPROTO { int kcmp(pid_t pid1, pid_t pid2, int type, \
 				    u_int idx1, u_int idx2); }
-589	AUE_INOTIFY	NOPROTO|CAPENABLED { int inotify_add_watch_at(int fd, int dfd, \
+589	AUE_NULL	NOPROTO|CAPENABLED { int getrlimitusage(u_int which, \
+				    int flags, rlim_t *res); }
+590	AUE_NULL	UNIMPL	fchroot
+591	AUE_SETCRED	STD|CAPENABLED { int freebsd32_setcred(u_int flags, \
+				    const struct setcred32 *wcred, size_t size); }
+592	AUE_NULL	UNIMPL	exterrctl
+593	AUE_INOTIFY	NOPROTO|CAPENABLED { int inotify_add_watch_at(int fd, int dfd, \
 				    const char *path, uint32_t mask); }
-590	AUE_INOTIFY	NOPROTO|CAPENABLED { int inotify_rm_watch(int fd, int wd); }
+594	AUE_INOTIFY	NOPROTO|CAPENABLED { int inotify_rm_watch(int fd, int wd); }
 
 ; vim: syntax=off

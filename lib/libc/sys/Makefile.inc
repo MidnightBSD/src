@@ -192,6 +192,7 @@ MAN+=	abort2.2 \
 	fhreadlink.2 \
 	flock.2 \
 	fork.2 \
+	fspacectl.2 \
 	fsync.2 \
 	getdirentries.2 \
 	getdtablesize.2 \
@@ -208,6 +209,7 @@ MAN+=	abort2.2 \
 	getpriority.2 \
 	getrandom.2 \
 	getrlimit.2 \
+	getrlimitusage.2 \
 	getrusage.2 \
 	getsid.2 \
 	getsockname.2 \
@@ -303,6 +305,7 @@ MAN+=	sctp_generic_recvmsg.2 \
 	send.2 \
 	setfib.2 \
 	sendfile.2 \
+	setcred.2 \
 	setgroups.2 \
 	setpgid.2 \
 	setregid.2 \

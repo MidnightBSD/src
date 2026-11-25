@@ -3398,6 +3398,17 @@ systrace_args(int sysnum, void *params, uint64_t *uarg, int *n_args)
 		*n_args = 1;
 		break;
 	}
+	/* fspacectl */
+	case 580: {
+		struct fspacectl_args *p = params;
+		iarg[0] = p->fd; /* int */
+		iarg[1] = p->cmd; /* int */
+		uarg[2] = (intptr_t)p->rqsr; /* const struct spacectl_range * */
+		iarg[3] = p->flags; /* int */
+		uarg[4] = (intptr_t)p->rmsr; /* struct spacectl_range * */
+		*n_args = 5;
+		break;
+	}
 	/* sched_getcpu */
 	case 581: {
 		*n_args = 0;
@@ -3464,8 +3475,26 @@ systrace_args(int sysnum, void *params, uint64_t *uarg, int *n_args)
 		*n_args = 5;
 		break;
 	}
-	/* inotify_add_watch_at */
+	/* getrlimitusage */
 	case 589: {
+		struct getrlimitusage_args *p = params;
+		uarg[0] = p->which; /* u_int */
+		iarg[1] = p->flags; /* int */
+		uarg[2] = (intptr_t)p->res; /* rlim_t * */
+		*n_args = 3;
+		break;
+	}
+	/* setcred */
+	case 591: {
+		struct setcred_args *p = params;
+		uarg[0] = p->flags; /* u_int */
+		uarg[1] = (intptr_t)p->wcred; /* const struct setcred * */
+		uarg[2] = p->size; /* size_t */
+		*n_args = 3;
+		break;
+	}
+	/* inotify_add_watch_at */
+	case 593: {
 		struct inotify_add_watch_at_args *p = params;
 		iarg[0] = p->fd; /* int */
 		iarg[1] = p->dfd; /* int */
@@ -3475,7 +3504,7 @@ systrace_args(int sysnum, void *params, uint64_t *uarg, int *n_args)
 		break;
 	}
 	/* inotify_rm_watch */
-	case 590: {
+	case 594: {
 		struct inotify_rm_watch_args *p = params;
 		iarg[0] = p->fd; /* int */
 		iarg[1] = p->wd; /* int */
@@ -9171,6 +9200,28 @@ systrace_entry_setargdesc(int sysnum, int ndx, char *desc, size_t descsz)
 			break;
 		};
 		break;
+	/* fspacectl */
+	case 580:
+		switch (ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "int";
+			break;
+		case 2:
+			p = "userland const struct spacectl_range *";
+			break;
+		case 3:
+			p = "int";
+			break;
+		case 4:
+			p = "userland struct spacectl_range *";
+			break;
+		default:
+			break;
+		};
+		break;
 	/* sched_getcpu */
 	case 581:
 		break;
@@ -9280,8 +9331,40 @@ systrace_entry_setargdesc(int sysnum, int ndx, char *desc, size_t descsz)
 			break;
 		};
 		break;
-	/* inotify_add_watch_at */
+	/* getrlimitusage */
 	case 589:
+		switch (ndx) {
+		case 0:
+			p = "u_int";
+			break;
+		case 1:
+			p = "int";
+			break;
+		case 2:
+			p = "userland rlim_t *";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* setcred */
+	case 591:
+		switch (ndx) {
+		case 0:
+			p = "u_int";
+			break;
+		case 1:
+			p = "userland const struct setcred *";
+			break;
+		case 2:
+			p = "size_t";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* inotify_add_watch_at */
+	case 593:
 		switch (ndx) {
 		case 0:
 			p = "int";
@@ -9300,7 +9383,7 @@ systrace_entry_setargdesc(int sysnum, int ndx, char *desc, size_t descsz)
 		};
 		break;
 	/* inotify_rm_watch */
-	case 590:
+	case 594:
 		switch (ndx) {
 		case 0:
 			p = "int";
@@ -11258,6 +11341,11 @@ systrace_return_setargdesc(int sysnum, int ndx, char *desc, size_t descsz)
 		if (ndx == 0 || ndx == 1)
 			p = "int";
 		break;
+	/* fspacectl */
+	case 580:
+		if (ndx == 0 || ndx == 1)
+			p = "int";
+		break;
 	/* sched_getcpu */
 	case 581:
 	/* swapoff */
@@ -11295,13 +11383,23 @@ systrace_return_setargdesc(int sysnum, int ndx, char *desc, size_t descsz)
 		if (ndx == 0 || ndx == 1)
 			p = "int";
 		break;
-	/* inotify_add_watch_at */
+	/* getrlimitusage */
 	case 589:
 		if (ndx == 0 || ndx == 1)
 			p = "int";
 		break;
+	/* setcred */
+	case 591:
+		if (ndx == 0 || ndx == 1)
+			p = "int";
+		break;
+	/* inotify_add_watch_at */
+	case 593:
+		if (ndx == 0 || ndx == 1)
+			p = "int";
+		break;
 	/* inotify_rm_watch */
-	case 590:
+	case 594:
 		if (ndx == 0 || ndx == 1)
 			p = "int";
 		break;

@@ -1089,6 +1089,18 @@ kaudit_to_bsm(struct kaudit_record *kar, struct au_record **pau)
 		FD_VNODE1_TOKENS;
 		break;
 
+	case AUE_FSPACECTL:
+		if (ARG_IS_VALID(kar, ARG_CMD)) {
+			tok = au_to_arg32(2, "operation", ar->ar_arg_cmd);
+			kau_write(rec, tok);
+		}
+		if (ARG_IS_VALID(kar, ARG_FFLAGS)) {
+			tok = au_to_arg32(4, "flags", ar->ar_arg_fflags);
+			kau_write(rec, tok);
+		}
+		FD_VNODE1_TOKENS;
+		break;
+
 	case AUE_RFORK:
 		if (ARG_IS_VALID(kar, ARG_FFLAGS)) {
 			tok = au_to_arg32(1, "flags", ar->ar_arg_fflags);
@@ -1467,6 +1479,45 @@ kaudit_to_bsm(struct kaudit_record *kar, struct au_record **pau)
 		if (ARG_IS_VALID(kar, ARG_EUID)) {
 			tok = au_to_arg32(2, "euid", ar->ar_arg_euid);
 			kau_write(rec, tok);
+		}
+		break;
+
+	case AUE_SETCRED:
+		if (ARG_IS_VALID(kar, ARG_FFLAGS)) {
+			tok = au_to_arg32(1, "flags", ar->ar_arg_fflags);
+			kau_write(rec, tok);
+		}
+		if (ARG_IS_VALID(kar, ARG_EUID)) {
+			tok = au_to_arg32(2, "euid", ar->ar_arg_euid);
+			kau_write(rec, tok);
+		}
+		if (ARG_IS_VALID(kar, ARG_RUID)) {
+			tok = au_to_arg32(2, "ruid", ar->ar_arg_ruid);
+			kau_write(rec, tok);
+		}
+		if (ARG_IS_VALID(kar, ARG_SUID)) {
+			tok = au_to_arg32(2, "suid", ar->ar_arg_suid);
+			kau_write(rec, tok);
+		}
+		if (ARG_IS_VALID(kar, ARG_EGID)) {
+			tok = au_to_arg32(2, "egid", ar->ar_arg_egid);
+			kau_write(rec, tok);
+		}
+		if (ARG_IS_VALID(kar, ARG_RGID)) {
+			tok = au_to_arg32(2, "rgid", ar->ar_arg_rgid);
+			kau_write(rec, tok);
+		}
+		if (ARG_IS_VALID(kar, ARG_SGID)) {
+			tok = au_to_arg32(2, "sgid", ar->ar_arg_sgid);
+			kau_write(rec, tok);
+		}
+		if (ARG_IS_VALID(kar, ARG_GROUPSET)) {
+			for (ctr = 0; ctr < ar->ar_arg_groups.gidset_size;
+			    ctr++) {
+				tok = au_to_arg32(2, "group",
+				    ar->ar_arg_groups.gidset[ctr]);
+				kau_write(rec, tok);
+			}
 		}
 		break;
 
