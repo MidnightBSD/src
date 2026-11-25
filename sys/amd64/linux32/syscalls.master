@@ -53,13 +53,13 @@
 		    u_int nbyte
 		);
 	}
-4	AUE_NULL	NOPROTO {
-		int write(
+4	AUE_NULL	STD {
+		int linux_write(
 		    int fd,
 		    char *buf,
 		    u_int nbyte
 		);
-	}
+	} write linux_write_args int
 5	AUE_OPEN_RWTC	STD {
 		int linux_open(
 		    char *path,
