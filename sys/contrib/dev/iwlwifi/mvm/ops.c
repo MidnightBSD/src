@@ -1374,6 +1374,10 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_rf_cfg *cfg,
 	INIT_WORK(&mvm->sap_connected_wk, iwl_mvm_sap_connected_wk);
 	INIT_DELAYED_WORK(&mvm->tdls_cs.dwork, iwl_mvm_tdls_ch_switch_work);
 	INIT_DELAYED_WORK(&mvm->scan_timeout_dwork, iwl_mvm_scan_timeout_wk);
+#if defined(__FreeBSD__)
+	INIT_DELAYED_WORK(&mvm->rs_lq_wk, iwl_mvm_rs_lq_wk);
+	spin_lock_init(&mvm->rs_wk_lock);
+#endif
 	INIT_WORK(&mvm->add_stream_wk, iwl_mvm_add_new_dqa_stream_wk);
 	INIT_LIST_HEAD(&mvm->add_stream_txqs);
 	spin_lock_init(&mvm->add_stream_lock);
@@ -1580,6 +1584,9 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode *op_mode)
 	 * anymore.
 	 */
 	cancel_work_sync(&mvm->sap_connected_wk);
+#if defined(__FreeBSD__)
+	cancel_delayed_work_sync(&mvm->rs_lq_wk);
+#endif
 
 	iwl_mvm_leds_exit(mvm);
 
@@ -1595,6 +1602,10 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode *op_mode)
 	 */
 	if (mvm->hw_registered)
 		ieee80211_unregister_hw(mvm->hw);
+#if defined(__FreeBSD__)
+	/* No station is left to arm it; this cancel is the last. */
+	cancel_delayed_work_sync(&mvm->rs_lq_wk);
+#endif
 
 	kfree(mvm->scan_cmd);
 	kfree(mvm->mcast_filter_cmd);

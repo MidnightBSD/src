@@ -444,6 +444,35 @@ out:
 }
 
 int
+lkpi_80211_mo_sta_txrate_update(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
+    struct ieee80211_sta *sta, const struct lkpi_txrate *txrate)
+{
+	struct lkpi_hw *lhw;
+	struct lkpi_sta *lsta;
+	int error;
+
+	lhw = HW_TO_LHW(hw);
+	if (lhw->ops->lkpi_sta_txrate_update == NULL) {
+		error = EOPNOTSUPP;
+		goto out;
+	}
+
+	lsta = STA_TO_LSTA(sta);
+	if (!lsta->added_to_drv || lsta->state != IEEE80211_STA_AUTHORIZED) {
+		error = EEXIST;
+		goto out;
+	}
+
+	LKPI_80211_TRACE_MO("hw %p vif %p sta %p gen %u type %u rate %u",
+	    hw, vif, sta, txrate->gen, txrate->type, txrate->rate);
+	lhw->ops->lkpi_sta_txrate_update(hw, vif, sta, txrate);
+	error = 0;
+
+out:
+	return (error);
+}
+
+int
 lkpi_80211_mo_config(struct ieee80211_hw *hw, uint32_t changed)
 {
 	struct lkpi_hw *lhw;

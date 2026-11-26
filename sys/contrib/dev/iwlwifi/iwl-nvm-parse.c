@@ -1093,6 +1093,16 @@ static void iwl_init_sbands(struct iwl_trans *trans,
 	int n_channels;
 	int n_used = 0;
 	struct ieee80211_supported_band *sband;
+#if defined(__FreeBSD__)
+	u8 ht_tx_chains = tx_chains;
+
+	/* Host rate control drives one stream. */
+	if (iwlwifi_mod_params.sw_rate_control && tx_chains != 0 &&
+	    !fw_has_capa(&fw->ucode_capa, IWL_UCODE_TLV_CAPA_TLC_OFFLOAD))
+		ht_tx_chains = BIT(__ffs(tx_chains));
+#else
+	u8 ht_tx_chains = tx_chains;
+#endif
 
 	n_channels = iwl_init_channel_map(trans, fw, data, nvm_ch_flags,
 					  sbands_flags, v4);
@@ -1103,7 +1113,7 @@ static void iwl_init_sbands(struct iwl_trans *trans,
 	n_used += iwl_init_sband_channels(data, sband, n_channels,
 					  NL80211_BAND_2GHZ);
 	iwl_init_ht_hw_capab(trans, data, &sband->ht_cap, NL80211_BAND_2GHZ,
-			     tx_chains, rx_chains);
+			     ht_tx_chains, rx_chains);
 
 	if (data->sku_cap_11ax_enable && !iwlwifi_mod_params.disable_11ax)
 		iwl_init_he_hw_capab(trans, data, sband, tx_chains, rx_chains,
@@ -1116,7 +1126,7 @@ static void iwl_init_sbands(struct iwl_trans *trans,
 	n_used += iwl_init_sband_channels(data, sband, n_channels,
 					  NL80211_BAND_5GHZ);
 	iwl_init_ht_hw_capab(trans, data, &sband->ht_cap, NL80211_BAND_5GHZ,
-			     tx_chains, rx_chains);
+			     ht_tx_chains, rx_chains);
 	if (data->sku_cap_11ac_enable && !iwlwifi_mod_params.disable_11ac)
 		iwl_init_vht_hw_capab(trans, data, &sband->vht_cap,
 				      tx_chains, rx_chains);

@@ -41,6 +41,7 @@
 
 #include "iwl-trans.h"
 #include "fw-api.h"
+#include "rs-table.h"
 
 #define	RS_NAME		"XXX_unknown"
 
@@ -76,6 +77,15 @@ struct iwl_lq_sta {
 		uint8_t		chains;
 		uint8_t		chain_signal[IEEE80211_MAX_CHAINS];
 		uint8_t		last_rssi;
+		bool		lq_valid;	/* rate init filled lq */
+		int		lq_error;	/* result of the last lq send */
+		int		build_error;	/* last failed table build */
+		uint8_t		lq_retries;
+		/* Under the lock above: what net80211 last chose. */
+		struct iwl_mvm_rs_desired desired;
+		/* Under mvm->mutex: when the next table or resend may go. */
+		unsigned long	next_build;
+		unsigned long	next_retry;
 	} pers;
 };
 
@@ -107,6 +117,9 @@ void iwl_mvm_rs_fw_rate_init(struct iwl_mvm *, struct ieee80211_vif *,
     struct ieee80211_link_sta *, enum nl80211_band);
 void iwl_mvm_rs_tx_status(struct iwl_mvm *, struct ieee80211_sta *,
     int, struct ieee80211_tx_info *, bool);
+void iwl_mvm_rs_lq_wk(struct work_struct *);
+void iwl_mvm_rs_sw_txrate_update(struct iwl_mvm *, struct ieee80211_sta *,
+    const struct lkpi_txrate *);
 void iwl_mvm_rs_add_sta_link(struct iwl_mvm *, struct iwl_mvm_link_sta *);
 
 #endif	/* _IWLWIFI_MVM_RS_H */

@@ -93,6 +93,13 @@ struct iwl_mod_params {
 	bool remove_when_gone;
 	u32 enable_ini;
 	bool disable_11be;
+#if defined(__FreeBSD__)
+	/**
+	 * @sw_rate_control: program the firmware's rate table from the host
+	 *	on devices whose firmware has no rate scaling, default = false
+	 */
+	bool sw_rate_control;
+#endif
 };
 
 static inline bool iwl_enable_rx_ampdu(void)

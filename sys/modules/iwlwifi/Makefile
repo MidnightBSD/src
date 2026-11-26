@@ -36,7 +36,8 @@ SRCS+=	mvm/ftm-initiator.c mvm/ftm-responder.c mvm/fw.c
 SRCS+=	mvm/link.c mvm/mac-ctxt.c mvm/mac80211.c mvm/mld-key.c
 SRCS+=	mvm/mld-mac.c mvm/mld-mac80211.c mvm/mld-sta.c mvm/nvm.c
 SRCS+=	mvm/offloading.c mvm/ops.c mvm/phy-ctxt.c mvm/power.c mvm/ptp.c
-SRCS+=	mvm/quota.c mvm/rfi.c mvm/rs-fw.c mvm/rs.c mvm/rx.c mvm/rxmq.c
+SRCS+=	mvm/quota.c mvm/rfi.c mvm/rs-fw.c mvm/rs-table.c mvm/rs.c mvm/rx.c
+SRCS+=	mvm/rxmq.c
 SRCS+=	mvm/scan.c mvm/sf.c mvm/sta.c mvm/tdls.c mvm/time-event.c
 SRCS+=	mvm/time-sync.c mvm/tt.c mvm/tx.c mvm/utils.c
 

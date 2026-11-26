@@ -963,6 +963,22 @@ struct ieee80211_low_level_stats {
 	uint32_t dot11RTSSuccessCount;
 };
 
+/*
+ * The rate net80211's rate control chose for a station, for drivers that
+ * program a firmware rate table themselves.  gen orders reports.  Not a
+ * Linux interface.
+ */
+enum lkpi_txrate_type {
+	LKPI_TXRATE_LEGACY = 1,		/* rate in 500 kbit/s */
+	LKPI_TXRATE_HT,			/* rate is an HT MCS */
+};
+
+struct lkpi_txrate {
+	uint32_t	gen;
+	uint8_t		type;
+	uint8_t		rate;
+};
+
 struct ieee80211_ops {
 	/* TODO FIXME */
 	int  (*start)(struct ieee80211_hw *);
@@ -1011,6 +1027,8 @@ struct ieee80211_ops {
 	void (*sta_notify)(struct ieee80211_hw *, struct ieee80211_vif *, enum sta_notify_cmd, struct ieee80211_sta *);
 	void (*sta_rc_update)(struct ieee80211_hw *, struct ieee80211_vif *, struct ieee80211_sta *, u32);
 	void (*link_sta_rc_update)(struct ieee80211_hw *, struct ieee80211_vif *, struct ieee80211_link_sta *, u32);
+	/* Optional, not a Linux operation: see struct lkpi_txrate. */
+	void (*lkpi_sta_txrate_update)(struct ieee80211_hw *, struct ieee80211_vif *, struct ieee80211_sta *, const struct lkpi_txrate *);
 	void (*sta_rate_tbl_update)(struct ieee80211_hw *, struct ieee80211_vif *, struct ieee80211_sta *);
 	void (*sta_set_4addr)(struct ieee80211_hw *, struct ieee80211_vif *, struct ieee80211_sta *, bool);
 	void (*sta_set_decap_offload)(struct ieee80211_hw *, struct ieee80211_vif *, struct ieee80211_sta *, bool);

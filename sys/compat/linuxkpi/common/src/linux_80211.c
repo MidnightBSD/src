@@ -929,6 +929,63 @@ skip_bw:
 }
 #endif
 
+/*
+ * Tell a driver with (*lkpi_sta_txrate_update) the rate net80211 chose for
+ * the station, when it differs from the one last told or with reseed.  With
+ * select, the rate control runs first.  Selection, comparison, generation
+ * and delivery all happen under the lock, so reports reach the driver in
+ * generation order.  The driver's operation may not sleep or wait for work.
+ */
+static void
+lkpi_sta_txrate_notify(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
+    struct lkpi_sta *lsta, bool select, bool reseed)
+{
+	struct lkpi_hw *lhw;
+	struct ieee80211_node_txrate txr;
+	struct lkpi_txrate req;
+	uint8_t type, rate;
+
+	lhw = HW_TO_LHW(hw);
+	if (lhw->ops->lkpi_sta_txrate_update == NULL) {
+		if (select)
+			ieee80211_ratectl_rate(lsta->ni, NULL, 0);
+		return;
+	}
+
+	mtx_lock(&lsta->txrate_mtx);
+	if (reseed) {
+		lsta->txrate_type = 0;
+		lsta->txrate_rate = 0;
+	}
+	if (select)
+		ieee80211_ratectl_rate(lsta->ni, NULL, 0);
+	ieee80211_node_get_txrate(lsta->ni, &txr);
+	switch (txr.type) {
+	case IEEE80211_NODE_TXRATE_LEGACY:
+		type = LKPI_TXRATE_LEGACY;
+		rate = txr.dot11rate & IEEE80211_RATE_VAL;
+		break;
+	case IEEE80211_NODE_TXRATE_HT:
+		type = LKPI_TXRATE_HT;
+		rate = txr.mcs;
+		break;
+	default:
+		mtx_unlock(&lsta->txrate_mtx);
+		return;
+	}
+	if (type == lsta->txrate_type && rate == lsta->txrate_rate) {
+		mtx_unlock(&lsta->txrate_mtx);
+		return;
+	}
+	lsta->txrate_type = type;
+	lsta->txrate_rate = rate;
+	req.gen = ++lsta->txrate_gen;
+	req.type = type;
+	req.rate = rate;
+	lkpi_80211_mo_sta_txrate_update(hw, vif, LSTA_TO_STA(lsta), &req);
+	mtx_unlock(&lsta->txrate_mtx);
+}
+
 static enum ieee80211_bss_changed
 lkpi_sta_sync_from_ni(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
     struct ieee80211_sta *sta, struct ieee80211_node *ni, bool updchnctx)
@@ -1118,6 +1175,7 @@ lkpi_lsta_alloc(struct ieee80211vap *vap, const uint8_t mac[IEEE80211_ADDR_LEN],
 		LKPI_80211_LTXQ_LOCK_INIT(ltxq);
 		sta->txq[tid] = &ltxq->txq;
 	}
+	mtx_init(&lsta->txrate_mtx, "lkpi-txrate", NULL, MTX_DEF);
 
 	/* Deflink information. */
 	for (band = 0; band < NUM_NL80211_BANDS; band++) {
@@ -1223,6 +1281,7 @@ lkpi_lsta_free(struct lkpi_sta *lsta, struct ieee80211_node *ni)
 	KASSERT(mbufq_empty(&lsta->txq), ("%s: lsta %p has txq len %d != 0\n",
 	    __func__, lsta, mbufq_len(&lsta->txq)));
 	LKPI_80211_LSTA_TXQ_LOCK_DESTROY(lsta);
+	mtx_destroy(&lsta->txrate_mtx);
 
 	/* Remove lsta from vif; that is done by the state machine.  Should assert it? */
 
@@ -3341,6 +3400,7 @@ lkpi_sta_assoc_to_run(struct ieee80211vap *vap, enum ieee80211_state nstate, int
 		    "failed: %d\n", __func__, __LINE__, error);
 		goto out;
 	}
+	lkpi_sta_txrate_notify(hw, vif, lsta, false, true);
 
 	/* - drv_config (?)
 	 * - bss_info_changed
@@ -9478,6 +9538,7 @@ linuxkpi_ieee80211_tx_status_ext(struct ieee80211_hw *hw,
 	struct ieee80211_tx_info *info, _info = { };
 	struct ieee80211_ratectl_tx_status txs;
 	struct ieee80211_node *ni;
+	struct lkpi_vif *lvif;
 	int status;
 
 	skb = txstat->skb;
@@ -9532,8 +9593,17 @@ linuxkpi_ieee80211_tx_status_ext(struct ieee80211_hw *hw,
 		 * This is another case of !lvif->lvif_bss_synched but checking
 		 * that seems too cumbersome.
 		 */
-		if (ni->ni_vap->iv_bss != NULL)
-			ieee80211_ratectl_rate(ni->ni_vap->iv_bss, NULL, 0);
+		if (ni->ni_vap->iv_bss != NULL) {
+			if (ni == ni->ni_vap->iv_bss &&
+			    ni->ni_drv_data != NULL) {
+				lvif = VAP_TO_LVIF(ni->ni_vap);
+				lkpi_sta_txrate_notify(hw, LVIF_TO_VIF(lvif),
+				    ni->ni_drv_data, true, false);
+			} else {
+				ieee80211_ratectl_rate(ni->ni_vap->iv_bss,
+				    NULL, 0);
+			}
+		}
 
 #ifdef LINUXKPI_DEBUG_80211
 		if (linuxkpi_debug_80211 & D80211_TRACE_TX) {

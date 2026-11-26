@@ -3315,6 +3315,11 @@ out:
 	IWL_DEBUG_HT(mvm, "Tx aggregation enabled on ra = %pM tid = %d\n",
 		     sta->addr, tid);
 
+#if defined(__FreeBSD__)
+	/* Send lq only once rate init has filled it. */
+	if (!mvmsta->deflink.lq_sta.rs_drv.pers.lq_valid)
+		return 0;
+#endif
 	return iwl_mvm_send_lq_cmd(mvm, &mvmsta->deflink.lq_sta.rs_drv.lq);
 }
 

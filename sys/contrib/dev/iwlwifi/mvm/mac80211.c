@@ -306,6 +306,12 @@ int iwl_mvm_op_get_antenna(struct ieee80211_hw *hw, int radio_idx,
 {
 	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
 	*tx_ant = iwl_mvm_get_valid_tx_ant(mvm);
+#if defined(__FreeBSD__)
+	/* Host rate control drives one stream; net80211 sizes its rates by this. */
+	if (iwlwifi_mod_params.sw_rate_control && *tx_ant != 0 &&
+	    !iwl_mvm_has_tlc_offload(mvm))
+		*tx_ant = first_antenna(*tx_ant);
+#endif
 	*rx_ant = iwl_mvm_get_valid_rx_ant(mvm);
 	return 0;
 }
@@ -1411,6 +1417,9 @@ void iwl_mvm_mac_stop(struct ieee80211_hw *hw, bool suspend)
 
 	cancel_delayed_work_sync(&mvm->cs_tx_unblock_dwork);
 	cancel_delayed_work_sync(&mvm->scan_timeout_dwork);
+#if defined(__FreeBSD__)
+	cancel_delayed_work_sync(&mvm->rs_lq_wk);
+#endif
 
 	/*
 	 * The work item could be running or queued if the
@@ -4136,13 +4145,33 @@ void iwl_mvm_sta_rc_update(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 
 	if (changed & (IEEE80211_RC_BW_CHANGED |
 		       IEEE80211_RC_SUPP_RATES_CHANGED |
-		       IEEE80211_RC_NSS_CHANGED))
+		       IEEE80211_RC_NSS_CHANGED)) {
+#if defined(__FreeBSD__)
+		/* The rate tables and their worker are written under mvm->mutex. */
+		mutex_lock(&mvm->mutex);
+#endif
 		iwl_mvm_rs_rate_init_all_links(mvm, vif, sta);
+#if defined(__FreeBSD__)
+		mutex_unlock(&mvm->mutex);
+#endif
+	}
 
 	if (vif->type == NL80211_IFTYPE_STATION &&
 	    changed & IEEE80211_RC_NSS_CHANGED)
 		iwl_mvm_sf_update(mvm, vif, false);
 }
+
+#if defined(__FreeBSD__)
+static void iwl_mvm_mac_sta_txrate_update(struct ieee80211_hw *hw,
+					  struct ieee80211_vif *vif,
+					  struct ieee80211_sta *sta,
+					  const struct lkpi_txrate *txrate)
+{
+	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+
+	iwl_mvm_rs_sw_txrate_update(mvm, sta, txrate);
+}
+#endif
 
 static int iwl_mvm_mac_conf_tx(struct ieee80211_hw *hw,
 			       struct ieee80211_vif *vif,
@@ -6391,6 +6420,9 @@ const struct ieee80211_ops iwl_mvm_hw_ops = {
 	.release_buffered_frames = iwl_mvm_mac_release_buffered_frames,
 	.set_rts_threshold = iwl_mvm_mac_set_rts_threshold,
 	.link_sta_rc_update = iwl_mvm_sta_rc_update,
+#if defined(__FreeBSD__)
+	.lkpi_sta_txrate_update = iwl_mvm_mac_sta_txrate_update,
+#endif
 	.conf_tx = iwl_mvm_mac_conf_tx,
 	.mgd_prepare_tx = iwl_mvm_mac_mgd_prepare_tx,
 	.mgd_complete_tx = iwl_mvm_mac_mgd_complete_tx,
