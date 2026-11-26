@@ -2240,5 +2240,12 @@ module_param_named(disable_11ax, iwlwifi_mod_params.disable_11ax, bool,
 		   S_IRUGO);
 MODULE_PARM_DESC(disable_11ax, "Disable HE capabilities (default: false)");
 
+#if defined(__FreeBSD__)
+module_param_named(sw_rate_control, iwlwifi_mod_params.sw_rate_control, bool,
+		   0444);
+MODULE_PARM_DESC(sw_rate_control,
+		 "Host rate control on devices whose firmware has no rate scaling (default: false)");
+#endif
+
 module_param_named(disable_11be, iwlwifi_mod_params.disable_11be, bool, 0444);
 MODULE_PARM_DESC(disable_11be, "Disable EHT capabilities (default: false)");

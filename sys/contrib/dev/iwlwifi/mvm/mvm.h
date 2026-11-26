@@ -930,6 +930,14 @@ struct iwl_mvm {
 
 	struct work_struct roc_done_wk;
 
+#if defined(__FreeBSD__)
+	/* Builds and sends host rate tables; resends refused ones. */
+	struct delayed_work rs_lq_wk;
+	/* Serialises arming rs_lq_wk; a kick asks for an immediate run. */
+	spinlock_t rs_wk_lock;
+	bool rs_wk_kick;
+#endif
+
 	unsigned long init_status;
 
 	unsigned long status;

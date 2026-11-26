@@ -204,6 +204,12 @@ struct lkpi_sta {
 	struct station_info	sinfo;				/* statistics */
 	uint64_t		frms_tx;			/* (*tx) */
 
+	/* The rate last reported to the driver, see lkpi_sta_txrate_notify(). */
+	struct mtx		txrate_mtx;
+	uint32_t		txrate_gen;
+	uint8_t			txrate_type;
+	uint8_t			txrate_rate;
+
 	/* Must be last! */
 	struct ieee80211_sta	sta __aligned(CACHE_LINE_SIZE);
 };
@@ -543,6 +549,8 @@ int lkpi_80211_mo_ampdu_action(struct ieee80211_hw *, struct ieee80211_vif *,
     struct ieee80211_ampdu_params *);
 int lkpi_80211_mo_sta_statistics(struct ieee80211_hw *, struct ieee80211_vif *,
     struct ieee80211_sta *, struct station_info *);
+int lkpi_80211_mo_sta_txrate_update(struct ieee80211_hw *, struct ieee80211_vif *,
+    struct ieee80211_sta *, const struct lkpi_txrate *);
 int lkpi_80211_mo_suspend(struct ieee80211_hw *, struct cfg80211_wowlan *);
 int lkpi_80211_mo_resume(struct ieee80211_hw *);
 int lkpi_80211_mo_set_wakeup(struct ieee80211_hw *, bool);
