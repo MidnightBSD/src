@@ -28,6 +28,7 @@
 
 #include <sys/cdefs.h>
 #include <err.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,6 +43,8 @@ typedef union {
 typedef struct port {
 	char * pkgname;
 	char * portdir;
+	char * flavor;
+	char * default_flavor;
 	char * prefix;
 	char * comment;
 	char * pkgdescr;
@@ -61,15 +64,21 @@ typedef struct port {
 	int recursed;
 } PORT;
 
+struct origin {
+	char *key;
+	PORT *port;
+};
+
 static void usage(void);
 static char * strdup2(const char *str);
 static DEP * makelist(char * str, size_t * n);
 static PORT * portify(char * line);
-static int portcompare(char * a, char * b);
+static int portcompare(const char *a, const char *b);
 static void heapifyports(PORT **pp, size_t size, size_t pos);
-static PORT * findport(PORT ** pp, size_t st, size_t en, char * name, char * from);
-static void translateport(PORT ** pp, size_t pplen, PORT * p);
-static DEP * recurse_one(DEP * d, size_t * nd);
+static PORT * findport(const struct origin *origins, size_t st, size_t en,
+    char *name, const char *from);
+static void translateport(struct origin *origins, size_t count, PORT *p);
+static void recurse_one(DEP **deps, size_t *nd);
 static void recurse(PORT * p);
 static void heapifypkgs(DEP * d, size_t size, size_t pos);
 static void sortpkgs(DEP * d, size_t nd);
@@ -122,7 +131,8 @@ makelist(char * str, size_t * n)
 		d[i].name = strdup2(strsep(&str, " "));
 
 		/* Strip trailing slashes */
-		if (d[i].name[strlen(d[i].name) - 1] == '/')
+		if (d[i].name[0] != '\0' &&
+		    d[i].name[strlen(d[i].name) - 1] == '/')
 			d[i].name[strlen(d[i].name) - 1] = 0;
 	}
 
@@ -140,7 +150,7 @@ portify(char * line)
 	for (n = i = 0; line[i] != 0; i++)
 		if (line[i] == '|')
 			n++;
-	if (n != 12)
+	if (n != 12 && n != 14)
 		errx(1, "Port describe line is corrupt:\n%s\n", line);
 
 	p = malloc(sizeof(PORT));
@@ -161,19 +171,20 @@ portify(char * line)
 	p->rdep = makelist(strsep(&line, "|"), &p->n_rdep);
 	p->www = strdup2(strsep(&line, "|"));
 
+	p->flavor = NULL;
+	p->default_flavor = NULL;
+	if (n == 14) {
+		p->flavor = strdup2(strsep(&line, "|"));
+		p->default_flavor = strdup2(line);
+	}
 	p->recursed = 0;
-
-	/*
-	 * line will now be equal to NULL -- we counted the field
-	 * separators at the top of the function.
-	 */
 
 	return p;
 }
 
 /* Returns -1, 0, or 1 based on a comparison of the portdir strings */
 static int
-portcompare(char * a, char * b)
+portcompare(const char *a, const char *b)
 {
 	size_t i;
 
@@ -230,9 +241,19 @@ top:
 	}
 }
 
+static int
+origincompare(const void *a, const void *b)
+{
+	const struct origin *left = a;
+	const struct origin *right = b;
+
+	return portcompare(left->key, right->key);
+}
+
 /* Translate a port directory name into a (PORT *), and free the name */
 static PORT *
-findport(PORT ** pp, size_t st, size_t en, char * name, char * from)
+findport(const struct origin *origins, size_t st, size_t en, char *name,
+    const char *from)
 {
 	size_t mid;
 	int r;
@@ -240,65 +261,71 @@ findport(PORT ** pp, size_t st, size_t en, char * name, char * from)
 	if (st == en)
 		errx(1, "%s: no entry for %s", from, name);
 
-	mid = (st + en) / 2;
-	r = portcompare(pp[mid]->portdir, name);
+	mid = st + (en - st) / 2;
+	r = portcompare(origins[mid].key, name);
 
 	if (r == 0) {
 		free(name);
-		return pp[mid];
+		return origins[mid].port;
 	} else if (r < 0)
-		return findport(pp, mid + 1, en, name, from);
+		return findport(origins, mid + 1, en, name, from);
 	else
-		return findport(pp, st, mid, name, from);
+		return findport(origins, st, mid, name, from);
 }
 
 /* Translate all depends from names into PORT *s */
 static void
-translateport(PORT ** pp, size_t pplen, PORT * p)
+translateport(struct origin *origins, size_t count, PORT *p)
 {
 	size_t i;
 
 	for (i = 0; i < p->n_edep; i++)
-		p->edep[i].p = findport(pp, 0, pplen, p->edep[i].name, p->portdir);
+		p->edep[i].p = findport(origins, 0, count, p->edep[i].name,
+		    p->portdir);
 	for (i = 0; i < p->n_pdep; i++)
-		p->pdep[i].p = findport(pp, 0, pplen, p->pdep[i].name, p->portdir);
+		p->pdep[i].p = findport(origins, 0, count, p->pdep[i].name,
+		    p->portdir);
 	for (i = 0; i < p->n_fdep; i++)
-		p->fdep[i].p = findport(pp, 0, pplen, p->fdep[i].name, p->portdir);
+		p->fdep[i].p = findport(origins, 0, count, p->fdep[i].name,
+		    p->portdir);
 	for (i = 0; i < p->n_bdep; i++)
-		p->bdep[i].p = findport(pp, 0, pplen, p->bdep[i].name, p->portdir);
+		p->bdep[i].p = findport(origins, 0, count, p->bdep[i].name,
+		    p->portdir);
 	for (i = 0; i < p->n_rdep; i++)
-		p->rdep[i].p = findport(pp, 0, pplen, p->rdep[i].name, p->portdir);
+		p->rdep[i].p = findport(origins, 0, count, p->rdep[i].name,
+		    p->portdir);
 }
 
-/* Recurse on one specific depends list */
-static DEP *
-recurse_one(DEP * d, size_t * nd)
+/* Recurse on one specific depends list. */
+static void
+recurse_one(DEP **deps, size_t *nd)
 {
-	size_t i, j, k, n, N;
+	DEP *d;
+	size_t capacity, i, j, k, n, used;
 
-	N = n = *nd;
+	d = *deps;
+	capacity = used = n = *nd;
 	for (i = 0; i < n; i++) {
 		recurse(d[i].p);
 		for (j = 0; j < d[i].p->n_rdep; j++) {
-			for (k = 0; k < N; k++) {
+			for (k = 0; k < used; k++) {
 				if (d[i].p->rdep[j].p == d[k].p)
 					break;
 			}
-			if (k == N) {
-				N++;
-				if (N >= *nd) {
-					*nd += *nd;
-					d = realloc(d, *nd * sizeof(DEP));
+			if (k == used) {
+				if (used == capacity) {
+					d = reallocarray(d, capacity, 2 * sizeof(*d));
 					if (d == NULL)
-						err(1, "realloc(d)");
+						err(1, "reallocarray(deps)");
+					capacity *= 2;
+					/* A cycle can read this list before we finish. */
+					*deps = d;
 				}
-				d[k].p = d[i].p->rdep[j].p;
+				d[used++].p = d[i].p->rdep[j].p;
 			}
 		}
 	}
-	*nd = N;
-
-	return d;
+	*nd = used;
 }
 
 /* Recurse on the depends lists */
@@ -311,17 +338,7 @@ recurse(PORT * p)
 		p->recursed = 1;
 		break;
 	case 1:
-		/*
-		 * We followed a dependency cycle back to a port that is
-		 * still in the middle of being recursed.  This happens
-		 * with flavored bootstrap chains: e.g. devel/glib20's
-		 * "default" and "bootstrap" flavors share a single port
-		 * directory, so a dependency recorded against that
-		 * directory can resolve to either flavor and close a
-		 * loop.  Break the cycle instead of aborting the entire
-		 * INDEX; the direct dependency edge is already recorded,
-		 * and this matches the behaviour of Tools/make_index.
-		 */
+		/* Keep the direct edge and stop descending into the cycle. */
 		warnx("Breaking dependency cycle at %s", p->pkgname);
 		return;
 	case 2:
@@ -329,11 +346,11 @@ recurse(PORT * p)
 		return;
 	}
 
-	p->edep = recurse_one(p->edep, &p->n_edep);
-	p->pdep = recurse_one(p->pdep, &p->n_pdep);
-	p->fdep = recurse_one(p->fdep, &p->n_fdep);
-	p->bdep = recurse_one(p->bdep, &p->n_bdep);
-	p->rdep = recurse_one(p->rdep, &p->n_rdep);
+	recurse_one(&p->edep, &p->n_edep);
+	recurse_one(&p->pdep, &p->n_pdep);
+	recurse_one(&p->fdep, &p->n_fdep);
+	recurse_one(&p->bdep, &p->n_bdep);
+	recurse_one(&p->rdep, &p->n_rdep);
 
 	/* Finished recursing on this port */
 	p->recursed = 2;
@@ -385,7 +402,7 @@ sortpkgs(DEP * d, size_t nd)
 	}
 }
 
-/* Output an index line for the given port. */
+/* Output the legacy 13-field INDEX record for the given port. */
 static void
 printport(PORT * p)
 {
@@ -438,7 +455,10 @@ main(int argc, char *argv[])
 	char * line;
 	size_t linelen;
 	PORT ** pp;	/* Array of pointers to PORTs */
-	PORT * tmp;
+	PORT *p, *tmp, **grown;
+	struct origin *origins;
+	bool flavored;
+	size_t count;
 	size_t pplen;	/* Allocated size of array */
 	size_t i;
 
@@ -461,17 +481,16 @@ main(int argc, char *argv[])
 
 		/* Enlarge array if needed */
 		if (i >= pplen) {
+			grown = reallocarray(pp, pplen, 2 * sizeof(*pp));
+			if (grown == NULL)
+				err(1, "reallocarray(pp)");
+			pp = grown;
 			pplen *= 2;
-			if ((pp = realloc(pp, pplen * sizeof(PORT *))) == NULL)
-				err(1, "realloc(pp)");
 		}
 
 		pp[i] = portify(line);
 	}
-	/* Reallocate to the correct size */
 	pplen = i;
-	if ((pp = realloc(pp, pplen * sizeof(PORT *))) == NULL)
-		err(1, "realloc(pp)");
 
 	/* Make sure we actually reached the EOF */
 	if (!feof(f))
@@ -483,8 +502,10 @@ main(int argc, char *argv[])
 	/*
 	 * 1a. If there are no ports, there is no INDEX.
 	 */
-	if (pplen == 0)
+	if (pplen == 0) {
+		free(pp);
 		return 0;
+	}
 
 	/*
 	 * 2. Sort the ports according to port directory.
@@ -499,11 +520,44 @@ main(int argc, char *argv[])
 	}
 
 	/*
-	 * 3. Using a binary search, translate each dependency from a
-	 * port directory name into a pointer to a port.
+	 * 3. Index named flavors and the bare origin separately. Legacy and
+	 * unflavored rows supply a bare origin, as does each default flavor.
 	 */
-	for (i = 0; i < pplen; i++)
-		translateport(pp, pplen, pp[i]);
+	origins = calloc(pplen, 2 * sizeof(*origins));
+	if (origins == NULL)
+		err(1, "calloc(origins)");
+	count = 0;
+	flavored = false;
+	for (i = 0; i < pplen; i++) {
+		p = pp[i];
+		if (p->flavor != NULL && p->flavor[0] != '\0') {
+			flavored = true;
+			if (asprintf(&origins[count].key, "%s@%s", p->portdir,
+			    p->flavor) < 0)
+				err(1, "asprintf(origin)");
+			origins[count++].port = p;
+			if (strcmp(p->flavor, p->default_flavor) != 0)
+				continue;
+		}
+		origins[count].key = strdup2(p->portdir);
+		origins[count++].port = p;
+	}
+	/* Preserve the historical search order for legacy duplicate origins. */
+	if (flavored)
+		qsort(origins, count, sizeof(*origins), origincompare);
+	for (i = 1; i < count; i++)
+		if ((origins[i - 1].port->flavor != NULL ||
+		    origins[i].port->flavor != NULL) &&
+		    origincompare(&origins[i - 1], &origins[i]) == 0)
+			errx(1, "duplicate origin: %s", origins[i].key);
+	for (i = 0; i < pplen; i++) {
+		translateport(origins, count, pp[i]);
+		free(pp[i]->flavor);
+		free(pp[i]->default_flavor);
+	}
+	for (i = 0; i < count; i++)
+		free(origins[i].key);
+	free(origins);
 
 	/*
 	 * 4. Recursively follow dependencies, expanding the lists of
