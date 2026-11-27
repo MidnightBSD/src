@@ -494,7 +494,7 @@ rcshim_scan_dir(const char *dirpath)
 		return (0);
 	}
 	/* Sorted, so the order of equal-priority shims does not vary. */
-	count = fdscandir(dfd, &names, rcshim_script_entry, alphasort);
+	count = scandirat(dfd, ".", &names, rcshim_script_entry, alphasort);
 	if (count == -1) {
 		prowl_log(LOG_WARNING, "rcshim_scan_dir %s: %m", dirpath);
 		close(dfd);
