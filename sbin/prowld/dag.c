@@ -48,6 +48,9 @@
 
 #include "prowld.h"
 
+/* Waits a job may drop to break dependency loops */
+#define DAG_IGNORED_MAX	8
+
 /*
  * Add an "after X" edge to job by inserting X into job->deps[] as a soft dep
  * (ordering only: a provider that is disabled, masked or failed does not hold
@@ -56,6 +59,7 @@
 static void
 dag_add_after_dep(job_t *job, const char *name, bool derived)
 {
+	dep_entry_t *nd;
 	int i;
 
 	if (job->deps_count >= PROWL_DEPS_MAX)
@@ -71,6 +75,11 @@ dag_add_after_dep(job_t *job, const char *name, bool derived)
 			return;
 	}
 
+	/* Out of memory: the edge is lost, and prowl_array_add() said so */
+	nd = prowl_array_add(job->deps, job->deps_count, sizeof(*job->deps));
+	if (nd == NULL)
+		return;
+	job->deps = nd;
 	strlcpy(job->deps[job->deps_count].name, name, PROWL_LABEL_MAX);
 	job->deps[job->deps_count].hard = false;
 	job->deps[job->deps_count].derived = derived;
@@ -91,7 +100,8 @@ dag_resolve_before(job_t *job)
 		if (other == NULL)
 			other = job_find_by_provides(job->before[i]);
 		if (other != NULL)
-			dag_add_after_dep(other, job->provides[0][0] != '\0' ?
+			dag_add_after_dep(other, job->provides_count > 0 &&
+			    job->provides[0][0] != '\0' ?
 			    job->provides[0] : job->rc_name, true);
 	}
 }
@@ -154,9 +164,18 @@ dag_break_loop(job_t *job, int idx, job_t *target)
 	prowl_log(LOG_WARNING, "dag: dependency loop %s; ignoring that %s "
 	    "waits for %s", path, victim->label, victim->deps[vidx].name);
 
-	if (victim->dag_ignored_count < 8)
-		strlcpy(victim->dag_ignored[victim->dag_ignored_count++],
-		    victim->deps[vidx].name, PROWL_LABEL_MAX);
+	if (victim->dag_ignored_count < DAG_IGNORED_MAX) {
+		char (*ig)[PROWL_LABEL_MAX];
+
+		ig = prowl_array_add(victim->dag_ignored,
+		    victim->dag_ignored_count, sizeof(*victim->dag_ignored));
+		if (ig != NULL) {
+			victim->dag_ignored = ig;
+			strlcpy(victim->dag_ignored[
+			    victim->dag_ignored_count++],
+			    victim->deps[vidx].name, PROWL_LABEL_MAX);
+		}
+	}
 	memmove(&victim->deps[vidx], &victim->deps[vidx + 1],
 	    (size_t)(victim->deps_count - vidx - 1) * sizeof(dep_entry_t));
 	victim->deps_count--;

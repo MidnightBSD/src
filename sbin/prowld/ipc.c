@@ -382,10 +382,10 @@ job_to_json(const job_t *job, char *buf, size_t bufsz)
 	char estderr[PROWL_PATH_MAX * 2 + 1];
 
 	json_escape_str(job->label, elabel, sizeof(elabel));
-	json_escape_str(job->description, edesc, sizeof(edesc));
+	json_escape_str(prowl_str(job->description), edesc, sizeof(edesc));
 	json_escape_str(job->rc_name, ercname, sizeof(ercname));
-	json_escape_str(job->stdout_path, estdout, sizeof(estdout));
-	json_escape_str(job->stderr_path, estderr, sizeof(estderr));
+	json_escape_str(prowl_str(job->stdout_path), estdout, sizeof(estdout));
+	json_escape_str(prowl_str(job->stderr_path), estderr, sizeof(estderr));
 
 	return snprintf(buf, bufsz,
 	    "{"

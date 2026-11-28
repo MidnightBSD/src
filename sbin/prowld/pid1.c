@@ -877,8 +877,15 @@ pid1_add_getty(const struct ttyent *typ)
 		job_free(job);
 		return (-1);
 	}
-	snprintf(job->description, sizeof(job->description), "getty on %s",
-	    typ->ty_name);
+	{
+		char desc[PROWL_DESC_MAX];
+
+		snprintf(desc, sizeof(desc), "getty on %s", typ->ty_name);
+		if (job_set_str(&job->description, desc, sizeof(desc)) == -1) {
+			job_free(job);
+			return (-1);
+		}
+	}
 	strlcpy(job->rc_name, typ->ty_name, sizeof(job->rc_name));
 	job->type = JOB_TYPE_DAEMON;
 
@@ -890,8 +897,12 @@ pid1_add_getty(const struct ttyent *typ)
 	while ((tok = strsep(&p, " \t")) != NULL) {
 		if (*tok == '\0')
 			continue;
-		if (job->program[0] == '\0') {
-			strlcpy(job->program, tok, sizeof(job->program));
+		if (job->program == NULL) {
+			if (job_set_str(&job->program, tok,
+			    PROWL_PATH_MAX) == -1) {
+				job_free(job);
+				return (-1);
+			}
 			continue;
 		}
 		if (job->argc >= PROWL_ARGS_MAX - 2)
@@ -903,7 +914,7 @@ pid1_add_getty(const struct ttyent *typ)
 		}
 		job->argc++;
 	}
-	if (job->program[0] == '\0') {
+	if (job->program == NULL) {
 		job_free(job);
 		return (-1);
 	}
@@ -927,6 +938,11 @@ pid1_add_getty(const struct ttyent *typ)
 
 	/* Logins are offered once the rc.d boot sequence is complete. */
 	i = 0;
+	job->deps = calloc(1, sizeof(*job->deps));
+	if (job->deps == NULL) {
+		job_free(job);
+		return (-1);
+	}
 	strlcpy(job->deps[i].name, "LOGIN", PROWL_LABEL_MAX);
 	job->deps[i].hard = true;
 	job->deps_count = 1;

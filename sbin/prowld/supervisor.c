@@ -877,7 +877,7 @@ child_setup_and_exec(job_t *job)
 	 * PID 1 supplies a read-only null descriptor. Other invocations
 	 * must set up default input before entering a unit's chroot.
 	 */
-	if (!g_is_init && job->stdin_path[0] == '\0')
+	if (!g_is_init && job->stdin_path == NULL)
 		child_redirect_fd(job, STDIN_FILENO, _PATH_DEVNULL, O_RDONLY);
 
 	/*
@@ -888,7 +888,7 @@ child_setup_and_exec(job_t *job)
 	 * chroot.  On failure we _exit so the service never runs with a
 	 * weaker-than-expected containment boundary.
 	 */
-	if (job->root_directory[0] != '\0') {
+	if (job->root_directory != NULL) {
 		if (chroot(job->root_directory) == -1) {
 			syslog(LOG_ERR,
 			    "prowld: chroot %s failed for job %s: %m",
@@ -899,7 +899,7 @@ child_setup_and_exec(job_t *job)
 			_exit(1);
 	}
 
-	if (job->working_directory[0] != '\0') {
+	if (job->working_directory != NULL) {
 		if (chdir(job->working_directory) == -1)
 			_exit(1);
 	}
@@ -938,7 +938,7 @@ child_setup_and_exec(job_t *job)
 	 * begins: a service started later must not read what is typed at
 	 * a login prompt.
 	 */
-	if (job->stdin_path[0] != '\0')
+	if (job->stdin_path != NULL)
 		child_redirect_fd(job, STDIN_FILENO, job->stdin_path, O_RDONLY);
 	else if (job->interactive && g_is_init && !g_multi_user &&
 	    job->action == PROWL_ACTION_NONE)
@@ -951,12 +951,12 @@ child_setup_and_exec(job_t *job)
 	 * reads, so that prowlctl can show what it printed.
 	 */
 	if (job->action == PROWL_ACTION_NONE &&
-	    job->stdout_path[0] != '\0')
+	    job->stdout_path != NULL)
 		child_redirect_fd(job, STDOUT_FILENO, job->stdout_path,
 		    O_WRONLY | O_CREAT | O_APPEND);
 
 	if (job->action == PROWL_ACTION_NONE &&
-	    job->stderr_path[0] != '\0')
+	    job->stderr_path != NULL)
 		child_redirect_fd(job, STDERR_FILENO, job->stderr_path,
 		    O_WRONLY | O_CREAT | O_APPEND);
 
@@ -1046,8 +1046,8 @@ child_setup_and_exec(job_t *job)
 		}
 
 		/* @name@ is an rc.conf variable, see prowl-unit(5) */
-		if (rcconf_expand(job->rc_name, job->program, program,
-		    sizeof(program)) == -1) {
+		if (rcconf_expand(job->rc_name, prowl_str(job->program),
+		    program, sizeof(program)) == -1) {
 			syslog(LOG_ERR, "prowld: %s: program too long",
 			    job->label);
 			_exit(1);
@@ -1213,7 +1213,7 @@ supervisor_start(job_t *job)
 	job->adopted = false;
 	job->launch_ready = false;
 	job->launch_stop_signal = 0;
-	job->launcher = job->pid_file[0] != '\0' || job->pid_name[0] != '\0';
+	job->launcher = job->pid_file != NULL || job->pid_name[0] != '\0';
 
 	pid = job->launcher ? fork_launcher(job) : fork();
 	if (pid == -1) {
@@ -1283,7 +1283,7 @@ supervisor_rc_stop(job_t *job)
 
 	if (job->type == JOB_TYPE_RCSHIM)
 		prowl_log(LOG_NOTICE, "stopping %s via %s stop", job->label,
-		    job->rcshim_path);
+		    prowl_str(job->rcshim_path));
 	else
 		prowl_log(LOG_NOTICE, "stopping %s via its stop command",
 		    job->label);
@@ -1899,7 +1899,8 @@ supervisor_mdns_register(job_t *job)
 	pid_t pid;
 
 #define MDNS_MIN_RESTART_SEC	10
-	if (!g_dnssd_available || !job->mdns.register_service || job->mdns_pid > 0)
+	if (!g_dnssd_available || job->mdns == NULL ||
+	    !job->mdns->register_service || job->mdns_pid > 0)
 		return;
 
 	{
@@ -1922,7 +1923,7 @@ supervisor_mdns_register(job_t *job)
 	}
 
 	/* Substitute %h and %l */
-	const char *src = job->mdns.name[0] != '\0' ? job->mdns.name : "%l";
+	const char *src = job->mdns->name[0] != '\0' ? job->mdns->name : "%l";
 	char *dst = name;
 	while (*src && (dst - name < PROWL_LABEL_MAX - 1)) {
 		if (*src == '%' && *(src+1) == 'h') {
@@ -1945,7 +1946,7 @@ supervisor_mdns_register(job_t *job)
 	}
 	*dst = '\0';
 
-	int port = job->mdns.port;
+	int port = job->mdns->port;
 	if (port <= 0 && job->sockets_count > 0)
 		port = job->sockets[0].port;
 
@@ -1961,11 +1962,12 @@ supervisor_mdns_register(job_t *job)
 	args[argc++] = g_dnssd_path;
 	args[argc++] = (char *)(uintptr_t)"-R";
 	args[argc++] = name;
-	args[argc++] = job->mdns.type[0] != '\0' ? job->mdns.type : (char *)(uintptr_t)"_http._tcp";
-	args[argc++] = job->mdns.domain;
+	args[argc++] = job->mdns->type[0] != '\0' ? job->mdns->type :
+	    (char *)(uintptr_t)"_http._tcp";
+	args[argc++] = job->mdns->domain;
 	args[argc++] = portstr;
-	for (i = 0; i < job->mdns.txt_count && argc < PROWL_ARGS_MAX - 1; i++)
-		args[argc++] = job->mdns.txt_record[i];
+	for (i = 0; i < job->mdns->txt_count && argc < PROWL_ARGS_MAX - 1; i++)
+		args[argc++] = job->mdns->txt_record[i];
 	args[argc] = NULL;
 
 	pid = fork();
@@ -2509,7 +2511,7 @@ pid_from_file(const char *path)
 pid_t
 supervisor_shim_pid(const job_t *job)
 {
-	if (job->type != JOB_TYPE_RCSHIM || job->shim_pidfile[0] == '\0')
+	if (job->type != JOB_TYPE_RCSHIM || job->shim_pidfile == NULL)
 		return (-1);
 	return (pid_from_file(job->shim_pidfile));
 }
@@ -2527,7 +2529,7 @@ find_daemon(const job_t *job, struct launch_result *result)
 	pid_t pid, self;
 	int i, count;
 
-	if (job->pid_file[0] != '\0') {
+	if (job->pid_file != NULL) {
 		pid = pid_from_file(job->pid_file);
 		if (pid < 0)
 			return (false);
@@ -2543,7 +2545,7 @@ find_daemon(const job_t *job, struct launch_result *result)
 	for (i = 0; i < count; i++) {
 		if (kp[i].ki_ppid != self || kp[i].ki_stat == SZOMB ||
 		    (kp[i].ki_flag & (P_WEXIT | P_TRACED)) != 0 ||
-		    (job->pid_file[0] == '\0' &&
+		    (job->pid_file == NULL &&
 		    strcmp(kp[i].ki_comm, job->pid_name) != 0))
 			continue;
 		if (result->pid == 0 ||

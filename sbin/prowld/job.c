@@ -63,12 +63,49 @@ job_alloc(void)
 	job->launch_fd = -1;
 	job->enabled = true;
 
-	for (int i = 0; i < PROWL_SOCKETS_MAX; i++) {
-		job->sockets[i].fd  = -1;
-		job->sockets[i].job = job;
-	}
-
 	return (job);
+}
+
+/*
+ * Replace the heap string *dst with at most max - 1 bytes of src, the way
+ * strlcpy() into a char[max] would.  An empty or NULL src leaves *dst
+ * NULL, so a set string is never "".  Returns -1 if memory runs out.
+ */
+int
+job_set_str(char **dst, const char *src, size_t max)
+{
+	char *s = NULL;
+
+	if (src != NULL && src[0] != '\0' && max > 1) {
+		s = strndup(src, max - 1);
+		if (s == NULL) {
+			prowl_log(LOG_ERR, "job_set_str: %m");
+			return (-1);
+		}
+	}
+	free(*dst);
+	*dst = s;
+	return (0);
+}
+
+/*
+ * Grow an array of count elements of size elsz by one zeroed element.
+ * Returns the new array, or NULL (arr left as it was) if memory runs out.
+ */
+void *
+prowl_array_add(void *arr, int count, size_t elsz)
+{
+	char *n;
+
+	if (count < 0)
+		return (NULL);
+	n = reallocarray(arr, (size_t)count + 1, elsz);
+	if (n == NULL) {
+		prowl_log(LOG_ERR, "prowl_array_add: %m");
+		return (NULL);
+	}
+	memset(n + (size_t)count * elsz, 0, elsz);
+	return (n);
 }
 
 static void
@@ -85,20 +122,46 @@ job_clear(job_t *job)
 	for (i = 0; i < job->stop_argc; i++)
 		free(job->stop_arguments[i]);
 
-	for (a = 0; a < PROWL_CMD_LISTS; a++)
+	for (a = 0; a < PROWL_CMD_LISTS; a++) {
 		for (i = 0; i < job->cmd_count[a]; i++)
 			for (int w = 0; w < job->cmds[a][i].argc; w++)
 				free(job->cmds[a][i].argv[w]);
+		free(job->cmds[a]);
+	}
 
-	for (a = 0; a < PROWL_ACTION_MAX; a++)
+	for (a = 0; a < PROWL_ACTION_MAX; a++) {
 		for (i = 0; i < job->action_argc[a]; i++)
 			free(job->action_args[a][i]);
+		free(job->action_args[a]);
+	}
 
 	for (i = 0; i < job->envc; i++)
 		free(job->envp[i]);
 
-	for (i = 0; i < job->mdns.txt_count; i++)
-		free(job->mdns.txt_record[i]);
+	if (job->mdns != NULL) {
+		for (i = 0; i < job->mdns->txt_count; i++)
+			free(job->mdns->txt_record[i]);
+		free(job->mdns);
+	}
+
+	free(job->description);
+	free(job->program);
+	free(job->working_directory);
+	free(job->root_directory);
+	free(job->pid_file);
+	free(job->stdin_path);
+	free(job->stdout_path);
+	free(job->stderr_path);
+	free(job->rcshim_path);
+	free(job->shim_pidfile);
+	free(job->deps);
+	free(job->before);
+	free(job->after);
+	free(job->conflicts);
+	free(job->provides);
+	free(job->required_files);
+	free(job->dag_ignored);
+	free(job->sockets);
 
 	if (job->launch_fd >= 0)
 		close(job->launch_fd);
@@ -135,7 +198,7 @@ job_replace(job_t *old, job_t *replacement)
 	replacement->stop_timer_generation = old->stop_timer_generation;
 	job_clear(old);
 	*old = *replacement;
-	for (int i = 0; i < PROWL_SOCKETS_MAX; i++)
+	for (int i = 0; i < old->sockets_count; i++)
 		old->sockets[i].job = old;
 	free(replacement);
 }
