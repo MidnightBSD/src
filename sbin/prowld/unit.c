@@ -57,15 +57,17 @@
 #include "prowld.h"
 
 /*
- * Parse a string array from a UCL node and fill a fixed-size char[][] array.
- * Returns the number of entries filled.
+ * Parse a string array from a UCL node into *dest, grown to hold at most
+ * maxn labels.  Returns the number of entries filled, or -1 if memory runs
+ * out (*dest then holds what was filled so far, for job_free() to release).
  */
 static int
-parse_str_array(const ucl_object_t *arr, char dest[][PROWL_LABEL_MAX],
+parse_str_array(const ucl_object_t *arr, char (**dest)[PROWL_LABEL_MAX],
     int maxn)
 {
 	const ucl_object_t *item;
 	ucl_object_iter_t it = NULL;
+	char (*nd)[PROWL_LABEL_MAX];
 	int n = 0;
 
 	if (arr == NULL || ucl_object_type(arr) != UCL_ARRAY)
@@ -76,7 +78,11 @@ parse_str_array(const ucl_object_t *arr, char dest[][PROWL_LABEL_MAX],
 			break;
 		if (ucl_object_type(item) != UCL_STRING)
 			continue;
-		strlcpy(dest[n], ucl_object_tostring(item),
+		nd = prowl_array_add(*dest, n, sizeof(**dest));
+		if (nd == NULL)
+			return (-1);
+		*dest = nd;
+		strlcpy((*dest)[n], ucl_object_tostring(item),
 		    PROWL_LABEL_MAX);
 		n++;
 	}
@@ -171,8 +177,9 @@ parse_keep_alive(const ucl_object_t *obj, keep_alive_t *ka)
 
 /*
  * Parse dependency list (requires or wants) into job->deps[].
+ * Returns false if memory runs out.
  */
-static void
+static bool
 parse_deps(const ucl_object_t *arr, job_t *job, bool hard)
 {
 	const ucl_object_t *item;
@@ -181,7 +188,7 @@ parse_deps(const ucl_object_t *arr, job_t *job, bool hard)
 	const char *s, *sp;
 
 	if (arr == NULL || ucl_object_type(arr) != UCL_ARRAY)
-		return;
+		return (true);
 
 	while ((item = ucl_object_iterate(arr, &it, true)) != NULL) {
 		if (job->deps_count >= PROWL_DEPS_MAX)
@@ -189,16 +196,24 @@ parse_deps(const ucl_object_t *arr, job_t *job, bool hard)
 		if (ucl_object_type(item) != UCL_STRING)
 			continue;
 		s = ucl_object_tostring(item);
-		dep = &job->deps[job->deps_count];
-		dep->cond[0] = '\0';
-		dep->activate = false;
 		/* "?name service": only when the rc.conf variable holds */
+		sp = NULL;
 		if (prowl_is_cond(s) &&
 		    (sp = strchr(s, ' ')) != NULL) {
 			size_t cl = (size_t)(sp - s);
 
 			if (cl < 2 || cl >= PROWL_COND_LEN)
 				continue;
+		}
+		dep = prowl_array_add(job->deps, job->deps_count,
+		    sizeof(*job->deps));
+		if (dep == NULL)
+			return (false);
+		job->deps = dep;
+		dep = &job->deps[job->deps_count];
+		if (sp != NULL) {
+			size_t cl = (size_t)(sp - s);
+
 			memcpy(dep->cond, s, cl);
 			dep->cond[cl] = '\0';
 			s = sp + strspn(sp, " ");
@@ -207,6 +222,7 @@ parse_deps(const ucl_object_t *arr, job_t *job, bool hard)
 		dep->hard = hard;
 		job->deps_count++;
 	}
+	return (true);
 }
 
 /*
@@ -277,18 +293,24 @@ parse_schedule(const ucl_object_t *obj, schedule_t *sched)
 /*
  * Parse mdns block.
  */
-static void
-parse_mdns(const ucl_object_t *obj, mdns_config_t *mdns)
+static bool
+parse_mdns(const ucl_object_t *obj, mdns_config_t **mdnsp)
 {
 	const ucl_object_t *f, *txt, *val;
+	mdns_config_t *mdns;
 	ucl_object_iter_t it;
 	int n;
 
-	memset(mdns, 0, sizeof(*mdns));
-	strlcpy(mdns->domain, "local", sizeof(mdns->domain));
-
+	/* Only a unit with an mdns block pays for one */
 	if (obj == NULL || ucl_object_type(obj) != UCL_OBJECT)
-		return;
+		return (true);
+	mdns = calloc(1, sizeof(*mdns));
+	if (mdns == NULL) {
+		prowl_log(LOG_ERR, "parse_mdns: %m");
+		return (false);
+	}
+	*mdnsp = mdns;
+	strlcpy(mdns->domain, "local", sizeof(mdns->domain));
 
 	f = ucl_object_lookup(obj, "register");
 	if (f != NULL)
@@ -320,10 +342,17 @@ parse_mdns(const ucl_object_t *obj, mdns_config_t *mdns)
 				break;
 			snprintf(kvbuf, sizeof(kvbuf), "%s=%s",
 			    ucl_object_key(val), ucl_object_tostring_forced(val));
-			mdns->txt_record[n++] = strdup(kvbuf);
+			mdns->txt_record[n] = strdup(kvbuf);
+			if (mdns->txt_record[n] == NULL) {
+				prowl_log(LOG_ERR, "parse_mdns: %m");
+				mdns->txt_count = n;
+				return (false);
+			}
+			n++;
 		}
 		mdns->txt_count = n;
 	}
+	return (true);
 }
 
 static bool
@@ -498,9 +527,12 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 
 	/* description */
 	obj = ucl_object_lookup(root, "description");
-	if (obj != NULL && ucl_object_type(obj) == UCL_STRING)
-		strlcpy(job->description, ucl_object_tostring(obj),
-		    sizeof(job->description));
+	if (obj != NULL && ucl_object_type(obj) == UCL_STRING &&
+	    job_set_str(&job->description, ucl_object_tostring(obj),
+	    PROWL_DESC_MAX) == -1) {
+		job_free(job);
+		return (NULL);
+	}
 
 	/* type */
 	obj = ucl_object_lookup(root, "type");
@@ -522,9 +554,12 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 
 	/* program */
 	obj = ucl_object_lookup(root, "program");
-	if (obj != NULL && ucl_object_type(obj) == UCL_STRING)
-		strlcpy(job->program, ucl_object_tostring(obj),
-		    sizeof(job->program));
+	if (obj != NULL && ucl_object_type(obj) == UCL_STRING &&
+	    job_set_str(&job->program, ucl_object_tostring(obj),
+	    PROWL_PATH_MAX) == -1) {
+		job_free(job);
+		return (NULL);
+	}
 
 	/* arguments */
 	arr = ucl_object_lookup(root, "arguments");
@@ -592,13 +627,25 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 			n = 0;
 			while ((item = ucl_object_iterate(arr, &it, true)) !=
 			    NULL) {
+				char **v;
+
 				if (n >= PROWL_ARGS_MAX - 1)
 					break;
 				if (ucl_object_type(item) != UCL_STRING)
 					continue;
-				job->action_args[act][n] =
-				    strdup(ucl_object_tostring(item));
-				if (job->action_args[act][n] == NULL) {
+				/* Room for this word and a NULL after it */
+				v = reallocarray(job->action_args[act],
+				    (size_t)n + 2, sizeof(*v));
+				if (v == NULL) {
+					prowl_log(LOG_ERR, "reallocarray: %m");
+					job->action_argc[act] = n;
+					job_free(job);
+					return (NULL);
+				}
+				job->action_args[act] = v;
+				v[n + 1] = NULL;
+				v[n] = strdup(ucl_object_tostring(item));
+				if (v[n] == NULL) {
 					prowl_log(LOG_ERR, "strdup: %m");
 					job->action_argc[act] = n;
 					job_free(job);
@@ -659,6 +706,13 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 					job_free(job);
 					return (NULL);
 				}
+				c = prowl_array_add(job->cmds[l],
+				    job->cmd_count[l], sizeof(*c));
+				if (c == NULL) {
+					job_free(job);
+					return (NULL);
+				}
+				job->cmds[l] = c;
 				c = &job->cmds[l][job->cmd_count[l]];
 				wit = NULL;
 				while ((word = ucl_object_iterate(cmdobj,
@@ -755,15 +809,24 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 
 	/* working_directory */
 	obj = ucl_object_lookup(root, "working_directory");
-	if (obj != NULL && ucl_object_type(obj) == UCL_STRING)
-		strlcpy(job->working_directory, ucl_object_tostring(obj),
-		    sizeof(job->working_directory));
-
-	/* root_directory */
-	if (!parse_optional_string(root, "root_directory", job->root_directory,
-	    sizeof(job->root_directory), path)) {
+	if (obj != NULL && ucl_object_type(obj) == UCL_STRING &&
+	    job_set_str(&job->working_directory, ucl_object_tostring(obj),
+	    PROWL_PATH_MAX) == -1) {
 		job_free(job);
 		return (NULL);
+	}
+
+	/* root_directory */
+	{
+		char rootdir[PROWL_PATH_MAX] = "";
+
+		if (!parse_optional_string(root, "root_directory", rootdir,
+		    sizeof(rootdir), path) ||
+		    job_set_str(&job->root_directory, rootdir,
+		    sizeof(rootdir)) == -1) {
+			job_free(job);
+			return (NULL);
+		}
 	}
 
 	/* umask */
@@ -792,8 +855,8 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 	if (obj != NULL && ucl_object_type(obj) == UCL_STRING) {
 		const char *pf = ucl_object_tostring(obj);
 
-		if (pf[0] != '/' || strlcpy(job->pid_file, pf,
-		    sizeof(job->pid_file)) >= sizeof(job->pid_file)) {
+		if (pf[0] != '/' || strlen(pf) >= PROWL_PATH_MAX ||
+		    job_set_str(&job->pid_file, pf, PROWL_PATH_MAX) == -1) {
 			prowl_log(LOG_ERR, "%s: bad pid_file", job->label);
 			job_free(job);
 			return (NULL);
@@ -809,7 +872,7 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 			return (NULL);
 		}
 	}
-	if (job->pid_file[0] != '\0' && job->pid_name[0] != '\0') {
+	if (job->pid_file != NULL && job->pid_name[0] != '\0') {
 		prowl_log(LOG_ERR, "%s: pid_file and pid_name are exclusive",
 		    job->label);
 		job_free(job);
@@ -843,32 +906,42 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 		job->exit_timeout = (int)ucl_object_toint(obj);
 
 	/* requires (hard deps) */
-	parse_deps(ucl_object_lookup(root, "requires"), job, true);
+	if (!parse_deps(ucl_object_lookup(root, "requires"), job, true)) {
+		job_free(job);
+		return (NULL);
+	}
 
 	/* activates: a hard dep that is started if it is disabled */
 	{
 		int first = job->deps_count, d;
 
-		parse_deps(ucl_object_lookup(root, "activates"), job, true);
+		if (!parse_deps(ucl_object_lookup(root, "activates"), job,
+		    true)) {
+			job_free(job);
+			return (NULL);
+		}
 		for (d = first; d < job->deps_count; d++)
 			job->deps[d].activate = true;
 	}
 
 	/* wants (soft deps) */
-	parse_deps(ucl_object_lookup(root, "wants"), job, false);
+	if (!parse_deps(ucl_object_lookup(root, "wants"), job, false)) {
+		job_free(job);
+		return (NULL);
+	}
 
-	/* before */
-	arr = ucl_object_lookup(root, "before");
-	job->before_count = parse_str_array(arr, job->before, PROWL_DEPS_MAX);
-
-	/* after */
-	arr = ucl_object_lookup(root, "after");
-	job->after_count = parse_str_array(arr, job->after, PROWL_DEPS_MAX);
-
-	/* conflicts */
-	arr = ucl_object_lookup(root, "conflicts");
-	job->conflicts_count = parse_str_array(arr, job->conflicts,
-	    PROWL_DEPS_MAX);
+	/* before, after, conflicts */
+	job->before_count = parse_str_array(ucl_object_lookup(root, "before"),
+	    &job->before, PROWL_DEPS_MAX);
+	job->after_count = parse_str_array(ucl_object_lookup(root, "after"),
+	    &job->after, PROWL_DEPS_MAX);
+	job->conflicts_count = parse_str_array(ucl_object_lookup(root,
+	    "conflicts"), &job->conflicts, PROWL_DEPS_MAX);
+	if (job->before_count == -1 || job->after_count == -1 ||
+	    job->conflicts_count == -1) {
+		job_free(job);
+		return (NULL);
+	}
 
 	/* required_files: all must be readable for the job to start */
 	arr = ucl_object_lookup(root, "required_files");
@@ -894,6 +967,18 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 				    "required_files entry", path);
 				job_free(job);
 				return (NULL);
+			}
+			{
+				char (*rf)[PROWL_PATH_MAX];
+
+				rf = prowl_array_add(job->required_files,
+				    job->required_files_count,
+				    sizeof(*job->required_files));
+				if (rf == NULL) {
+					job_free(job);
+					return (NULL);
+				}
+				job->required_files = rf;
 			}
 			strlcpy(job->required_files[job->required_files_count],
 			    s, sizeof(job->required_files[0]));
@@ -932,8 +1017,12 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 
 	/* provides */
 	arr = ucl_object_lookup(root, "provides");
-	job->provides_count = parse_str_array(arr, job->provides,
+	job->provides_count = parse_str_array(arr, &job->provides,
 	    PROWL_PROVIDES_MAX);
+	if (job->provides_count == -1) {
+		job_free(job);
+		return (NULL);
+	}
 
 	/* Console input while PID 1 boots (passphrase prompts) */
 	obj = ucl_object_lookup(root, "interactive");
@@ -949,19 +1038,28 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 
 	/* I/O paths */
 	obj = ucl_object_lookup(root, "standard_in_path");
-	if (obj != NULL && ucl_object_type(obj) == UCL_STRING)
-		strlcpy(job->stdin_path, ucl_object_tostring(obj),
-		    sizeof(job->stdin_path));
+	if (obj != NULL && ucl_object_type(obj) == UCL_STRING &&
+	    job_set_str(&job->stdin_path, ucl_object_tostring(obj),
+	    PROWL_PATH_MAX) == -1) {
+		job_free(job);
+		return (NULL);
+	}
 
 	obj = ucl_object_lookup(root, "standard_out_path");
-	if (obj != NULL && ucl_object_type(obj) == UCL_STRING)
-		strlcpy(job->stdout_path, ucl_object_tostring(obj),
-		    sizeof(job->stdout_path));
+	if (obj != NULL && ucl_object_type(obj) == UCL_STRING &&
+	    job_set_str(&job->stdout_path, ucl_object_tostring(obj),
+	    PROWL_PATH_MAX) == -1) {
+		job_free(job);
+		return (NULL);
+	}
 
 	obj = ucl_object_lookup(root, "standard_error_path");
-	if (obj != NULL && ucl_object_type(obj) == UCL_STRING)
-		strlcpy(job->stderr_path, ucl_object_tostring(obj),
-		    sizeof(job->stderr_path));
+	if (obj != NULL && ucl_object_type(obj) == UCL_STRING &&
+	    job_set_str(&job->stderr_path, ucl_object_tostring(obj),
+	    PROWL_PATH_MAX) == -1) {
+		job_free(job);
+		return (NULL);
+	}
 
 	/* nice */
 	obj = ucl_object_lookup(root, "nice");
@@ -1008,7 +1106,10 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 	parse_schedule(ucl_object_lookup(root, "schedule"), &job->schedule);
 
 	/* mdns */
-	parse_mdns(ucl_object_lookup(root, "mdns"), &job->mdns);
+	if (!parse_mdns(ucl_object_lookup(root, "mdns"), &job->mdns)) {
+		job_free(job);
+		return (NULL);
+	}
 
 	/*
 	 * sockets: object keyed by name, each value describes one socket.
@@ -1028,6 +1129,28 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 			job_free(job);
 			return (NULL);
 		}
+		if (obj->len > PROWL_SOCKETS_MAX) {
+			prowl_log(LOG_ERR, "unit %s: too many sockets "
+			    "(max %d)", path, PROWL_SOCKETS_MAX);
+			job_free(job);
+			return (NULL);
+		}
+		/*
+		 * Sized once: kqueue events point at these entries, so the
+		 * array must not move after the sockets are bound.
+		 */
+		if (obj->len > 0) {
+			job->sockets = calloc(obj->len, sizeof(*job->sockets));
+			if (job->sockets == NULL) {
+				prowl_log(LOG_ERR, "unit %s: %m", path);
+				job_free(job);
+				return (NULL);
+			}
+			for (unsigned int si = 0; si < obj->len; si++) {
+				job->sockets[si].fd = -1;
+				job->sockets[si].job = job;
+			}
+		}
 		sit = ucl_object_iterate_new(obj);
 		if (sit == NULL) {
 			job_free(job);
@@ -1039,9 +1162,9 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 			const ucl_object_t *f;
 			prowl_socket_t *sock;
 
-			if (job->sockets_count >= PROWL_SOCKETS_MAX) {
-				prowl_log(LOG_ERR, "unit %s: too many sockets "
-				    "(max %d)", path, PROWL_SOCKETS_MAX);
+			if ((unsigned int)job->sockets_count >= obj->len) {
+				prowl_log(LOG_ERR, "unit %s: too many sockets",
+				    path);
 				break;
 			}
 			if (sobj->next != NULL ||

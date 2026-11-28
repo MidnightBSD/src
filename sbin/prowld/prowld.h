@@ -259,30 +259,36 @@ typedef struct dep_entry {
 
 /* Job structure (forward-declared as job_t above) */
 struct job {
+	/*
+	 * Strings and lists that most units leave empty live on the heap:
+	 * a char * is NULL when unset (never ""), and a list holds exactly
+	 * its count of entries.  job_clear() frees all of them.
+	 */
+
 	/* Identity */
 	char		label[PROWL_LABEL_MAX];
-	char		description[PROWL_DESC_MAX];
+	char	       *description;
 	job_type_t	type;
 	char		rc_name[PROWL_LABEL_MAX];
 
 	/* Execution */
-	char		program[PROWL_PATH_MAX];
+	char	       *program;
 	char	       *arguments[PROWL_ARGS_MAX];
 	int		argc;
 	char	       *stop_arguments[PROWL_ARGS_MAX];
 	int		stop_argc;
 	/* reload, check and resync commands, indexed by PROWL_ACTION_* */
-	char	       *action_args[PROWL_ACTION_MAX][PROWL_ARGS_MAX];
+	char	      **action_args[PROWL_ACTION_MAX];	/* NULL-terminated */
 	int		action_argc[PROWL_ACTION_MAX];
 	int		action;		/* command being run in the child */
 	/* start_pre and stop_post, indexed by PROWL_CMD_* */
-	prowl_cmd_t	cmds[PROWL_CMD_LISTS][PROWL_CMDS_MAX];
+	prowl_cmd_t    *cmds[PROWL_CMD_LISTS];
 	int		cmd_count[PROWL_CMD_LISTS];
 	const prowl_cmd_t *run_cmd;	/* stop_post command in the child */
 	char	       *envp[PROWL_ENV_MAX];
 	int		envc;
-	char		working_directory[PROWL_PATH_MAX];
-	char		root_directory[PROWL_PATH_MAX];
+	char	       *working_directory;
+	char	       *root_directory;
 
 	/* Privilege */
 	char		user[64];
@@ -306,22 +312,23 @@ struct job {
 	int		exit_timeout;
 
 	/* Dependencies */
-	dep_entry_t	deps[PROWL_DEPS_MAX];	/* requires + wants merged */
+	/* At most PROWL_DEPS_MAX (PROWL_PROVIDES_MAX) entries each */
+	dep_entry_t    *deps;		/* requires + wants merged */
 	int		deps_count;
-	char		before[PROWL_DEPS_MAX][PROWL_LABEL_MAX];
+	char		(*before)[PROWL_LABEL_MAX];
 	int		before_count;
-	char		after[PROWL_DEPS_MAX][PROWL_LABEL_MAX];
+	char		(*after)[PROWL_LABEL_MAX];
 	int		after_count;
-	char		conflicts[PROWL_DEPS_MAX][PROWL_LABEL_MAX];
+	char		(*conflicts)[PROWL_LABEL_MAX];
 	int		conflicts_count;
-	char		provides[PROWL_PROVIDES_MAX][PROWL_LABEL_MAX];
+	char		(*provides)[PROWL_LABEL_MAX];
 	int		provides_count;
 
 	/*
 	 * A daemon that forks and lets its parent exit: where to find the
 	 * process that stays, and the signal that stops it (0 = SIGTERM).
 	 */
-	char		pid_file[PROWL_PATH_MAX];
+	char	       *pid_file;
 	char		pid_name[PROWL_PIDNAME_LEN];
 	int		stop_signal;
 	int		launch_stop_signal;
@@ -329,15 +336,15 @@ struct job {
 	struct timeval	adopted_start;	/* birth time of supervised daemon */
 
 	/* Files that must be readable before the job is started */
-	char		required_files[PROWL_REQFILES_MAX][PROWL_PATH_MAX];
+	char		(*required_files)[PROWL_PATH_MAX];
 	int		required_files_count;
 	char		required_modules[PROWL_MODULES_MAX][PROWL_MODULE_LEN];
 	int		required_modules_count;
 
 	/* I/O */
-	char		stdin_path[PROWL_PATH_MAX];
-	char		stdout_path[PROWL_PATH_MAX];
-	char		stderr_path[PROWL_PATH_MAX];
+	char	       *stdin_path;
+	char	       *stdout_path;
+	char	       *stderr_path;
 
 	/* Resources */
 	int		nice_val;
@@ -350,7 +357,7 @@ struct job {
 	uid_t		notify_uid;	/* launch identity for this socket */
 
 	/* mDNS Discovery */
-	mdns_config_t	mdns;
+	mdns_config_t  *mdns;		/* NULL without an mdns block */
 	pid_t		mdns_pid;
 	time_t		mdns_last_register;
 
@@ -358,8 +365,8 @@ struct job {
 	bool		shutdown_wait;
 
 	/* rc-shim specific */
-	char		rcshim_path[PROWL_PATH_MAX];
-	char		shim_pidfile[PROWL_PATH_MAX]; /* of its daemon */
+	char	       *rcshim_path;
+	char	       *shim_pidfile;	/* of its daemon */
 
 	/* Runtime state */
 	job_state_t	state;
@@ -384,7 +391,7 @@ struct job {
 	int		dag_indegree;
 	bool		dag_visited;
 	bool		dag_in_stack;
-	char		dag_ignored[8][PROWL_LABEL_MAX]; /* waits dropped */
+	char		(*dag_ignored)[PROWL_LABEL_MAX]; /* waits dropped */
 	int		dag_ignored_count;
 	job_t		*dag_parent;	/* job that led the search here */
 	int		dag_parent_idx;	/* its deps[] entry for this job */
@@ -405,7 +412,7 @@ struct job {
 	time_t		watchdog_last_ping;
 
 	/* Socket activation */
-	prowl_socket_t	sockets[PROWL_SOCKETS_MAX];
+	prowl_socket_t *sockets;	/* sized once; kqueue holds pointers */
 	int		sockets_count;
 	bool		socket_activated;	/* daemon has been fork+exec'd */
 
@@ -500,6 +507,8 @@ extern int		 ipc_listen_fd;
 /* ---- job.c ---- */
 job_t		*job_alloc(void);
 void		 job_free(job_t *);
+int		 job_set_str(char **, const char *, size_t);
+void		*prowl_array_add(void *, int, size_t);
 job_t		*job_find_by_label(const char *);
 job_t		*job_find_by_rcname(const char *);
 job_t		*job_find_instance(const char *);
@@ -521,6 +530,13 @@ int		 prowl_cmd_first(const prowl_cmd_t *);
 bool		 prowl_cond_holds(const char *, const char *);
 bool		 prowl_is_cond(const char *);
 pid_t		 supervisor_shim_pid(const job_t *);
+
+/* A job's optional string, or "" when it is unset */
+static inline const char *
+prowl_str(const char *s)
+{
+	return (s != NULL ? s : "");
+}
 
 /* ---- unit.c ---- */
 struct ucl_parser;

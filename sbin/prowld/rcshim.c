@@ -373,8 +373,16 @@ rcshim_parse_script(int fd, const char *path, const char *scriptname)
 		return (NULL);
 
 	/* The script's pidfile tells which process its daemon is */
-	pidfile_path(pidfile_raw, name_var[0] != '\0' ? name_var : scriptname,
-	    job->shim_pidfile, sizeof(job->shim_pidfile));
+	{
+		char pf[PROWL_PATH_MAX];
+
+		pidfile_path(pidfile_raw, name_var[0] != '\0' ? name_var :
+		    scriptname, pf, sizeof(pf));
+		if (job_set_str(&job->shim_pidfile, pf, sizeof(pf)) == -1) {
+			job_free(job);
+			return (NULL);
+		}
+	}
 
 	/* Label: org.midnightbsd.rc.<scriptname> */
 	snprintf(job->label, sizeof(job->label),
@@ -392,30 +400,59 @@ rcshim_parse_script(int fd, const char *path, const char *scriptname)
 		return (NULL);
 	}
 
-	snprintf(job->description, sizeof(job->description),
-	    "rc.d compatibility shim for %s", scriptname);
+	{
+		char desc[PROWL_DESC_MAX];
+
+		snprintf(desc, sizeof(desc), "rc.d compatibility shim for %s",
+		    scriptname);
+		if (job_set_str(&job->description, desc, sizeof(desc)) == -1) {
+			job_free(job);
+			return (NULL);
+		}
+	}
 
 	job->type = JOB_TYPE_RCSHIM;
 	strlcpy(job->rc_name, provides_raw[0], sizeof(job->rc_name));
-	strlcpy(job->rcshim_path, path, sizeof(job->rcshim_path));
 
 	/* rc-shim invocation: /path/to/script start/stop */
-	strlcpy(job->program, path, sizeof(job->program));
+	if (job_set_str(&job->rcshim_path, path, PROWL_PATH_MAX) == -1 ||
+	    job_set_str(&job->program, path, PROWL_PATH_MAX) == -1) {
+		job_free(job);
+		return (NULL);
+	}
 
-	/* provides: all tokens from PROVIDE header */
-	for (int i = 0; i < provides_count && i < PROWL_PROVIDES_MAX; i++)
+	/*
+	 * provides: all tokens from PROVIDE header; deps: all REQUIRE tokens
+	 * are hard dependencies; before: BEFORE tokens.  tokenize_into()
+	 * kept each count within its PROWL_*_MAX limit.
+	 */
+	if (provides_count > 0)
+		job->provides = calloc((size_t)provides_count,
+		    sizeof(*job->provides));
+	if (requires_count > 0)
+		job->deps = calloc((size_t)requires_count, sizeof(*job->deps));
+	if (before_count > 0)
+		job->before = calloc((size_t)before_count,
+		    sizeof(*job->before));
+	if ((provides_count > 0 && job->provides == NULL) ||
+	    (requires_count > 0 && job->deps == NULL) ||
+	    (before_count > 0 && job->before == NULL)) {
+		prowl_log(LOG_ERR, "rcshim: %s: %m", path);
+		job_free(job);
+		return (NULL);
+	}
+
+	for (int i = 0; i < provides_count; i++)
 		strlcpy(job->provides[i], provides_raw[i], PROWL_LABEL_MAX);
 	job->provides_count = provides_count;
 
-	/* deps: all REQUIRE tokens are hard dependencies */
-	for (int i = 0; i < requires_count && i < PROWL_DEPS_MAX; i++) {
+	for (int i = 0; i < requires_count; i++) {
 		strlcpy(job->deps[i].name, requires_raw[i], PROWL_LABEL_MAX);
 		job->deps[i].hard = true;
 	}
 	job->deps_count = requires_count;
 
-	/* before */
-	for (int i = 0; i < before_count && i < PROWL_DEPS_MAX; i++)
+	for (int i = 0; i < before_count; i++)
 		strlcpy(job->before[i], before_raw[i], PROWL_LABEL_MAX);
 	job->before_count = before_count;
 
